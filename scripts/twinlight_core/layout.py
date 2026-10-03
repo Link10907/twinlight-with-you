@@ -10,9 +10,16 @@ def unit(seed: str, key: str) -> float:
     return int(digest([seed,key])[:13],16)/float(16**13)
 
 def make_layout(analysis: dict, history: dict, previous: dict | None = None) -> dict:
-    owner = analysis["owner"]["id"]
+    facts={f["id"]:f for f in analysis["facts"]}
+    messages={m["id"]:m for m in history["messages"]}
+    spec=[(t["id"],[(topic["id"],len({messages[r["message_id"]]["conversation_id"] for fid in topic["fact_ids"] for r in facts[fid]["evidence"]}))
+                    for topic in t["topics"]]) for t in analysis["themes"]]
+    return layout_from_spec(analysis["owner"]["id"], spec, previous)
+
+def layout_from_spec(owner: str, spec: list[tuple[str, list[tuple[str, int]]]], previous: dict | None = None) -> dict:
+    """spec: [(theme_id, [(topic_id, conversation_count), ...]), ...]."""
     seed = digest(["twinlight-layout-v1", owner])
-    themes = sorted(analysis["themes"], key=lambda t:t["id"])
+    themes = sorted(({"id":tid,"topics":[{"id":pid,"weight":n} for pid,n in topics]} for tid,topics in spec), key=lambda t:t["id"])
     check(1 <= len(themes) <= 8, "Need 1–8 evidence-backed themes; merge explicitly rather than invent or silently discard")
     old_stars, old_topics = {}, {}
     if previous:
@@ -39,8 +46,6 @@ def make_layout(analysis: dict, history: dict, previous: dict | None = None) -> 
         material=int(unit(seed,tid+":material")*5)%5
         stars.append({"id":tid,"position":chosen,"material":material,"color":COLORS[material]})
         taken.append(chosen)
-    facts={f["id"]:f for f in analysis["facts"]}
-    messages={m["id"]:m for m in history["messages"]}
     topics=[]
     for t in themes:
         max_old=max([p["orbitRadius"]+p["radius"] for key,p in old_topics.items() if key[0]==t["id"]],default=9)
@@ -51,8 +56,7 @@ def make_layout(analysis: dict, history: dict, previous: dict | None = None) -> 
             if key in old_topics:
                 topics.append(old_topics[key]); continue
             k="/".join(key)
-            conversations={messages[r["message_id"]]["conversation_id"] for fid in topic["fact_ids"] for r in facts[fid]["evidence"]}
-            radius=round(min(2.7,1.2+.36*math.log2(1+len(conversations)))+.22*unit(seed,k+":size"),4)
+            radius=round(min(2.7,1.2+.36*math.log2(1+topic["weight"]))+.22*unit(seed,k+":size"),4)
             orbit_radius=round(inner+radius,4)
             inner=orbit_radius+radius+2.7
             check(orbit_radius <= 80, "Retained orbit slots exhausted; explicitly reset layout lock after review")

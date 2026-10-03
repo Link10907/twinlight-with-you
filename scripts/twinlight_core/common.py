@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-VERSION = "1.0.0"
+VERSION = "1.2.0"
 ROOT = Path(__file__).resolve().parents[2]
 
 class ContractError(ValueError):
@@ -50,10 +50,66 @@ def check(condition: bool, message: str) -> None:
     if not condition:
         raise ContractError(message)
 
-def schema_check(data: Any, name: str) -> None:
+class Collector:
+    """A check() that either raises at the first failure or records every failure with its path."""
+    def __init__(self, collect: bool = False):
+        self.collect = collect
+        self.errors: list[dict] = []
+
+    def __call__(self, condition: bool, message: str, path: str = "$") -> bool:
+        if condition:
+            return True
+        if not self.collect:
+            raise ContractError(message)
+        self.errors.append({"path": path, "message": message})
+        return False
+
+
+def _validator(name: str):
     from jsonschema import Draft202012Validator, FormatChecker
-    validator = Draft202012Validator(load(ROOT / "schemas" / name), format_checker=FormatChecker())
-    errors = sorted(validator.iter_errors(data), key=lambda e: str(list(e.absolute_path)))
+    from referencing import Registry, Resource
+    schemas = [load(p) for p in sorted((ROOT / "schemas").glob("*.schema.json"))]
+    registry = Registry().with_resources([(s["$id"], Resource.from_contents(s)) for s in schemas if "$id" in s])
+    return Draft202012Validator(load(ROOT / "schemas" / name), registry=registry, format_checker=FormatChecker())
+
+
+def _raw_schema_errors(data: Any, name: str) -> list:
+    return sorted(_validator(name).iter_errors(data), key=lambda e: [str(p) for p in e.absolute_path])
+
+
+def json_path(parts) -> str:
+    out = ""
+    for p in parts:
+        out += f"[{p}]" if isinstance(p, int) else (f".{p}" if out else str(p))
+    return out or "$"
+
+
+def schema_errors(data: Any, name: str) -> list[dict]:
+    """Every schema violation. Messages name the rule and limit, never echo source text."""
+    found = []
+    for e in _raw_schema_errors(data, name):
+        if e.validator == "required":
+            m = re.match(r"^'(.{1,80})' is a required property$", e.message)
+            message = f"missing required field '{m.group(1)}'" if m else "missing required field"
+        elif e.validator == "additionalProperties" and isinstance(e.instance, dict):
+            allowed = set(e.schema.get("properties", {}))
+            message = "unexpected field(s): " + ", ".join(sorted(k for k in e.instance if k not in allowed))[:200]
+        elif e.validator == "enum":
+            message = "must be one of: " + " | ".join(map(str, e.validator_value))[:200]
+        elif e.validator == "type":
+            message = f"must be of type {e.validator_value}"
+        elif isinstance(e.validator_value, (int, float, str)) and len(str(e.validator_value)) <= 80:
+            message = f"violates {e.validator} {e.validator_value}"
+        else:
+            message = f"violates {e.validator}"
+        item = {"path": json_path(e.absolute_path), "message": message}
+        if item not in found:
+            found.append(item)
+    return found
+
+
+def schema_check(data: Any, name: str) -> None:
+    errors = _raw_schema_errors(data, name)
     if errors:
         msg = "; ".join(f"{'/'.join(map(str,e.absolute_path)) or '$'}: validation rule '{e.validator}' failed" for e in errors[:12])
         raise ContractError(msg)

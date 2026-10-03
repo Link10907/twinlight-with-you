@@ -131,13 +131,14 @@ tick=function(dt,draw=true){
  }
  if(draw){paint();if(state.monitor&&state.frame%15===0)$('performance').textContent=Math.round(1000/state.frameEMA)+' FPS · '+canvas.width+' × '+canvas.height+' · '+(v9IsMap()?'光点全景':'行星近景');}
 };
-// Reuse the illustrated artwork generated in this conversation. It is a fantasy
-// persona, not a claim of photographic likeness or a freshly executed Skill.
+// The compiler supplies the current person's bound card composition. Concept
+// artwork does not imply photographic likeness without an authorized reference.
 const V9_CARD_IMAGE='__V9_CARD_IMAGE__';
 const v9OldCardSVG=buildCardSVG;
 buildCardSVG=function(side='front'){
  if(side!=='front'||!currentPersona().ready)return v9OldCardSVG(side);
- return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800"><title>SSR · 筑星者 · AI 眼中的你</title><image href="${V9_CARD_IMAGE}" x="0" y="0" width="600" height="800" preserveAspectRatio="xMidYMid slice"/></svg>`;
+ const d=currentPersona();
+ return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 800" width="600" height="800"><title>SSR · ${v8xml(d.title)} · ${v8xml(d.name)}</title><image href="${V9_CARD_IMAGE}" x="0" y="0" width="600" height="800" preserveAspectRatio="xMidYMid slice"/></svg>`;
 };
 refreshIdentity();window.twinlightV8.cardSVG=buildCardSVG;
 window.twinlightV9={getState:()=>({view:v9IsMap()?'points':state.mode,flow:v9.flow,phase:v9.phase,motion:v9.motion,reduced:state.reduced,coasting:v9.coasting,bodyBlends:nodes.map((_,i)=>v9BodyBlend(i)),renderedBodies:renderObjects.length,cardArt:'independently-bound-layers',look:[...v9.look]}),pause:()=>{v9.motion=false;v9SyncMotion();},resume:()=>{v9.motion=true;v9SyncMotion();}};

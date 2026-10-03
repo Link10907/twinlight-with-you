@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Twinlight · 与你同光</title>
+<meta name="description" content="把 AI 眼中的你，变成一片星系和一张专属闪卡。内容只在浏览器本地处理。">
+<style>__VIEWER_CSS__</style>
+</head>
+<body>
+<header class="hero">
+  <div class="brand"><span class="mark">✦</span> 同光 <small>TWINLIGHT</small></div>
+  <h1>一片属于你的星系，<br><span>一张 AI 眼中的你。</span></h1>
+  <p class="lead">交给 AI 制作，在这里查看。内容只留在你的浏览器里。</p>
+</header>
+<main>
+<section class="step" id="step1">
+  <div class="step-head"><b>1</b><h2>交给你的 AI</h2></div>
+  <div class="copy-row"><code id="oneLiner">读取 __PROMPT_URL__，根据你实际了解的我，做我的 Twinlight，完成后直接给我看。</code><button class="primary" data-copy="oneLiner">复制</button></div>
+  <div class="row"><button id="copyPrompt">复制完整说明</button>
+    <details class="agent"><summary>用 Codex、Claude Code 或 Cursor？</summary>
+      <div class="copy-row"><code id="agentLiner">读取 __AGENT_URL__，根据我提供的材料制作 Twinlight，完成后直接打开成品。</code><button data-copy="agentLiner">复制</button></div>
+    </details>
+  </div>
+  <p class="hint">AI 能预览页面时直接观看；它只给出数据时，继续下面两步。</p>
+</section>
+<section class="step" id="step2">
+  <div class="step-head"><b>2</b><h2>放入 AI 的结果</h2></div>
+  <textarea id="jsonInput" spellcheck="false" aria-label="AI 的结果" placeholder="粘贴 AI 回复的数据，整段或代码块都可以…"></textarea>
+  <div class="row"><label class="file-btn">选择数据文件<input id="jsonFile" type="file" accept=".json,.txt,application/json,text/plain"></label><button id="loadExample" class="ghost">试试虚构示例</button></div>
+  <div id="checkPanel" class="panel" hidden></div>
+  <details id="contentDetails" hidden><summary>查看全部文字</summary><div id="contentPreview"></div></details>
+  <details id="artDetails"><summary>放入卡图 <small>可选</small></summary>
+    <div class="row"><label class="file-btn">导入分层卡<input id="layerFiles" type="file" multiple accept=".json,.png,.jpg,.jpeg,.webp,application/json,image/png,image/jpeg,image/webp"></label><label class="file-btn">导入静态原型<input id="prototypeFile" type="file" accept="image/png,image/jpeg,image/webp"></label><button id="clearArt" class="ghost">清空卡图</button></div>
+    <p class="hint">选择 AI 给出的卡片包，或同时选择图层清单和图片。原型只有一张完整插画；分层卡使用直接生成的独立图层。</p>
+    <img id="artThumb" alt="当前导入的卡面" hidden>
+    <details id="artPromptBox" hidden><summary>让 AI 继续画卡</summary><div id="promptRows"></div></details>
+  </details>
+  <p id="artStatus" class="hint" role="status"></p>
+</section>
+<section class="step" id="step3">
+  <div class="step-head"><b>3</b><h2>确认并观看</h2></div>
+  <label class="confirm"><input type="checkbox" id="confirmCheck"> 我已检查文字和卡图，可以用于我的星系。</label>
+  <div class="row"><button class="primary big" id="generate" disabled>查看我的星系</button><span id="genStatus" class="hint"></span></div>
+  <div id="buildPanel" class="panel" hidden></div>
+</section>
+</main>
+<footer><p>Twinlight · 与你同光 · 来自 AI 对你的有限了解。每张卡都是 SSR。</p><p><a href="https://github.com/Link10907/twinlight-with-you" target="_blank" rel="noreferrer noopener">GitHub</a> · 不上传内容，不使用统计或外部请求。</p></footer>
+<div id="previewLayer" hidden>
+  <div class="preview-bar"><b id="previewTitle">预览</b><span class="spacer"></span><button class="primary" id="downloadHtml">下载完整 HTML</button><button id="downloadJson">下载数据</button><button id="closePreview">关闭 ✕</button></div>
+  <iframe id="previewFrame" title="星系预览" sandbox="allow-scripts allow-downloads"></iframe>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script type="application/json" id="bundle">__BUNDLE__</script>
+<script>__LITE_JS__</script>
+<script>__VIEWER_JS__</script>
+</body>
+</html>

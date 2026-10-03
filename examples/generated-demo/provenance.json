@@ -1,0 +1,58 @@
+{
+  "fictional": true,
+  "real_user_material": false,
+  "generator": "OpenAI imagegen",
+  "created_at": "2026-10-03",
+  "persona": "小禾 · 虚构示例",
+  "source": "The fictional data in twinlight.json; no historical personal showcase is an input.",
+  "prototype": "prototype.png",
+  "canvas": [
+    1086,
+    1448
+  ],
+  "generation": {
+    "prototype": "Direct full-scene generation",
+    "subject": "Independent native-alpha generation referenced to the prototype",
+    "background": "Independent complete opaque scene generation referenced to the prototype",
+    "effects": "Independent native-alpha foreground generation referenced to the prototype",
+    "spirit": "Empty RGBA canvas because this concept needs no companion",
+    "text": "Separate typesetting from current card text",
+    "lineart": "Exact subject-alpha contour; no redrawing"
+  },
+  "image_operations": {
+    "cutout": false,
+    "background_removal": false,
+    "chroma_key": false,
+    "checkerboard_conversion": false,
+    "subject_crop": false,
+    "subject_reposition": false,
+    "subject_resampling": false
+  },
+  "visual_review": "Full scene composite inspected; background has no duplicate guardian, subject/effects have real alpha. Native generation may vary slightly from prototype; registration and parallax must still be visually reviewed.",
+  "assets": {
+    "background": {
+      "file": "background.png",
+      "sha256": "f97cc352051e6b423653604efc127582c1e35bbb247dabaeab4be807c613ea08"
+    },
+    "subject": {
+      "file": "subject.png",
+      "sha256": "ec6e344d0c88a8f50fbe84fef4efbe3106bc22801180278c01cfd6eb88b37d99"
+    },
+    "spirit": {
+      "file": "spirit.png",
+      "sha256": "dd3ec632e9c88100c66362346cfd11cae9066a5be956c53851c86a6d389da74f"
+    },
+    "effects": {
+      "file": "effects.png",
+      "sha256": "2ad01d9ba01bf2e3bb6c18721772fa90d8a15a4d1713860d72544e348e0f5c65"
+    },
+    "text": {
+      "file": "text.png",
+      "sha256": "6c7640072133d9db895122bb6c5f86bf4a8a30510547082455790af349c4418c"
+    },
+    "lineart": {
+      "file": "lineart.png",
+      "sha256": "3f72dce8055f99ccd4fe1f6df0374e7a87e42a30d375deb391fe29c13f8bf007"
+    }
+  }
+}

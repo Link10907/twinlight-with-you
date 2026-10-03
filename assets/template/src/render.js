@@ -116,8 +116,10 @@ let starProgram,starLoc={},ringProgram,ringLoc={},ringBuffer,ringCount=0,discTex
 let streamBuffer,streamCount=0;
 let galaxyStart=0,galaxyCount=0,aiStart=0,aiCount=0,backCount=0,autoLevel=0,pixelScale=1;
 const radii=nodes.map((_,i)=>[5.8,4.5,6.2,4.8,5.15][DEFAULT_PROFILE.layout.stars[i].material]);
-const starTypes=nodes.map(()=> '恒星 · 艺术化表面');
-const planetCaption=nodes.map(()=> 'STELLAR LIGHT');
+const STAR_TYPES=['金白光球 · 柔亮颗粒与自转','双星系统 · 两种光芒相互照亮','赤金光球 · 缓慢翻涌的光层','青白恒星 · 丝状光流与磁弧','蓝紫恒星 · 缓慢环绕的星尘'];
+const STAR_CAPTIONS=['GRANULATION / AMBER','BINARY / ICE & GOLD','CONVECTION / EMBER','MAGNETIC / CYAN','ACCRETION / VIOLET'];
+const starTypes=DEFAULT_PROFILE.layout.stars.map(s=>STAR_TYPES[s.material]);
+const planetCaption=DEFAULT_PROFILE.layout.stars.map(s=>STAR_CAPTIONS[s.material]);
 function compile(type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;}
 function makeProgram(v,f){const p=gl.createProgram(),vs=compile(gl.VERTEX_SHADER,v),fs=compile(gl.FRAGMENT_SHADER,f);gl.attachShader(p,vs);gl.attachShader(p,fs);gl.bindAttribLocation(p,0,'a_pos');gl.linkProgram(p);gl.deleteShader(vs);gl.deleteShader(fs);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p));return p;}
 function locs(p,names){const o={};for(const n of names)o[n]=gl.getUniformLocation(p,n);return o;}
@@ -141,6 +143,7 @@ async function initWebGL(){
  function addGalaxy(count,blue){for(let i=0;i<count;i++){let rad,a,h;if(r()<.21){rad=Math.pow(r(),1.4)*34;a=r()*TAU;h=normal()*(4.4*Math.exp(-rad/19)+.7);}else{rad=Math.pow(r(),.69)*147;a=(r()<.5?0:Math.PI)+2.30*Math.log(rad/155+.06)+normal()*(r()<.73?(.20+rad*.0013):.76);if(r()<.22)a+=Math.PI*.5;a+=.10*Math.sin(rad*.12);h=normal()*(.48+rad*.006);}
  const w=Math.exp(-rad/34),b=.12+Math.pow(r(),3)*.93;let c=blue?[.56+w*.30,.72+w*.17,1]:[.76+w*.24,.82-w*.12,.96-w*.52];if(r()<.08)c=blue?[.78,.55,1]:[1,.68,.39];put(Math.cos(a)*rad,h,Math.sin(a)*rad,b,c,.135+r()*.21);}}
  addGalaxy(98500,false);
+ for(let k=0;k<localNodes.length;k++)for(let j=0;j<1200;j++){const n=localNodes[k],spread=3+r()*8;put(n[0]+normal()*spread,n[1]*.17+normal()*.9,n[2]+normal()*spread,(.11+Math.pow(r(),3)*.45),[.87,.84,.77],.08+r()*.17);}
  galaxyCount=verts.length/7-galaxyStart;aiStart=verts.length/7;addGalaxy(82500,true);aiCount=verts.length/7-aiStart;
  pointCount=verts.length/7;pointBuffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pointBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(verts),gl.STATIC_DRAW);
  const ring=[];
@@ -179,6 +182,14 @@ function renderGL(){if(!state.gl)return;
  let fraction=state.quality==='balanced'?.48:state.quality==='high'?1:autoLevel>0?.64:.86;
  gl.uniform1f(pointLoc.u_gain,(1.0-active*.16)/Math.sqrt(fraction));for(let g=0;g<2;g++){if(g===1&&!quietAIVisible()||g===0&&!quietPersonVisible())continue;gl.uniform1f(pointLoc.u_galaxy,g);const f=galaxyFrames[g];gl.uniformMatrix3fv(pointLoc.u_matrix,false,f.matrix);gl.uniform3fv(pointLoc.u_origin,f.origin);gl.uniform1f(pointLoc.u_scale,f.scale);gl.drawArrays(gl.POINTS,g===0?galaxyStart:aiStart,Math.floor((g===0?galaxyCount:aiCount)*fraction));}stopPoints(pointsProgram);
  if(state.merge>.08){usePoints(pointsProgram,streamBuffer);gl.uniform1f(pointLoc.u_stream,1);gl.uniform3fv(pointLoc.u_origin,galaxyFrames[0].origin);gl.uniform3fv(pointLoc.u_other,galaxyFrames[1].origin);gl.uniform1f(pointLoc.u_gain,.91);gl.drawArrays(gl.POINTS,0,state.quality==='balanced'?3600:streamCount);stopPoints(pointsProgram);gl.uniform1f(pointLoc.u_stream,0);}
+ // Accretion ring + disc for every ACCRETION / VIOLET star: one static buffer, rotation in the vertex shader.
+ for(let i=0;i<nodes.length;i++){if(profile.layout.stars[i].material!==4)continue;gl.blendFunc(gl.ONE,gl.ONE);
+  const ringDetail=starDetail(i),rp=project(nodes[i]);if(quietPersonVisible()&&ringDetail>.02&&rp&&rp.x> -600&&rp.x<state.w+600){
+   usePoints(ringProgram,ringBuffer);setCameraUniforms(ringLoc);gl.uniform3fv(ringLoc.u_center,nodes[i]);gl.uniform1f(ringLoc.u_time,state.time);gl.uniform1f(ringLoc.u_height,canvas.height);gl.uniform1f(ringLoc.u_pixel,pixelScale);gl.uniform1f(ringLoc.u_fade,ringDetail*ringDetail);gl.drawArrays(gl.POINTS,0,ringCount);stopPoints(ringProgram);
+  }
+  if(quietPersonVisible()&&rp&&ringDetail>.05){const rr=18*state.h/(2*rp.z*Math.tan(state.fov*Math.PI/360));if(rp.x+rr>0&&rp.x-rr<state.w&&rp.y+rr>0&&rp.y-rr<state.h){
+   useQuad(diskProgram);setCameraUniforms(diskLoc);gl.uniform4f(diskLoc.u_rect,(rp.x-rr)/state.w*2-1,1-(rp.y+rr)/state.h*2,(rp.x+rr)/state.w*2-1,1-(rp.y-rr)/state.h*2);gl.uniform3fv(diskLoc.u_center,nodes[i]);gl.uniform1f(diskLoc.u_time,state.time);gl.uniform1f(diskLoc.u_fade,ringDetail*ringDetail);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);gl.uniform1i(diskLoc.u_surface,1);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.drawArrays(gl.TRIANGLES,0,6);}}
+ }
  // Sort only six objects, not every particle. Discs are opaque; corona is alpha.
  renderObjects.length=0;
  for(let i=0;i<nodes.length;i++){const detail=starDetail(i),appearance=v9BodyBlend(i);if(appearance>.001)renderObjects.push({p:nodes[i],r:mix(2.5,radii[i],detail),kind:profile.layout.stars[i].material,c:colors[i],opacity:appearance});}

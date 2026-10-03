@@ -1,42 +1,21 @@
-Twinlight · 直接交给 AI 使用
+Twinlight · 与你同光
 
-你只需要提供材料、表达目标、审查结果。命令、JSON 和文件由有工具能力的 AI 处理。
+把项目交给你的 AI，然后说：
 
-给其他人使用：twinlight-with-you.zip。这个默认包只有通用流程和模板，没有示例历史或预写的人物分析。
-只看虚构演示：twinlight-with-you-demo.zip。仓库 examples/demo/profile.json 是可公开的虚构展示数据，不是维护者的经历。
-个人运行不读取 demo，也不把缺少的资料用示例补齐；每个人使用自己的独立工作目录。
+“根据你实际了解的我，做我的 Twinlight，完成后直接给我看。”
 
-第一次测试效果
+AI 会用本次授权的材料写你的星系与 SSR 卡，先让你确认文字，再生成专属卡图和页面。
+资料不足时只问两三个短问题；命令、JSON、分层和检查都由有工具的 AI 处理。
 
-在一个新聊天里上传 prompts/06-smoke-test.txt，或者复制它的全文，发送：
-“请执行这份 Twinlight 小样本试用。逐条读完材料，先给有原话依据的判断，再给个人摘要。不要读取标准答案。”
+纯聊天网站：把 PROMPT.md 发给或上传给 AI：
+https://github.com/Link10907/twinlight-with-you/blob/main/PROMPT.md
+下载查看器，保存 viewer.html 后用浏览器直接打开，再导入 AI 交付的内容和图层包：
+https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html
 
-小样本提示词和输入在源码仓库或单独 demo 包中，默认个人使用包不包含它们。模型完成后，自己查看另行提供的 expected.txt 核对答案；源码仓库中的位置为 examples/smoke/expected.txt，两个 ZIP 都不包含它。相同材料也可以交给不同平台，每个平台开一个新聊天。这是在测模型理解与遵循指令，不是测试完整网页编译。
+Claude Code、Codex、Cursor 等 Agent：让它读取项目里的 SKILL.md 或 AGENT.md。
+提供聊天导出并要求原话出处时，AI 会走严格模式。
 
-要比较“使用 skill 前后”的提升：同一模型开两个新聊天，都只给 examples/smoke/history.txt；A 不加载 skill，B 加载 skill，任务目标保持相同。标准答案仍只由你在事后查看。
-
-用自己的材料
-
-有代码执行的网页 AI：上传整个 twinlight-with-you.zip 和你选择的历史文件。
-Codex / Claude Code / Cursor：打开解压后的项目文件夹，提供历史文件位置。
-Claude 网页的原生 Skills：开启代码执行，在 Customize > Skills 上传 ZIP，然后提供历史文件。
-具体能力由平台、账号和组织设置决定；ZIP 上传到聊天并不自动等于安装了原生 skill。
-
-复制这段话给 AI：
-
-“使用 twinlight-with-you。读取包里的 SKILL.md 和 references/quickstart.md，历史只使用我本次提供的文件，从空分析开始，不读取 demo 或其他人的经历。请你负责环境检查、规范化、提取、消歧、验证和构建，我不手动操作命令或 JSON。先完成可审查的事实和摘要，再生成网页草稿，并在本次聊天可用的 HTML/Artifact 预览里直接打开给我看，同时提供可下载的单文件 HTML；不要自动公开。没有代码执行能力就只交付带原话的审查稿，没有生图工具就保留明确占位。报告实际读过的范围、哪些检查运行了，以及未完成部分。”
-
-如果环境不能读取 ZIP，就直接使用小样本试用文本；不要让模型凭仓库链接假装已经读完全部文件。
-
-查看已有的 HTML：下载后用浏览器打开即可，不需要安装 Node.js、Python 或启动服务器。生成新页面需要 Python，可由 AI 的执行环境处理。聊天内能否直接交互预览，取决于宿主实际能力；上传 ZIP 不会自动渲染。
-
-三种结果要分清
-
-1. 小样本分析：检验提取、归属、计划/成果与纠错，程序引用检查未运行。
-2. 网页草稿：Python 校验和固定模板实际运行，专属人物图可能仍是占位。
-3. 分层人物成品：独立图层真实生成、检查完成，并得到本人对文字与图像的审查。
-
-旧示例 demo 使用预先写好的分析，只能验证页面能运行，不能证明 AI 提取准确。
-任何工具都不会因为安装了 skill 就自动取得你的全部账户聊天。
-
-查看平台入口、完整模式和测试方法：references/quickstart.md。
+完成的 HTML 可直接用浏览器打开，不需要 Node.js、Python 或服务器。
+GitHub Pages 是维护者手动发布后的可选入口，当前使用不依赖线上部署。
+有分层图就显示分层卡；只有原型图则显示静态插画；不能生图则明确占位。
+每张卡都是 SSR，不是能力排名。页面不会自动公开，是否分享由你决定。

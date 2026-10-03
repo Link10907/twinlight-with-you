@@ -1,163 +1,67 @@
 # Twinlight · 与你同光
 
-**把有出处的记录，变成一片可以探索的星系。**
+让 AI 写下它眼中的你，变成一片个人星系和一张 SSR 卡。
 
-这是一个可复用 Agent Skill + 本地编译器。页面沿用 Twinlight V10 的交互与视觉结构；不同的人只替换经过审查的内容、确定性布局和独立分层卡图。仓库不附带任何真实用户的聊天、照片、人物总结或私人卡面。
+把这个项目交给你的 AI，然后说：
 
-> 当前版本：1.0.0。示例完全虚构。演示里的星盘是明确标注的分层占位素材，不是假装生成好的专属人物插画。
+> 根据你实际了解的我，做我的 Twinlight，完成后直接给我看。
 
-通用的是材料处理、证据规则和页面模板。每个人的经历、主题、关键词、人物设定与图像只来自其本次提供并经审查的资料。默认安装包不附示例人物内容；源码中的虚构 demo 仅用于明确的演示或测试，不能充当个人资料缺省值。
+AI 会使用本次授权的材料，先让你确认文字，再生成专属卡图与页面。资料不足时只问两三个短问题；命令、JSON、图层与检查由有工具的 Agent 处理。
 
-## 不想手动跑命令：直接交给 AI
+- **Codex / Claude Code / Cursor 等 Agent**：读取项目里的 [SKILL.md](SKILL.md) 或 [AGENT.md](AGENT.md)，生成后优先在当前聊天预览。
+- **普通聊天 AI**：发送或上传 [PROMPT.md](https://github.com/Link10907/twinlight-with-you/blob/main/PROMPT.md)，将它交付的内容和图层包导入 [下载的查看器](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)。保存 `viewer.html` 后直接用浏览器打开。
+- **想要原话出处**：提供聊天导出，要求严格模式。资料范围、事实引用和未完成部分会如实说明。
 
-第一次看提取和分析效果，上传或复制 [`prompts/06-smoke-test.txt`](prompts/06-smoke-test.txt) 到一个新聊天即可。模型答完后，自己对照 [`examples/smoke/expected.txt`](examples/smoke/expected.txt)；不要提前把答案给模型。这轮只测理解与指令遵循，不要求安装 Python 或生图。
+已生成的 HTML 用现代浏览器直接打开，**不需要 Node.js、Python 或本地服务器**。网页内预览取决于宿主实际能力；页面不会自动公开。
 
-用自己的历史生成网页：把完整 skill 文件夹交给 Codex / Claude Code / Cursor，或在具备文件和代码能力的网页 AI 中提供 ZIP 和历史文件，然后发送：
+查看器是可下载的离线单文件，不依赖已经部署的网站。GitHub Pages 仅在维护者明确手动发布后作为可选线上入口；skill 包不含这份较大的查看器，按上面的链接单独取得即可。
 
-> 使用 twinlight-with-you，读取 SKILL.md 和 references/quickstart.md。只用我本次提供的历史，从空分析开始，不读取 demo 或别人的经历。你负责环境检查、提取、消歧、验证和构建，我只提供材料并审查结果。先完成审查稿，再在可用的 HTML/Artifact 预览里直接给我看，并提供单文件 HTML；没有代码能力就标注程序未验证，没有生图工具就明确占位，不自动公开。
+## 每个人得到自己的内容与卡图
 
-平台入口与完整方法见 [`START_HERE.txt`](START_HERE.txt) 和 [`references/quickstart.md`](references/quickstart.md)。Claude 网页支持自定义 skill ZIP；ChatGPT 网页的原生分发与普通附件不同，不能承诺任意网站上传 ZIP 就能执行。入口已按官方文档核对，实际可用性取决于账号与工具权限。
+复用的是 V10 页面样式、星系动画与卡片交互；经历、主题、称号、符号、构图和图像都由当前人的材料产生。记忆形成的印象会标明范围，问题不写成能力，计划不写成成果。每张卡都是 SSR，不表示排名。
 
-维护者可运行 `python scripts/package_skill.py --out outputs/twinlight-with-you.zip` 生成默认分发包，不含任何示例历史、预写的个人分析或人物 profile。演示包另用 `python scripts/package_skill.py --include-demo --out outputs/twinlight-with-you-demo.zip`。两者都排除真实历史、Git 数据、评审截图与小样本标准答案。使用者接收包后不需要执行打包命令。
+卡图使用同一套流程：
 
-**观看已生成的单文件 HTML 无需 Node.js、Python 或本地服务器，浏览器打开即可。** 生成新页面需要 Python，可由 AI 宿主处理。宿主支持交互式 HTML 预览时优先在聊天内打开；不能承诺所有 ChatGPT 网页账号都具备该能力。详见 [`references/preview.md`](references/preview.md)。
+> 本人的无字原型 → 参考原型直接生成同画布背景、透明主体与前景层 → 独立 SSR/文字层 → 紧凑景深与随视角变化的闪卡
 
-## 先运行示例
+主体由图像工具直接输出真实透明，**不抠图、不去绿幕、不转换棋盘格、不裁切重摆**。SSR、称号和边框由程序精确排成独立透明 text 层，线稿从最终主体派生。这沿用 [RuiC-card-skill](https://github.com/HRuiCcc/RuiC-card-skill) 的分层思路与 MIT 署名。
 
-以下是维护者/宿主的本地命令。普通用户可以让有工具能力的 AI 执行。
+有独立素材就是分层卡；只有原型就是静态插画；没有生图能力则明确占位。原型不是几张重复海报的替身。没有本人授权照片时，角色是艺术化概念，不能声称像本人。
 
-demo 命令适用于源码仓库或单独演示包；默认个人使用包不会自动退回到示例数据。可公开的虚构输入与展示 JSON 在 [`examples/demo/history-input.json`](examples/demo/history-input.json) 和 [`examples/demo/profile.json`](examples/demo/profile.json)。
+## 示例与私人材料隔离
 
-需要 Python 3.10+。Node.js 用于 JS 语法检查；Chromium + Playwright 用于浏览器测试，不是普通用户打开页面的前提。
+默认使用包不含示例历史、预写人物分析或人物图。不同人的分析、布局和卡图分别保存，不能借用作者或其他人的经历。
 
-```bash
-python -m venv .venv
-# macOS / Linux
-source .venv/bin/activate
-# Windows PowerShell 对应：.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python scripts/twinlight.py demo --out outputs/demo
-```
+- `examples/demo/`：完全虚构的严格模式测试材料。
+- `examples/lite/` 与 `examples/generated-demo/`：完全虚构的新人物与原生分层演示，只有明确演示/测试时使用。
+- `examples/showcase/`：历史作者个人展示，含真实摘要和少量原话；保留源文件用于历史溯源，**不进入默认包、虚构演示包或通用查看器**。不得据此补全任何用户，也不据代码变更推定新的公开授权。
 
-用浏览器打开 `outputs/demo/index.html`。文件内嵌本地素材，不请求 CDN、分析服务或模型接口。源历史不会自动上传。`profile.json` 仍然包含个人摘要，不应把本地输出目录默认公开。
+真人聊天导出、证据、照片、确认收据和运行报告放在忽略提交的私人目录。将 HTML 分享出去也会分享其中的摘要与图像，是否公开由本人决定。详细规则见 [隐私与确认](references/privacy.md)。
 
-将整个仓库目录作为 `twinlight-with-you` 放入宿主支持的 Skills 目录，或让宿主读取根目录 `SKILL.md`。目录位置因宿主而异。本 Skill 使用标准 `SKILL.md` + `scripts/` + `references/` + `assets/` 结构，不声称所有产品会自动识别安装。
+## 给维护者和 Agent
 
-对宿主说：
+操作、schema 和修复步骤放在内部说明中：
 
-> 使用 twinlight-with-you。先说明你能读取哪些历史；按证据提取，不要把我的提问写成能力。生成本地审查稿，保持固定模板，审查后再生成人物分层卡。
-
-## 工作分工
-
-```text
-显式提供的历史 JSON
-  → 本地规范化 / 选定分支 / 分块与覆盖清单
-  → 宿主 AI：逐块提取，有证据的事实与排除理由
-  → 合并与纠错：计划、问题、成果、第三方内容分开
-  → 受 JSON Schema 约束的主题 / 叙事 / SSR 人物理解
-  → 机械审计 + 本人审查
-  → 确定性布局 + 独立分层人物生图
-  → 固定网页模板 → 本地预览 → 明确许可后分享
-```
-
-**Python 不会替 AI 理解文意，也不会偷偷调用外部模型。** 它负责规范化、引用核对、冲突检查、稳定排列和构建。宿主模型负责语义判断与可用的图像工具调用。缺少图像能力时只交付生图 brief 和待生成占位状态。
-
-## 准确提取如何落地
-
-每条事实含 `message_id`、原文 SHA-256、字符起止位置、原话、事实类型、语境和审查状态。每条用户消息都必须有处置记录：提取了哪些事实，或为何排除。每句公开文案和每个主题、卡片关键词都要指回可发布事实。
-
-程序会阻止引用助手话语、原话改写、偏移错误、陈旧摘要、未处置的消息、未解决的当前状态冲突、把计划标为已完成、发布敏感/被替代事实。**它不能机械证明一段原话真的蕴含某个总结**，因此提供 `review.md` 做语义复核，不宣称“100% 准确”或“读过所有历史”。
-
-更多：[`references/extraction.md`](references/extraction.md)、[`prompts/`](prompts/)、[`schemas/`](schemas/)。
-
-## 星体数量和位置
-
-主星对应稳定主题，支持 **1–8 颗**；每颗主星的主题行星支持 **0–8 颗**。通常 3–6 个大主题更易读，但资料只有一个主题时不补齐。一次提问不自动产生一颗“掌握该技能”的星；反复重复同一问题也不会膨胀成很多颗星。
-
-主题/行星语义 ID 与 owner ID 生成稳定种子；同一分析结果的排列可复现。增量更新使用 `layout.lock.json` 保留已有坐标、轨道和材质。尺寸最多轻微表达记录跨度，不是熟练度、人格分数或比较排名。详见 [`references/layout.md`](references/layout.md)。
-
-## 保留的体验
-
-首页为有旋转与流动感的个人光点星系；靠近主星后才展现行星。选中使用主体发光，不套硬圈。14 秒终章依次展示 AI 星系点亮、交融、实际总结者署名的提问、SSR 卡。允许暂停、跳过和减动效；开启音乐需要用户交互。
-
-卡片前景、人物、背景具有独立视差，文字/边框钉在卡面；镭射随观察方向变化。公式改编自 MIT 授权的 RuiC-card-skill，保留完整署名。本仓库**没有运行或交付其 Blender/GLB 流水线，也不把 2.5D 卡面叫作完整三维人物模型**。
-
-## 真实资料的本地流程
-
-把个人材料放在 `.gitignore` 排除的 `private/`。
+| 工作 | 说明 |
+|---|---|
+| Lite 内容与执行 | [PROMPT.md](PROMPT.md)、[AGENT.md](AGENT.md) |
+| 严格提取、原话核对与增量更新 | [工作流](references/workflow.md)、[提取规则](references/extraction.md) |
+| 原型、独立图层与视觉检查 | [美术契约](references/art-direction.md) |
+| 直接预览与平台边界 | [预览说明](references/preview.md) |
+| 效果实验、平台入口与分发 | [测试与使用](references/quickstart.md) |
 
 ```bash
-python scripts/twinlight.py ingest private/history-input.json --out private/history.json
-python scripts/twinlight.py chunk private/history.json --out private/chunks
-python scripts/twinlight.py init-analysis private/history.json \
-  --owner-id your-stable-id --name 你的昵称 \
-  --provider openai --attribution-source host_metadata --out private/analysis.json
-```
-
-上面的 OpenAI 只适用于确实由 GPT 生成这次总结。Claude 应传 `--provider anthropic`；未知则保持默认 `unknown`，不要照抄。版本不知道就不填 `--model`。
-
-由宿主按提示词完成分析；分块可先输出批次结果，再运行：
-
-```bash
-python scripts/twinlight.py merge-extractions private/history.json private/analysis.json \
-  private/chunks/manifest.json private/chunk-results --out private/analysis.json
-# 随后按提示词消歧、纠错，填写 themes 和 card。
-python scripts/twinlight.py verify private/history.json private/analysis.json
-python scripts/twinlight.py review private/history.json private/analysis.json --out private/review.md
-python scripts/twinlight.py art-brief private/history.json private/analysis.json --out private/art-brief.json
-python scripts/twinlight.py build private/history.json private/analysis.json --out outputs/preview
-```
-
-没有提供图层时明确显示待生成；不能点击导出成“已审核个人卡”。实际生图完成、真透明度和左右视角均核对后：
-
-```bash
-python scripts/twinlight.py validate-art private/card/layers.json
-# 只有本人确实同意文本与图像公开时才执行下面的许可记录：
-python scripts/twinlight.py approve private/history.json private/analysis.json \
-  --by 你的昵称 --scope share --layers private/card/layers.json \
-  --ack-reviewed --out private/approval.json
-python scripts/twinlight.py build private/history.json private/analysis.json \
-  --layers private/card/layers.json --approval private/approval.json \
-  --out outputs/release
-```
-
-图层清单的 `art_status=approved` 由实际视觉审查决定，校验器不会自动改它。许可绑定分析与素材字节；改一处需重审。许可收据不是身份认证、法律证明或防复制技术。详见 [`references/privacy.md`](references/privacy.md)。
-
-## 测试
-
-```bash
+python scripts/package_skill.py --out outputs/twinlight-with-you.zip
+python scripts/package_skill.py --include-demo --out outputs/twinlight-with-you-demo.zip
 python -m unittest discover -s tests -v
-python scripts/twinlight.py demo --out outputs/demo
-node --check outputs/demo/compiled-check.js
-python -m pip install -r requirements-dev.txt
-python -m playwright install chromium
-python scripts/verify_browser.py --html outputs/demo/index.html --out verification/browser
-python scripts/check_capacity.py
 ```
 
-浏览器脚本记录 WebGL 是否可用，降级情况下不会把 CSS 结果报成 GPU 着色器通过。`--require-webgl` 可让 CI 在缺少完整 GPU/软件 WebGL 时失败。测试使用虚构数据，不能替代真实用户语义准确率评估。
+默认 ZIP 只含 skill 与通用资源；演示 ZIP 另加白名单中的虚构数据，始终排除真人 showcase、标准答案、隐藏文件和私人目录。`package-manifest.json` 记录范围和文件哈希。生成新页面需要 Python 3.10+ 与 `requirements.txt`，由 Agent 处理；Node.js 与 Playwright 属于开发检查。
 
-## 目录
+精简模式是经过本人确认的有限印象；严格模式核对源引用与状态。机械校验不证明语义蕴含，也不保证跨模型抽取完全一致。冻结数据与素材后构建才是确定性的。页面支持 1–8 个主主题，每个 0–8 个话题，不强行凑满。
 
-```text
-SKILL.md                     宿主执行入口
-prompts/                     提取、消歧、叙事、生图、审查
-schemas/                     分析、证据、历史、布局、图层、许可契约
-scripts/twinlight.py          命令行入口
-scripts/twinlight_core/       本地规范化、审计、编译、素材与布局
-assets/template/             固定 V10 衍生前端、程序纹理与原创合成配乐
-assets/ai-history.json       少量可核验的 AI 历史锚点，不是完整发展年表
-examples/demo/              完全虚构的端到端示例
-references/                 工作流、隐私、画面与来源说明
-tests/                      回归测试
-```
-
-## 已知边界
-
-只内置文档列明的 ChatGPT mapping、Claude chat_messages 与 generic JSON 文本适配器；不扫描账户、不读取删掉的聊天、不分析导出中的图片/语音，不把格式失败解释为没有历史。模型自由写作仍有随机性；冻结的分析和素材才是确定性编译输入。网页运行时导入新的 profile 不会自动生图，必须在本地重建并重新审核。
-
-模板保留 V10 分阶段覆盖模块以减少视觉回归，尚不是组件化前端框架。顶多八个主题是明确容量约束，不是心理学分类。星系/行星是艺术表达，不是引力模拟。生产部署、真机性能与真实语料语义评估仍需单独完成。
+保留 V10 光点流动、靠近才显行星、选中主体发光和约 14 秒星系交融后揭卡；有暂停、跳过与减少动态。卡片是分层视差与观察方向驱动的 foil，不是完整三维人体；本项目没有交付上游 Blender/GLB 流水线。
 
 ## License
 
-本仓库原创代码采用 MIT；第三方公式和代码见 [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md)。不分发字体、官方游戏角色或真实用户素材。用户照片与生成图的权利取决于素材授权和工具条款，不自动继承代码许可。
+原创代码采用 MIT；第三方来源见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。软件许可不自动授权个人历史、照片或生成图的再使用。

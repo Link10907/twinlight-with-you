@@ -8,32 +8,51 @@ from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
-ROOT_FILES = ('SKILL.md', 'README.md', 'START_HERE.txt', 'LICENSE',
+ROOT_FILES = ('SKILL.md', 'AGENT.md', 'PROMPT.md', 'README.md', 'START_HERE.txt', 'LICENSE',
               'THIRD-PARTY-NOTICES.md', 'requirements.txt', 'requirements-dev.txt', '.gitignore')
 RESOURCE_DIRS = ('scripts', 'references', 'prompts', 'schemas', 'assets', 'agents')
+# The Pages viewer is built and tested from the repository (needs examples and test fixtures).
+MAINTAINER_ONLY = {'scripts/build_viewer.py', 'scripts/verify_viewer.py'}
 SUFFIXES = {'.py', '.md', '.txt', '.json', '.js', '.css', '.html', '.svg',
             '.png', '.jpg', '.jpeg', '.webp', '.mp3', '.yaml', '.yml'}
+EXCLUDED_PARTS = {'__pycache__', 'node_modules', 'private', 'runs', 'outputs',
+                  'exports', 'local', 'verification', 'venv'}
+
+
+def is_hidden_or_private(relative: Path) -> bool:
+    return any(part.startswith('.') or part in EXCLUDED_PARTS for part in relative.parts)
+
+
+def maintained_tree(root: Path, directory: str) -> list[Path]:
+    """Read only a named maintained subtree; never traverse personal directories."""
+    folder = root / directory
+    if folder.is_symlink():
+        raise ValueError('Resource directory cannot be a symlink: ' + directory)
+    if not folder.exists():
+        return []
+    result = []
+    for path in folder.rglob('*'):
+        relative = path.relative_to(root)
+        if is_hidden_or_private(relative):
+            continue
+        if path.is_symlink():
+            raise ValueError('Resource cannot be a symlink: ' + relative.as_posix())
+        if path.is_file() and path.suffix.lower() in SUFFIXES:
+            result.append(path)
+    return result
 
 
 def resource_files(root: Path, include_demo: bool = False) -> list[Path]:
     root = root.resolve()
     files = [root / name for name in ROOT_FILES if (root / name).is_file()]
     for directory in RESOURCE_DIRS:
-        folder = root / directory
-        if folder.is_symlink():
-            raise ValueError('Resource directory cannot be a symlink: ' + directory)
-        if not folder.exists():
-            continue
-        for path in folder.rglob('*'):
+        for path in maintained_tree(root, directory):
             relative = path.relative_to(root)
-            if any(part.startswith('.') or part == '__pycache__' for part in relative.parts):
+            if relative.as_posix() == 'prompts/06-smoke-test.txt' and not include_demo:
                 continue
-            if path.is_symlink():
-                raise ValueError('Resource cannot be a symlink: ' + relative.as_posix())
-            if path.is_file() and path.suffix.lower() in SUFFIXES:
-                if relative.as_posix() == 'prompts/06-smoke-test.txt' and not include_demo:
-                    continue
-                files.append(path)
+            if relative.as_posix() in MAINTAINER_ONLY or relative.parts[:2] == ('assets', 'viewer'):
+                continue
+            files.append(path)
     # Personal runs receive no example biography or prewritten interpretation.
     # Fictional fixtures are opt-in, and the grading answer always stays out.
     if include_demo:
@@ -41,6 +60,8 @@ def resource_files(root: Path, include_demo: bool = False) -> list[Path]:
             'README.md', 'history-input.json', 'history.json', 'analysis.json',
             'profile.json', 'layout.lock.json'))
         files.append(root / 'examples/smoke/history.txt')
+        files.append(root / 'examples/lite/example.json')
+        files.extend(maintained_tree(root, 'examples/generated-demo'))
     files.append(root / 'examples/layers.example.json')
     for path in files:
         if path.is_symlink() or not path.resolve().is_relative_to(root) or not path.is_file():
@@ -64,6 +85,10 @@ def package(root: Path, out: Path, include_demo: bool = False) -> dict:
             'schema_version': '1.0', 'files_sha256': hashes,
             'mode': 'fictional_demo' if include_demo else 'personal_use',
             'contains_fictional_history': include_demo,
+            'contains_author_showcase': False,
+            'contains_generated_fictional_art': any(
+                p.relative_to(root).parts[:2] == ('examples', 'generated-demo') and
+                p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'} for p in files),
             'scope': ('Maintained skill files and opt-in fictional fixtures; no private history or grading answers.'
                       if include_demo else 'Skill resources only; no example history, prewritten personal analysis, or grading answers.')
         }, ensure_ascii=False, indent=2))

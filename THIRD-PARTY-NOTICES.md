@@ -8,6 +8,8 @@ Read source snapshots: SKILL.md `54caa2b36ef4f74f2ef349b95add5103de7b18e6`; app.
 
 The card-local parallax offset, spectrum/film, view-driven sweep and restrained line-glint functions in `src/holo-card.js` are adapted from `assets/web-template/app.js`. The galaxy code, DOM integration, audio synthesis and application narrative are not claimed as upstream work. Upstream's full Blender/GLB pipeline has not been executed here.
 
+The artwork workflow follows upstream's independent registered layers, different depths within one canvas, line art derived from the final subject, and program-generated typography/frame. Twinlight first generates a personal prototype, then directly generates same-canvas native-alpha layers using the prototype as a reference. Upstream's painted-checkerboard conversion is a repair fallback; Twinlight does not use background removal, green-screen keying, checkerboard conversion, cropping or subject repositioning in its personal-card workflow. The project-specific layer preparation and runtime integration are not represented as copied upstream implementations.
+
 MIT License
 
 Copyright (c) 2026 HRuiCcc
@@ -18,10 +20,12 @@ The above copyright notice and this permission notice shall be included in all c
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-Generated artwork and user-uploaded references are not distributed with this repository and are not covered by this software license.
+Code licensing does not automatically grant rights to personal histories, uploaded references or generated artwork. Their reuse depends on the actual source authorization and image-tool terms.
 
 ## Template assets, fixtures and music
 
-The fixed template derives from the user-approved Twinlight V10 conversation artifact. No real user's profile, source chats, portraits or fantasy card layers are distributed in this repository. The demonstration uses fictional records and an explicitly marked procedural astrolabe placeholder.
+The fixed page template derives from the Twinlight V10 conversation artifact. The historical `examples/showcase/` contains author-specific narrative, selected real quotations and the 筑星者 artwork. It is retained for source history, excluded from the general viewer and both skill distribution modes, and is not evidence for any other user's profile. This notice does not infer a new public authorization for those personal materials.
 
-The retained dust texture, stellar atlas and background track are procedural assets from that template. The track is original procedural synthesis; no movie soundtrack recording or melody is sampled. No font files, official game characters or upstream demo artwork are bundled.
+The distributed demonstration inputs in `examples/demo/`, `examples/lite/` and `examples/generated-demo/` are fictional. The latter contains a fictional prototype and directly generated artwork layers; the generated-art records should describe actual tools and checks, not claim new personal likenesses or upstream demo ownership. The abstract placeholder is a procedural astrolabe and is marked separately from a completed personal illustration.
+
+The retained dust texture, stellar atlas and background track are procedural assets from the template. The track is original procedural synthesis; no movie soundtrack recording or melody is sampled. No font files, official game characters or upstream demo artwork are bundled.

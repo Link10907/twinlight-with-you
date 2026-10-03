@@ -1,0 +1,162 @@
+[
+  {
+    "file": "valid.json",
+    "expect_ok": true,
+    "expect_codes": [],
+    "expect_warnings": 0,
+    "note": "合法示例"
+  },
+  {
+    "file": "fenced.txt",
+    "expect_ok": true,
+    "expect_codes": [],
+    "expect_warnings": 1,
+    "note": "聊天 AI 常见：代码块 + 前后说明"
+  },
+  {
+    "file": "prose.txt",
+    "expect_ok": true,
+    "expect_codes": [],
+    "expect_warnings": 1,
+    "note": "前后带说明文字"
+  },
+  {
+    "file": "trailing_commas.txt",
+    "expect_ok": true,
+    "expect_codes": [],
+    "expect_warnings": 1,
+    "note": "末尾多余逗号"
+  },
+  {
+    "file": "smart_quotes.txt",
+    "expect_ok": false,
+    "expect_codes": [
+      "parse_error"
+    ],
+    "expect_warnings": 0,
+    "note": "中文引号当 JSON 引号"
+  },
+  {
+    "file": "extra_field.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "unknown_field",
+      "unknown_field"
+    ],
+    "expect_warnings": 0,
+    "note": "多出字段"
+  },
+  {
+    "file": "too_long.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "too_long",
+      "too_long"
+    ],
+    "expect_warnings": 0,
+    "note": "超长文本"
+  },
+  {
+    "file": "too_many_themes.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "too_many"
+    ],
+    "expect_warnings": 0,
+    "note": "9 个主题"
+  },
+  {
+    "file": "missing_fields.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "missing",
+      "missing"
+    ],
+    "expect_warnings": 0,
+    "note": "缺字段"
+  },
+  {
+    "file": "wrong_types.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "wrong_type",
+      "wrong_type"
+    ],
+    "expect_warnings": 0,
+    "note": "类型错误"
+  },
+  {
+    "file": "bad_enum.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "bad_value",
+      "bad_value"
+    ],
+    "expect_warnings": 0,
+    "note": "枚举/版本错误"
+  },
+  {
+    "file": "english_chinese.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "bad_format"
+    ],
+    "expect_warnings": 0,
+    "note": "英文名写成中文"
+  },
+  {
+    "file": "duplicate.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "duplicate",
+      "duplicate"
+    ],
+    "expect_warnings": 0,
+    "note": "重名"
+  },
+  {
+    "file": "privacy.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "privacy",
+      "privacy"
+    ],
+    "expect_warnings": 0,
+    "note": "邮箱和手机号"
+  },
+  {
+    "file": "empty_and_few.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "empty",
+      "too_few"
+    ],
+    "expect_warnings": 0,
+    "note": "全角空格和关键词太少"
+  },
+  {
+    "file": "emoji_length.json",
+    "expect_ok": true,
+    "expect_codes": [],
+    "expect_warnings": 0,
+    "note": "emoji 按 1 个字计；160 个刚好不超"
+  },
+  {
+    "file": "not_object.json",
+    "expect_ok": false,
+    "expect_codes": [
+      "wrong_type"
+    ],
+    "expect_warnings": 0,
+    "note": "根不是对象"
+  },
+  {
+    "file": "nan.txt",
+    "expect_ok": false,
+    "expect_codes": [
+      "parse_error"
+    ],
+    "expect_warnings": 0,
+    "note": "NaN 不是合法 JSON"
+  }
+]

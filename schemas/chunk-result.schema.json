@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/chunk-result.schema.json",
+  "title": "One map-stage extraction result for exactly one chunk",
+  "description": "Facts and dispositions use the same definitions as the analysis contract. Write message_id + quote and run `twinlight anchor` to fill text_sha256/start/end.",
+  "type": "object",
+  "properties": {
+    "chunk_path": { "type": "string", "pattern": "^chunk-[0-9]{4,}\\.json$" },
+    "chunk_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "history_digest": { "$ref": "analysis.schema.json#/properties/history_digest" },
+    "facts": { "$ref": "analysis.schema.json#/properties/facts" },
+    "message_dispositions": { "$ref": "analysis.schema.json#/properties/message_dispositions" }
+  },
+  "required": ["chunk_path", "chunk_sha256", "history_digest", "facts", "message_dispositions"],
+  "additionalProperties": false
+}

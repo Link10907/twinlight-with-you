@@ -18,7 +18,61 @@ jobs:
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m unittest discover -s tests -v
       - run: python scripts/twinlight.py demo --out outputs/demo
+      - run: python scripts/twinlight.py demo --pipeline --out outputs/demo-pipeline
       - run: node --check outputs/demo/compiled-check.js
+      - run: node --check assets/lite/lite.js
+      - run: node --check assets/viewer/viewer.js
       - run: python -m playwright install --with-deps chromium
       - run: python scripts/check_capacity.py
       - run: python scripts/verify_browser.py --html outputs/demo/index.html --out verification/browser --require-webgl
+      - run: python scripts/verify_browser.py --html outputs/demo-pipeline/index.html --out verification/browser-pipeline --require-webgl
+      - name: Lite workflow, end to end through the state machine
+        run: |
+          TL="python scripts/twinlight.py"
+          W=runs/ci
+          $TL start --workspace $W
+          cp examples/lite/example.json $W/twinlight.json
+          $TL check --workspace $W
+          $TL confirm --workspace $W --user-reply "CI 示例，可以"
+          python - <<'EOF'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'scripts')
+          sys.path.insert(0, 'tests')
+          from twinlight_core.common import load
+          from twinlight_core.cardgen import card_spec
+          from test_card_art import native_fixture
+          data = load(Path('runs/ci/twinlight.json'))
+          spec = card_spec(data, generated_at='2026-10-03T00:00:00Z')
+          # Synthetic independent RGBA layers exercise ownership and full-canvas registration.
+          # No green screen, segmentation, image-model calls or personal history.
+          native_fixture(Path('runs/ci/card'), spec['persona_digest'])
+          EOF
+          $TL check --workspace $W
+          $TL check --workspace $W
+          $TL check --workspace $W
+          $TL check --workspace $W
+          python - <<'EOF'
+          import json
+          s = json.load(open('runs/ci/state.json', encoding='utf-8'))['stages']
+          bad = {k: v['status'] for k, v in s.items() if v['status'] != 'passed'}
+          assert not bad, bad
+          assert s['visual']['detail']['verified'] is True, s['visual']['detail']
+          assert s['art']['detail']['art_mode'] == 'layered', s['art']['detail']
+          assert s['art']['detail']['binding'] == 'persona_digest', s['art']['detail']
+          print('all stages passed; browser check verified')
+          EOF
+      - name: Viewer, driven like a user
+        run: |
+          python scripts/build_viewer.py --out outputs/viewer
+          cmp viewer.html outputs/viewer/index.html
+          python scripts/verify_viewer.py --out verification/viewer
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-checks
+          path: |
+            verification/
+            runs/ci/report.html
+            runs/ci/visual/
+          if-no-files-found: ignore

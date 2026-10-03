@@ -9,11 +9,17 @@ const holo={ready:false,gl:null,program:null,loc:{},x:-.045,y:-.14,tx:-.045,ty:-
 const holoCard=$('identityCard'),holoTilt=holoCard.querySelector('.card-tilt'),holoFront=holoCard.querySelector('.card-front');
 const holoCanvas=el('canvas');holoCanvas.id='holoCanvas';holoCanvas.setAttribute('aria-hidden','true');holoFront.prepend(holoCanvas);
 const holoFallback=el('div','holo-fallback');holoFallback.hidden=true;holoFront.prepend(holoFallback);
-for(const k of ['background','spirit','subject','effects','text']){const im=el('img');im.alt='';im.src=HOLO_LAYERS[k];im.dataset.layer=k;holoFallback.append(im);}
+for(const k of ['background','spirit','subject','effects','text']){const im=el('img');im.alt='';if(HOLO_LAYERS[k]!=='auto')im.src=HOLO_LAYERS[k];im.dataset.layer=k;holoFallback.append(im);}
 // A thin solid card edge, not a group of disconnected transparent posters.
 for(let k=0;k<8;k++){const e=el('div','holo-thickness');e.style.transform=`translateZ(${(-2.7+k*.75).toFixed(2)}px)`;holoCard.querySelector('.card-flipper').prepend(e);}
 const holoControls=el('div','holo-controls');holoControls.innerHTML=`<div class="holo-control-row"><button id="holoAuto" aria-pressed="true">Ⅱ 暂停轻摇</button><button id="holoReset">归位 ↺</button><button id="holoSettings" aria-expanded="false" aria-controls="holoSettingsPanel">质感与景深 ☷</button></div><div id="holoSettingsPanel" hidden><label>层次景深 <input id="holoDepth" type="range" min="0" max="1.6" step=".05" value="1" aria-label="层次景深"><output id="holoDepthValue">1.00</output></label><label>镭射强度 <input id="holoFoil" type="range" min="0" max="1" step=".05" value=".5" aria-label="镭射强度"><output id="holoFoilValue">0.50</output></label><div class="holo-finishes" aria-label="卡面材质"><button data-finish="0" aria-pressed="true">珠光</button><button data-finish="1" aria-pressed="false">银箔</button><button data-finish="3" aria-pressed="false">烫金</button><button data-finish="2" aria-pressed="false">原画</button></div></div>`;
 $('cardSideHint').after(holoControls);$('cardSideHint').textContent='按住拖转 · 滚轮缩放 · 双击归位';
+function holoStaticArt(){const d=currentPersona();return d.ready&&(d.art_status==='static'||d.art_mode==='static');}
+function holoConstrainAppearance(){
+ // A single prototype remains a printed flat image, even if a script changes
+ // the controls. Physical card rotation is still available for viewing it.
+ if(holoStaticArt()){holo.depth=0;holo.foil=0;holo.finish=2;}
+}
 const HOLO_VERT=`attribute vec2 a_pos;varying vec2 vUv;void main(){vUv=vec2(a_pos.x*.5+.5,.5-a_pos.y*.5);gl_Position=vec4(a_pos,0.,1.);}`;
 const HOLO_FRAG=`precision highp float;
 varying vec2 vUv;uniform sampler2D tBackground,tSubject,tSpirit,tEffects,tText,tLine;
@@ -53,6 +59,7 @@ async function initHolo(){if(holo.ready||holo.failed||holo.loading)return;holo.l
  holo.ready=true;holo.loading=false;holoCard.classList.add('holo-ready');holoRender();
  }catch(e){holo.loading=false;holo.failed=true;holoCard.classList.add('holo-ready','holo-fallback-on');holoCanvas.hidden=true;holoFallback.hidden=false;console.warn('Layered CSS fallback:',String(e));}}
 function holoRender(){
+ holoConstrainAppearance();
  if(!v8.cardOpen||!currentPersona().ready)return;
  const cw=holoCard.clientWidth,scale=Math.min(devicePixelRatio||1,2);const width=Math.round(cw*scale);if(width<1)return;
  const vx=-Math.sin(holo.y)*Math.cos(holo.x),vy=Math.sin(holo.x),vz=Math.cos(holo.y)*Math.cos(holo.x);
@@ -65,7 +72,15 @@ function holoTick(t){requestAnimationFrame(holoTick);if(!holo.last)holo.last=t;c
  let tx=holo.tx,ty=holo.ty;if(animated){ty+=Math.sin(holo.elapsed*.72)*.32;tx+=Math.sin(holo.elapsed*.53+1)*.095;}
  const ease=state.reduced||holo.drag?1:1-Math.exp(-dt*10);holo.x+=(tx-holo.x)*ease;holo.y+=(ty-holo.y)*ease;holoApply();}
 requestAnimationFrame(holoTick);
-function holoSync(){ $('holoAuto').textContent=holo.auto?'Ⅱ 暂停轻摇':'▷ 自动轻摇';$('holoAuto').setAttribute('aria-pressed',String(holo.auto));$('cardFlip').innerHTML=(v8.flipped?'翻回正面':'翻到背面')+' <span>↻</span>';}
+function holoSync(){
+ holoConstrainAppearance();const staticArt=holoStaticArt();
+ $('holoAuto').textContent=holo.auto?'Ⅱ 暂停轻摇':'▷ 自动轻摇';$('holoAuto').setAttribute('aria-pressed',String(holo.auto));$('cardFlip').innerHTML=(v8.flipped?'翻回正面':'翻到背面')+' <span>↻</span>';
+ $('holoSettings').hidden=staticArt;$('holoSettings').disabled=staticArt;
+ if(staticArt){$('holoSettingsPanel').hidden=true;$('holoSettings').setAttribute('aria-expanded','false');}
+ for(const [id,value] of [['holoDepth',holo.depth],['holoFoil',holo.foil]]){$(id).disabled=staticArt;$(id).value=String(value);$(id+'Value').textContent=value.toFixed(2);}
+ holoControls.querySelectorAll('[data-finish]').forEach(b=>{b.disabled=staticArt;b.setAttribute('aria-pressed',String(Number(b.dataset.finish)===holo.finish));});
+ $('cardSideHint').textContent=staticArt?'拖转查看 · 静态原型，分层尚未完成':'按住拖转 · 滚轮缩放 · 双击归位';
+}
 function holoReset(){holo.tx=-.045;holo.ty=-.14;holo.zoom=1;holo.elapsed=0;v8.flipped=false;holoCard.classList.remove('flipped');holoSync();}
 // Replace all old card handlers. A drag never falls through to click-to-flip.
 holoCard.onclick=null;holoCard.setAttribute('role','group');holoCard.removeAttribute('aria-pressed');holoCard.onpointermove=null;holoCard.onpointerleave=null;holoCard.onkeydown=null;
@@ -77,13 +92,13 @@ holoCard.onkeydown=e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter
 flipIdentity=function(force){const target=typeof force==='boolean'?force:!v8.flipped;v8.flipped=target;holo.ty=target?Math.PI-.14:-.14;holo.tx=-.045;holoCard.classList.remove('flipped');holoCard.setAttribute('aria-pressed',String(target));holoSync();};
 setCardTilt=function(){}; // All orientation now has a single source of truth.
 $('cardFlip').onclick=()=>flipIdentity();$('holoAuto').onclick=()=>{holo.auto=!holo.auto;holoSync();};$('holoReset').onclick=holoReset;
-$('holoSettings').onclick=()=>{const panel=$('holoSettingsPanel');panel.hidden=!panel.hidden;$('holoSettings').setAttribute('aria-expanded',String(!panel.hidden));};
-$('holoDepth').oninput=e=>{holo.depth=Number(e.target.value);$('holoDepthValue').textContent=holo.depth.toFixed(2);holoRender();};$('holoFoil').oninput=e=>{holo.foil=Number(e.target.value);$('holoFoilValue').textContent=holo.foil.toFixed(2);holoRender();};
-holoControls.querySelectorAll('[data-finish]').forEach(b=>b.onclick=()=>{holo.finish=Number(b.dataset.finish);holoControls.querySelectorAll('[data-finish]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));holoRender();});
+$('holoSettings').onclick=()=>{if(holoStaticArt())return;const panel=$('holoSettingsPanel');panel.hidden=!panel.hidden;$('holoSettings').setAttribute('aria-expanded',String(!panel.hidden));};
+$('holoDepth').oninput=e=>{if(!holoStaticArt())holo.depth=Number(e.target.value);holoSync();holoRender();};$('holoFoil').oninput=e=>{if(!holoStaticArt())holo.foil=Number(e.target.value);holoSync();holoRender();};
+holoControls.querySelectorAll('[data-finish]').forEach(b=>b.onclick=()=>{if(!holoStaticArt())holo.finish=Number(b.dataset.finish);holoSync();holoRender();});
 const holoOldRefresh=refreshIdentity;
-refreshIdentity=function(){holoOldRefresh();holoCard.classList.toggle('holo-generic',!currentPersona().ready);if(v8.cardOpen){initHolo();holoRender();}};
+refreshIdentity=function(){holoOldRefresh();holoCard.classList.toggle('holo-generic',!currentPersona().ready);holoSync();if(v8.cardOpen){initHolo();holoRender();}};
 const holoOldShow=showIdentityCard;
-showIdentityCard=function(){if(v8.cardOpen)return;holoOldShow();holoReset();holo.auto=!state.reduced;holoSync();holoCard.setAttribute('aria-label','SSR 人物卡分层闪卡；按住拖动旋转，方向键调整角度，回车翻面');initHolo();};
+showIdentityCard=function(){if(v8.cardOpen)return;holoOldShow();holoReset();holo.auto=!state.reduced;holoSync();const d=currentPersona();holoCard.setAttribute('aria-label','SSR '+d.title+'，'+d.name+' 的'+(holoStaticArt()?'静态原型，分层尚未完成':'分层闪卡')+'；按住拖动旋转，方向键调整角度，回车翻面');initHolo();};
 const holoOldExport=exportCardBlob;
 exportCardBlob=async function(side){if(side!=='front'||!holo.ready||!currentPersona().ready)return holoOldExport(side);holoRender();const cv=document.createElement('canvas');cv.width=1080;cv.height=1440;cv.getContext('2d').drawImage(holoCanvas,0,0,1080,1440);return new Promise((resolve,reject)=>cv.toBlob(b=>b?resolve(b):reject(Error('Export failed')),'image/png'));};
-window.__holo={get ready(){return holo.ready},getState:()=>({x:holo.x,y:holo.y,depth:holo.depth,foil:holo.foil,finish:holo.finish,auto:holo.auto,flipped:v8.flipped,drawn:holo.drawn,webgl:!!holo.gl,fallback:holo.failed,layers:5}),setView:(x,y)=>{holo.auto=false;holo.x=holo.tx=x;holo.y=holo.ty=y;holoApply();holoSync();},reset:holoReset,flip:()=>flipIdentity(),render:holoRender};
+window.__holo={get ready(){return holo.ready},getState:()=>{holoConstrainAppearance();return {x:holo.x,y:holo.y,depth:holo.depth,foil:holo.foil,finish:holo.finish,auto:holo.auto,flipped:v8.flipped,drawn:holo.drawn,webgl:!!holo.gl,fallback:holo.failed,layers:holoStaticArt()?1:5,artMode:currentPersona().art_mode,artStatus:currentPersona().art_status};},setView:(x,y)=>{holo.auto=false;holo.x=holo.tx=x;holo.y=holo.ty=y;holoApply();holoSync();},reset:holoReset,flip:()=>flipIdentity(),render:holoRender};

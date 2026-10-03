@@ -112,7 +112,7 @@ const narrativeShowCard=showIdentityCard;
 showIdentityCard=function(){if(v8.cardOpen)return;state.mergePlaying=false;v10.playing=false;v10.phase='card';v10HideOverlays();narrativeShowCard();refreshIdentity();if(!v10.keyboardInput)$('identityCard').classList.add('pointer-focus');};
 const v10OldEnd=endEncounter;endEncounter=function(returnView=false){v10.playing=false;v10HideOverlays();v10OldEnd(returnView);};
 $('cinemaExit').onclick=()=>{endEncounter(false);showWorld('personal');};
-$('cardFront').alt='SSR 人物卡，原创月下幻想人物插画；非真人肖像';document.querySelector('#cardReplay small').textContent='14s';$('encounterCinema').setAttribute('aria-label','十四秒终章：AI 星系发展、交融与身份卡揭晓');
+$('cardFront').alt='SSR 专属闪卡，本次设定的原创插画';document.querySelector('#cardReplay small').textContent='14s';$('encounterCinema').setAttribute('aria-label','十四秒终章：AI 星系发展、交融与身份卡揭晓');
 const oldV10Nav=createNav;createNav=function(){oldV10Nav();const last=$('indexList').lastElementChild;if(last?.querySelector('small'))last.querySelector('small').textContent='认识 AI 星系 · 快速交融 · 揭晓 SSR 闪卡';};
 document.addEventListener('keydown',e=>{if(e.key==='Tab'){v10.keyboardInput=true;$('identityCard').classList.remove('pointer-focus');}},true);
 document.addEventListener('pointerdown',()=>{v10.keyboardInput=false;$('identityCard').classList.add('pointer-focus');},true);

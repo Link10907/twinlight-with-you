@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/lite.schema.json",
+  "title": "Twinlight 精简版个人 JSON",
+  "description": "用户唯一需要拥有的数据。样式、星系坐标与卡面排版全部由固定模板生成。字段长度按 Unicode 字符计。",
+  "type": "object",
+  "properties": {
+    "twinlight": {
+      "title": "格式版本",
+      "const": "lite-1"
+    },
+    "name": {
+      "title": "昵称",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16
+    },
+    "summarizer": {
+      "title": "写这份总结的 AI",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 24
+    },
+    "intro": {
+      "title": "开场白",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "themes": {
+      "title": "主题",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "title": "主题名",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8
+          },
+          "english": {
+            "title": "主题英文名",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "pattern": "^[ -~]+$",
+            "x-message": "只能用英文字母、数字、空格和半角符号"
+          },
+          "headline": {
+            "title": "主题标题句",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "story": {
+            "title": "主题故事段落",
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 3,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            }
+          },
+          "reflection": {
+            "title": "主题寄语",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "topics": {
+            "title": "话题（行星）",
+            "type": "array",
+            "minItems": 0,
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "title": "话题名",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 12
+                },
+                "summary": {
+                  "title": "话题描述",
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 160
+                },
+                "basis": {
+                  "title": "依据",
+                  "enum": ["often", "once", "inferred"]
+                }
+              },
+              "required": ["label", "summary", "basis"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["label", "english", "headline", "story", "reflection", "topics"],
+        "additionalProperties": false
+      }
+    },
+    "card": {
+      "title": "SSR 卡片",
+      "type": "object",
+      "properties": {
+        "title": {
+          "title": "卡片称号",
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 8
+        },
+        "english_title": {
+          "title": "卡片英文称号",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 28,
+          "pattern": "^[ -~]+$",
+          "x-message": "只能用英文字母、数字、空格和半角符号"
+        },
+        "keywords": {
+          "title": "关键词",
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 6
+          }
+        },
+        "tagline": {
+          "title": "卡片标语",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "reflection": {
+          "title": "卡片背面寄语",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "art_prompt": {
+          "title": "卡面主体设定（生图用）",
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 1500
+        }
+      },
+      "required": ["title", "english_title", "keywords", "tagline", "reflection", "art_prompt"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["twinlight", "name", "summarizer", "themes", "card"],
+  "additionalProperties": false
+}

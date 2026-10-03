@@ -60,12 +60,14 @@ class Isolation(unittest.TestCase):
         package(ROOT, out)
         with ZipFile(out) as archive:
             names = archive.namelist()
-            self.assertFalse(any('/examples/demo/' in n or '/examples/smoke/' in n for n in names))
+            self.assertFalse(any('/examples/demo/' in n or '/examples/smoke/' in n or '/examples/showcase/' in n or '/examples/lite/' in n for n in names))
             self.assertNotIn('twinlight-with-you/prompts/06-smoke-test.txt', names)
             self.assertFalse(any('/private/' in n or '/verification/' in n or '/.git/' in n for n in names))
             manifest = json.loads(archive.read('twinlight-with-you/package-manifest.json'))
             self.assertEqual(manifest['mode'], 'personal_use')
             self.assertFalse(manifest['contains_fictional_history'])
+            self.assertFalse(manifest['contains_author_showcase'])
+            self.assertFalse(manifest['contains_generated_fictional_art'])
             for name, expected in manifest['files_sha256'].items():
                 self.assertEqual(hashlib.sha256(archive.read('twinlight-with-you/' + name)).hexdigest(), expected)
 
@@ -75,9 +77,50 @@ class Isolation(unittest.TestCase):
         with ZipFile(out) as archive:
             names = archive.namelist()
             self.assertIn('twinlight-with-you/examples/demo/history.json', names)
+            self.assertIn('twinlight-with-you/examples/lite/example.json', names)
             self.assertIn('twinlight-with-you/prompts/06-smoke-test.txt', names)
             self.assertNotIn('twinlight-with-you/examples/smoke/expected.txt', names)
-            self.assertTrue(json.loads(archive.read('twinlight-with-you/package-manifest.json'))['contains_fictional_history'])
+            self.assertFalse(any('/examples/showcase/' in n for n in names))
+            self.assertFalse(any(any(part.startswith('.') and part != '.gitignore'
+                                     for part in n.split('/')) for n in names))
+            manifest = json.loads(archive.read('twinlight-with-you/package-manifest.json'))
+            self.assertEqual(manifest['mode'], 'fictional_demo')
+            self.assertTrue(manifest['contains_fictional_history'])
+            self.assertFalse(manifest['contains_author_showcase'])
+
+    def test_generated_demo_only_includes_public_maintained_files(self):
+        root = self.folder / 'package-fixture'
+        (root / 'examples/generated-demo').mkdir(parents=True)
+        (root / 'SKILL.md').write_text('name: fictional fixture\n')
+        for name in ('README.md', 'history-input.json', 'history.json', 'analysis.json',
+                     'profile.json', 'layout.lock.json'):
+            path = root / 'examples/demo' / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('{}')
+        for name in ('examples/smoke/history.txt', 'examples/lite/example.json',
+                     'examples/layers.example.json'):
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text('{}')
+        visible = root / 'examples/generated-demo/prototype.png'
+        visible.write_bytes(b'fictional artwork for distribution test')
+        for name in ('.DS_Store', '.hidden.json', '__pycache__/record.json',
+                     'private/history.json', 'runs/another-person.json',
+                     'outputs/draft.json', 'unknown.bin'):
+            path = root / 'examples/generated-demo' / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b'not for distribution')
+        (root / 'examples/showcase').mkdir()
+        (root / 'examples/showcase/profile.json').write_text('{"name":"real person"}')
+        out = self.folder / 'fictional-only.zip'
+        package(root, out, include_demo=True)
+        with ZipFile(out) as archive:
+            names = archive.namelist()
+            generated = [n for n in names if '/examples/generated-demo/' in n]
+            self.assertEqual(generated, ['twinlight-with-you/examples/generated-demo/prototype.png'])
+            self.assertFalse(any('/examples/showcase/' in n for n in names))
+            manifest = json.loads(archive.read('twinlight-with-you/package-manifest.json'))
+            self.assertTrue(manifest['contains_generated_fictional_art'])
 
     def test_two_distinct_people_do_not_inherit_demo_or_each_other(self):
         ha, aa = fictional_case(self.folder, 'fictional-baker', '我每周练习烤面包。')
@@ -119,6 +162,10 @@ class Isolation(unittest.TestCase):
         self.assertNotIn('小岚', html)
         self.assertNotIn('整理照片', html)
         demo = self.cli(root, 'demo', '--out', self.folder / 'unexpected-demo')
+        self.assertEqual(demo.returncode, 2)
+        self.assertIn('不含', demo.stderr)
+        self.assertIn('示例', demo.stderr)
+        demo = self.cli(root, 'demo', '--pipeline', '--out', self.folder / 'unexpected-demo')
         self.assertEqual(demo.returncode, 2)
         self.assertIn('no fictional demo', demo.stderr)
         self.assertFalse((self.folder / 'unexpected-demo').exists())

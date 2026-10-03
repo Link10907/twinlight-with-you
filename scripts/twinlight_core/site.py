@@ -6,7 +6,7 @@ import json
 import re
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
-from .common import ROOT, check, load, save, safe_script_json, local_asset, digest
+from .common import ROOT, VERSION, check, load, save, safe_script_json, local_asset, digest
 from .compiler import compile_profile, check_approval
 from .art import validate_layers, asset_digest
 
@@ -75,6 +75,142 @@ def flatten_layers(manifest_path: Path) -> bytes:
     for k in ['spirit','subject','effects','text']:im=Image.alpha_composite(im,images[k])
     stream=io.BytesIO();im.convert('RGB').save(stream,format='JPEG',quality=92);return stream.getvalue()
 
+PERSONAL_TOKENS=('PROFILE','CARD_DATA','CARD_LAYERS','V9_CARD_IMAGE','DEPTH_BG','DEPTH_SUBJECT','DEPTH_EFFECTS')
+PERSONAL_RE=re.compile(r'__('+'|'.join(PERSONAL_TOKENS)+r')__')
+
+def template_parts() -> tuple[str,str]:
+    """Fixed template with only the per-person tokens left. Shared by the CLI and the browser viewer."""
+    src=TEMPLATE/'src'; js=(src/'app.js').read_text()
+    modules={'RENDER':'render','CONTROLS':'controls','V6':'v6','V7':'v7','V8':'v8','FINALE':'finale','V9':'v9','HOLO':'holo-card','V10':'v10','ADAPTER':'adapter'}
+    for token,file in modules.items():js=js.replace('__'+token+'__',(src/(file+'.js')).read_text())
+    for token,fn in [('__TEXTURE__','dust-disc.jpg'),('__SURFACE__','stellar-atlas.jpg'),('__V10_MUSIC__','another-light.mp3')]:
+        js=js.replace(token,uri(TEMPLATE/'assets'/fn))
+    js=js.replace('__CARD_ART__',safe_script_json((src/'card-art.svg').read_text()))
+    css='\n'.join((src/(f+'.css')).read_text() for f in ['style','v7','v8','v9','v10','adapter'])
+    html=(src/'page.html').read_text().replace('__CSS__',css).replace('__JS__',js)
+    left=set(re.findall(r'__([A-Z][A-Z0-9_]+)__',html))
+    check(left<=set(PERSONAL_TOKENS), 'Unexpanded template token: '+', '.join(sorted(left-set(PERSONAL_TOKENS))))
+    return html,js
+
+def personal_values(profile: dict, layer_uris: dict, card_image_uri: str, depths: dict) -> dict:
+    return {'PROFILE':safe_script_json(profile),'CARD_DATA':safe_script_json(profile['persona']),
+            'CARD_LAYERS':safe_script_json(layer_uris),'V9_CARD_IMAGE':card_image_uri,
+            'DEPTH_BG':str(depths['background']),'DEPTH_SUBJECT':str(depths['subject']),'DEPTH_EFFECTS':str(depths['effects'])}
+
+def fill(template: str, values: dict) -> str:
+    # Single pass: substituted personal text is never rescanned for tokens.
+    return PERSONAL_RE.sub(lambda m:values[m.group(1)],template)
+
+def write_site(out: Path, profile: dict, layer_uris: dict, card_image_uri: str, depths: dict) -> str:
+    html_t,js_t=template_parts()
+    values=personal_values(profile,layer_uris,card_image_uri,depths)
+    html=fill(html_t,values)
+    out.mkdir(parents=True,exist_ok=True)
+    (out/'index.html').write_text(html,encoding='utf-8');(out/'compiled-check.js').write_text(fill(js_t,values),encoding='utf-8')
+    return html
+
+CARD_SIZE=(1080,1440)
+LITE_DEPTHS={'static':{'background':0,'subject':0,'effects':0,'text':0},
+             'portrait':{'background':0,'subject':0,'effects':0,'text':0},
+             'layered':{'background':-.25,'subject':.4,'effects':.5,'text':0}}
+
+
+def _png_uri(im: Image.Image) -> str:
+    s=io.BytesIO();im.save(s,format='PNG',optimize=True);return 'data:image/png;base64,'+base64.b64encode(s.getvalue()).decode('ascii')
+
+
+def _jpeg_uri(im: Image.Image) -> str:
+    s=io.BytesIO();im.convert('RGB').save(s,format='JPEG',quality=90);return 'data:image/jpeg;base64,'+base64.b64encode(s.getvalue()).decode('ascii')
+
+
+def open_card_image(path: Path) -> Image.Image:
+    check(path.is_file(),f'找不到图片：{path.name}')
+    check(path.stat().st_size<=20*1024*1024,f'{path.name} 超过 20 MB')
+    with Image.open(path) as im:
+        check(im.format in ('PNG','JPEG','WEBP'),f'{path.name} 必须是 PNG / JPG / WebP')
+        check(im.width*im.height<=16_000_000,f'{path.name} 尺寸过大')
+        check(min(im.size)>=512,f'{path.name} 太小，短边至少 512 像素，现在 {min(im.size)}')
+        im=ImageOps.exif_transpose(im).convert('RGBA')
+    return im
+
+
+def native_subject(path: Path) -> Image.Image:
+    """Check the original full-canvas subject. No segmentation, crop or relocation."""
+    im=open_card_image(path)
+    check(abs(im.width/im.height-.75)<.01,f'{path.name}：主体必须使用完整的 3:4 画布，请按原型坐标重新生成')
+    hist=im.getchannel('A').histogram(); total=im.width*im.height
+    check(sum(hist[:16])/total>.01,f'{path.name}：需要原生真实 alpha 透明层，请用支持透明输出的生图工具重新生成；不会抠图或移除背景')
+    check(sum(hist[16:])/total>.0005,f'{path.name}：主体层为空，请按当前卡面设定重新生成')
+    return im
+
+
+def lite_layers(portrait: Path|None=None, character: Path|None=None, background: Path|None=None, *,
+                layers: Path|None=None, expected_persona: str|None=None, prototype: Path|None=None) -> dict:
+    """Consume registered native layers; a lone prototype remains a zero-depth static card."""
+    check(not (portrait and prototype),'prototype 和 portrait 是同一静态预览的两种名称，请只提供一个')
+    portrait=prototype or portrait
+    check(not layers or not (portrait or character or background),'layers.json 与单图输入不能同时使用')
+    check(not (portrait and (character or background)),'静态原型与独立分层输入二选一')
+    check(not background or character,'背景图必须和原生主体层一起使用')
+    if layers:
+        check(bool(expected_persona),'分层 manifest 必须绑定当前用户的 persona_digest')
+        report=validate_layers(layers,expected_persona)
+        manifest=load(layers)
+        return {'layers':{k:uri(local_asset(layers.parent,p)) for k,p in manifest['assets'].items()},
+                'card_image':'data:image/jpeg;base64,'+base64.b64encode(flatten_layers(layers)).decode('ascii'),
+                'depths':dict(manifest['depths']),'art_status':manifest['art_status'],
+                'art_mode':'placeholder' if manifest['art_status']=='placeholder' else 'layered',
+                'art_validation':report,'binding':'persona_digest','native_full_canvas':True}
+    clear=_png_uri(Image.new('RGBA',(4,4)))
+    layer_data={'background':'auto','subject':clear,'spirit':clear,'effects':'auto','lineart':'auto','text':'auto'}
+    if portrait:
+        # A prototype contains one composited scene; it must never imply independent depth.
+        im=open_card_image(portrait)
+        check(abs(im.width/im.height-.75)<.01,'静态原型必须使用完整的 3:4 画布，不会自动裁切或拉伸')
+        layer_data['background']=_png_uri(im)
+        return {'layers':layer_data,'card_image':'auto','depths':dict(LITE_DEPTHS['static']),
+                'art_status':'static','art_mode':'static','art_validation':None,
+                'binding':'explicit_current_run_input','native_full_canvas':False}
+    if character:
+        sub=native_subject(character)
+        check(background is not None,'独立主体层还需要完整背景层；仅有主体不能声称分层完成。请生成同画布背景或交付静态原型')
+        bg=open_card_image(background)
+        check(bg.size==sub.size,'主体和背景必须使用完全相同的画布尺寸与坐标，不会自动裁切或重摆')
+        check(bg.getchannel('A').getextrema()==(255,255),'背景层必须完全不透明并画完整场景')
+        layer_data['subject']=_png_uri(sub);layer_data['background']=_png_uri(bg)
+        return {'layers':layer_data,'card_image':'auto','depths':dict(LITE_DEPTHS['layered']),
+                'art_status':'generated','art_mode':'layered','art_validation':{'ok':True,'size':list(sub.size),
+                    'native_alpha':True,'same_canvas':True,'visual_review_required':['registered composition','complete background without duplicate subject']},
+                'binding':'explicit_current_run_inputs','native_full_canvas':True}
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        placeholder_layers(Path(tmp),'0'*64)
+        layer_data['subject']=_png_uri(Image.open(Path(tmp)/'subject.png').convert('RGBA'))
+    return {'layers':layer_data,'card_image':'auto','depths':dict(LITE_DEPTHS['layered']),
+            'art_status':'placeholder','art_mode':'placeholder','art_validation':None,
+            'binding':'none','native_full_canvas':False}
+
+
+def build_lite(data: dict, out: Path, *, generated_at: str, confirmed: bool=False,
+               portrait: Path|None=None, character: Path|None=None, background: Path|None=None,
+               layers: Path|None=None, prototype: Path|None=None) -> dict:
+    from .lite import to_profile
+    provisional=to_profile(data,generated_at=generated_at)
+    art=lite_layers(portrait,character,background,layers=layers,prototype=prototype,
+                    expected_persona=provisional['persona']['persona_digest'])
+    profile=to_profile(data,generated_at=generated_at,art_status=art['art_status'],art_mode=art['art_mode'],confirmed=confirmed)
+    html=write_site(out,profile,art['layers'],art['card_image'],art['depths'])
+    save(out/'profile.json',profile)
+    report={'ok':True,'mode':'lite','stars':len(profile['chapters']),'planets':len(profile['layout']['topics']),
+            'persona_digest':profile['persona']['persona_digest'],'art_status':art['art_status'],'art_mode':art['art_mode'],
+            'art_binding':art['binding'],'art_validation':art['art_validation'],'native_full_canvas':art['native_full_canvas'],
+            'share_allowed':profile['release']['share_allowed'],
+            'html_sha256':__import__('hashlib').sha256(html.encode()).hexdigest(),'html_bytes':len(html.encode()),
+            'out':str(out/'index.html')}
+    save(out/'build-report.json',report)
+    return report
+
+
 def build(history: dict, analysis: dict, out: Path, *, previous: dict|None=None,
           layers: Path|None=None, approval: dict|None=None) -> dict:
     profile,layout,audit=compile_profile(history,analysis,previous)
@@ -90,24 +226,12 @@ def build(history: dict, analysis: dict, out: Path, *, previous: dict|None=None,
     may_share=bool(approval and approval['scope']=='share' and manifest['art_status']=='approved' and analysis['card'])
     profile['release']={'draft':not may_share,'share_allowed':may_share}
     profile['persona']['art_status']=manifest['art_status']
-    src=TEMPLATE/'src'; js=(src/'app.js').read_text()
-    modules={'RENDER':'render','CONTROLS':'controls','V6':'v6','V7':'v7','V8':'v8','FINALE':'finale','V9':'v9','HOLO':'holo-card','V10':'v10','ADAPTER':'adapter'}
-    for token,file in modules.items():js=js.replace('__'+token+'__',(src/(file+'.js')).read_text())
-    for token,fn in [('__TEXTURE__','dust-disc.jpg'),('__SURFACE__','stellar-atlas.jpg'),('__V10_MUSIC__','another-light.mp3')]:
-        js=js.replace(token,uri(TEMPLATE/'assets'/fn))
-    js=js.replace('__CARD_ART__',safe_script_json((src/'card-art.svg').read_text()))
-    js=js.replace('__CARD_DATA__',safe_script_json(profile['persona']))
-    js=js.replace('__V9_CARD_IMAGE__','data:image/jpeg;base64,'+base64.b64encode(flatten_layers(layers)).decode('ascii'))
     layer_data={k:uri(local_asset(layers.parent,p)) for k,p in manifest['assets'].items()}
-    js=js.replace('__CARD_LAYERS__',safe_script_json(layer_data))
-    for token,key in [('BG','background'),('SUBJECT','subject'),('EFFECTS','effects')]:js=js.replace('__DEPTH_'+token+'__',str(manifest['depths'][key]))
-    css='\n'.join((src/(f+'.css')).read_text() for f in ['style','v7','v8','v9','v10','adapter'])
-    html=(src/'page.html').read_text().replace('__CSS__',css).replace('__PROFILE__',safe_script_json(profile)).replace('__JS__',js)
-    check(not re.findall(r'__[A-Z][A-Z_]+__',html), 'Unexpanded template token')
+    card_image='data:image/jpeg;base64,'+base64.b64encode(flatten_layers(layers)).decode('ascii')
     # No original export, evidence ledger, private quote or reference photo is copied.
-    (out/'index.html').write_text(html,encoding='utf-8');(out/'compiled-check.js').write_text(js,encoding='utf-8')
+    html=write_site(out,profile,layer_data,card_image,manifest['depths'])
     save(out/'profile.json',profile);save(out/'layout.lock.json',layout)
-    build_report={'ok':True,'version':'1.0.0','analysis_digest':digest(analysis),'persona_digest':profile['persona']['persona_digest'],
+    build_report={'ok':True,'version':VERSION,'analysis_digest':digest(analysis),'persona_digest':profile['persona']['persona_digest'],
       'stars':len(profile['chapters']),'planets':len(layout['topics']),'art_status':manifest['art_status'],'share_allowed':may_share,
       'html_sha256':__import__('hashlib').sha256(html.encode()).hexdigest(),'html_bytes':len(html.encode()),
       'audit':{k:audit[k] for k in ['ok','user_messages','accounted_user_messages','candidate_facts','active_publishable_facts','cited_facts','extraction_coverage_complete','semantic_truth_verified_by_code']},'art_validation':art_report,'warning':'Draft files still contain personal summaries. A share flag is an application guard, not DRM or proof of consent.'}

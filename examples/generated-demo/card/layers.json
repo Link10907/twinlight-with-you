@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "persona_digest": "d62445c4415356d8e843263cdd8b6c694432792a737dd08ed83497a49b09780c",
+  "art_status": "generated",
+  "reference_consent": false,
+  "assets": {
+    "background": "background.png",
+    "subject": "subject.png",
+    "spirit": "spirit.png",
+    "effects": "effects.png",
+    "text": "text.png",
+    "lineart": "lineart.png"
+  },
+  "depths": {
+    "background": -0.25,
+    "subject": 0.4,
+    "effects": 0.5,
+    "text": 0
+  },
+  "notes": "Native independent layers generated for this card; prototype is reference only."
+}

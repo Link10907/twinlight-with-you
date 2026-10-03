@@ -1,6 +1,8 @@
 # User material: never publish by default
+examples/showcase/
 private/
 outputs/
+runs/
 exports/
 local/
 *.blend
