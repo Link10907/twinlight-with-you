@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "date": "2026-10-02",
+  "unit_tests": {
+    "passed": 66,
+    "failed": 0
+  },
+  "browser_checks": {
+    "passed": 21,
+    "failed": 0,
+    "render_path": "CSS fallback; WebGL unavailable"
+  },
+  "capacity_cases": [
+    {
+      "stars": 1,
+      "planets_per_star": 0,
+      "passed": true,
+      "state": {
+        "stars": 1,
+        "planets": 0,
+        "active": 0,
+        "caption": "测试1",
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "stars": 8,
+      "planets_per_star": 8,
+      "passed": true,
+      "state": {
+        "stars": 8,
+        "planets": 64,
+        "active": 7,
+        "caption": "测试8",
+        "overflow": false
+      },
+      "errors": []
+    }
+  ],
+  "syntax_check": "node --check passed",
+  "not_verified": [
+    "GPU/WebGL shaders in this environment",
+    "Safari",
+    "physical mobile devices",
+    "real-user extraction semantic precision and recall",
+    "GitHub Actions remote execution"
+  ],
+  "remote_publication": {
+    "repository": "Link10907/twinlight-with-you",
+    "published": false,
+    "write_http_status": 403,
+    "error": "Resource not accessible by integration",
+    "latest_read": "Repository empty"
+  },
+  "privacy": "Only fictional history fixtures and neutral procedural assets are prepared for version control. No original user profile, chats, images or font files."
+}

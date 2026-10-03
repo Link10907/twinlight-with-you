@@ -1,0 +1,32 @@
+{
+  "environment": "Chromium 390px layout and JS state, no claim of GPU rendering",
+  "ok": true,
+  "checks": [
+    {
+      "stars": 1,
+      "planets_per_star": 0,
+      "passed": true,
+      "state": {
+        "stars": 1,
+        "planets": 0,
+        "active": 0,
+        "caption": "测试1",
+        "overflow": false
+      },
+      "errors": []
+    },
+    {
+      "stars": 8,
+      "planets_per_star": 8,
+      "passed": true,
+      "state": {
+        "stars": 8,
+        "planets": 64,
+        "active": 7,
+        "caption": "测试8",
+        "overflow": false
+      },
+      "errors": []
+    }
+  ]
+}

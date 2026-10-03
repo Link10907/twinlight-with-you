@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/approval.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "analysis_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "approved_by": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "scope": {
+      "enum": [
+        "local_preview",
+        "share"
+      ]
+    },
+    "confirmed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "acknowledgments": {
+      "type": "object",
+      "properties": {
+        "reviewed_personal_facts": {
+          "const": true
+        },
+        "reviewed_public_copy": {
+          "const": true
+        },
+        "understands_source_coverage": {
+          "const": true
+        },
+        "permits_selected_output": {
+          "const": true
+        }
+      },
+      "required": [
+        "reviewed_personal_facts",
+        "reviewed_public_copy",
+        "understands_source_coverage",
+        "permits_selected_output"
+      ],
+      "additionalProperties": false
+    },
+    "art_digest": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "analysis_digest",
+    "approved_by",
+    "scope",
+    "confirmed_at",
+    "acknowledgments",
+    "art_digest"
+  ],
+  "additionalProperties": false
+}

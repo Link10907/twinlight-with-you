@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#04060b">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; media-src data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="description" content="你的个人成长星图。拖动、缩放与点选，在需要时展开故事；星系交融留在旅程末尾。">
+<title>Twinlight · 你的星系 · 同光 TWINLIGHT</title>
+<style>__CSS__</style>
+
+<!--
+# Third-party notices
+
+## RuiC-card-skill
+
+Source: https://github.com/HRuiCcc/RuiC-card-skill
+
+Read source snapshots: SKILL.md `54caa2b36ef4f74f2ef349b95add5103de7b18e6`; app.js `805acef3dfbe5512af80e829c36bb1d49dcdcb33`.
+
+The card-local parallax offset, spectrum/film, view-driven sweep and restrained line-glint functions in `src/holo-card.js` are adapted from `assets/web-template/app.js`. The galaxy code, DOM integration, audio synthesis and application narrative are not claimed as upstream work. Upstream's full Blender/GLB pipeline has not been executed here.
+
+MIT License
+
+Copyright (c) 2026 HRuiCcc
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Generated artwork and user-uploaded references are not distributed with this repository and are not covered by this software license.
+
+
+-->
+</head>
+<body data-view="overview" class="quiet-v7">
+<canvas id="cosmos" aria-label="可探索的三维星系，使用章节按钮进行星际漫游"></canvas>
+<canvas id="trails" aria-hidden="true"></canvas>
+<div class="edge-shade" aria-hidden="true"></div><div class="reading-shade" aria-hidden="true"></div>
+<div class="cinema top" aria-hidden="true"></div><div class="cinema bottom" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<div id="loading"><div class="loading-orbit"><i></i></div><p>为那些走过的路，点亮星空。</p><span>PREPARING YOUR UNIVERSE</span></div>
+<header class="header">
+<button id="home" class="brand" aria-label="返回星系全景"><svg viewBox="0 0 60 60" class="twin-logo" aria-hidden="true"><g transform="rotate(-32 30 30)"><ellipse cx="24" cy="30" rx="13" ry="22" stroke="#dfba82" stroke-width="1.4"/><ellipse cx="36" cy="30" rx="13" ry="22" stroke="#91b8ee" stroke-width="1.4"/><circle class="logo-a" cx="20" cy="9" r="3.3" fill="#ffe2aa" stroke="none"/><circle class="logo-b" cx="40" cy="51" r="3.3" fill="#bad8ff" stroke="none"/></g><path d="M30 23v14m-7-7h14" stroke="#e5e3de" stroke-width=".7" opacity=".6"/></svg><span><b>同<em>光</em></b><small>TWINLIGHT</small></span></button>
+<nav aria-label="页面导航"><button id="navMap" class="active">双星全景</button><button id="navPersonal">我的星系</button><button id="navAI">AI 星系</button><button id="navIndex">旅程目录</button><button id="navAbout">关于</button></nav>
+<div class="header-right"><span class="identity"><i></i><b id="userName">YOU</b> / PERSONAL UNIVERSE</span><button id="fullBtn" class="icon" title="全屏" aria-label="进入全屏"><svg viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg></button></div>
+</header>
+<main>
+<section id="welcome" class="welcome" aria-labelledby="welcomeTitle">
+<div class="eyebrow"><span></span> YOU / YOU &amp; AI, THROUGH THE YEARS</div>
+<h1 id="welcomeTitle">AI 在进化，<br><span>其实你也是。</span></h1>
+<p class="welcome-en">TWO GALAXIES. &nbsp; ONE SHARED JOURNEY.</p>
+<p class="intro" id="introText"></p>
+<div class="welcome-actions"><button id="meetHero" class="primary">让两片星系相遇 <span>↗</span></button><button id="begin" class="secondary">探索我的星系 <span>→</span></button><button id="film" hidden>连续漫游</button></div>
+<div class="opening-note"><span>YOU × AI</span><i></i><p>两个各自生长的宇宙，正在交汇。<br><small>拖动环绕 · 滚轮靠近 · 双击一颗星</small></p></div>
+</section>
+<section id="reader" class="reader" aria-labelledby="chapterTitle" hidden>
+<div class="reader-edge"></div>
+<div class="reader-top"><span id="chapterNumber">CHAPTER 01 / 01</span><span id="chapterPeriod"></span></div>
+<div class="reader-scroll" id="readerScroll" tabindex="0" aria-label="成长来信，可以滚动阅读">
+<button id="backChapter" class="back-chapter" hidden>← 回到这段旅程</button>
+<div class="letter-overline" id="letterOverline">写给那时的你</div>
+<div class="chapter-kicker" id="chapterEnglish"></div><h2 id="chapterTitle"></h2><h3 id="chapterHeadline"></h3>
+<div id="chapterLetter" class="letter-body"></div>
+<div id="chapterReflection" class="letter-reflection"></div>
+<p class="letter-signature" id="letterClosing"></p>
+<section class="ai-echo" aria-label="这一段的 AI 足迹"><div class="echo-kicker">另一条，也在向前的光轨 <span>YOU × AI</span></div><p id="collaboration"></p><div class="model-trace" id="modelTrace"></div><div id="eraEcho"></div><button id="readerAI">飞往 AI 星系 <span>↗</span></button></section>
+<div class="topic-shelf"><p>这段星空里的小小回声</p><div id="chapterTopics"></div></div>
+<details class="letter-sources"><summary>这封信的来处</summary><div id="chapterSources"></div><p>引文来自列出的用户消息；其余为 AI 的叙事解读。没有完整历史、技能评分或因果推断。未确认的日期与型号保留为空白。</p></details>
+</div>
+<div class="read-cue">还有一些话，藏在下一行 ↓</div>
+<div class="reader-bottom"><button id="prev" class="back" aria-label="上一段经历">←</button><button id="next" class="primary"><span id="nextLabel">飞往下一颗星</span><span>↗</span></button><span class="next-hint" id="nextHint"></span></div>
+</section>
+<aside id="eventReader" class="event-reader" hidden>
+<button id="eventClose" class="event-back">← 返回 AI 星系</button><div class="letter-overline">另一片宇宙的来信</div><div id="eventMeta" class="event-meta"></div><h2 id="eventTitle"></h2><h3 id="eventHeadline"></h3><p id="eventSummary"></p><a id="eventSource" target="_blank" rel="noopener noreferrer">阅读官方发布 ↗</a><div class="evidence-note">这是公开发展史，不是你的使用记录。<br>星点大小与位置不代表模型能力排名。</div><div class="event-switch"><button id="prevEvent">← 上一事件</button><button id="nextEvent">下一事件 →</button></div></aside>
+<aside id="aiIntro" class="ai-intro" hidden><div class="eyebrow"><span></span> THE OTHER GALAXY</div><h2>另一片宇宙，<br>也在生长。</h2><p>从对话到多模态，从推理到工具。<br>不同的来路，在这里各自发光。</p><div id="providerFilters" class="provider-filters"></div><div class="event-list" id="eventList"></div><small>精选里程碑 · 非完整发展史 · 非个人使用记录</small><button id="aiArchive">查看日期与全部来源 ↗</button></aside>
+<button id="companionLabel" class="companion-label" hidden><i></i><span><small>ALONGSIDE YOU</small><b>AI · 同行的光</b><em>版本年表 · 按时间读</em></span></button>
+<aside id="companionCard" class="companion-card" hidden><button id="companionClose" class="mini-close" aria-label="收起 AI 伴星">×</button><div class="letter-overline">在你身旁的另一束光</div><h3 id="companionName"></h3><p id="companionText"></p><div id="companionYears" class="companion-years"></div><div id="companionVersionCount" class="version-count"></div><div id="companionVersions" class="companion-versions"></div><div id="companionTrace"></div><button id="companionExplore">去看 AI 的星系 ↗</button></aside>
+<section id="flightText" class="flight-text" aria-live="polite"><span id="flightCode">INTERSTELLAR TRANSIT</span><h2 id="flightTitle"></h2><p id="flightSubtitle"></p></section>
+<div id="starLabels" class="star-labels"></div>
+<div id="aiLabels" class="ai-labels" aria-label="AI 公开发展事件"></div><div id="galaxyTitles" class="galaxy-titles"><button id="humanGalaxyTitle"><small>YOUR GALAXY / 01</small><b>你，走过的路。</b></button><button id="aiGalaxyTitle"><small>AI GALAXY / 02</small><b>另一片宇宙，也在生长。</b></button></div><div id="topicLabels" class="topic-labels" aria-label="当前章节的主题星群"></div>
+<div id="clusterTitle" class="cluster-title" hidden><span>CONSTELLATION / </span><b id="clusterName"></b><small>每颗微光，都有它的来处 · 点击探索</small></div>
+
+<div class="star-caption" id="starCaption" hidden><div class="caption-rule"></div><div><small id="captionEnglish"></small><h3 id="captionTitle"></h3><p id="captionSignature"></p><div class="material-spec"><span id="captionMaterialCode"></span><p id="captionMaterial"></p></div></div></div>
+<aside class="corner-poem" hidden><p>你记得每次版本更新，<br>也别忘了自己的光。</p><small>EVERY QUESTION LEAVES A LITTLE LIGHT.</small></aside>
+<div class="travel-state" id="travelState"><i></i><span>星系全景 · 选择一颗恒星开始</span></div>
+<div class="explore-toolbar" id="exploreToolbar" aria-label="星系镜头控制"><button id="zoomIn" aria-label="放大星图" title="放大 +">+</button><span id="zoomReadout">1.0×</span><button id="zoomOut" aria-label="缩小星图" title="缩小 −">−</button><i></i><button id="orbitToggle" aria-label="自动环绕" aria-pressed="false" title="自动环绕">⟳</button><button id="resetView" aria-label="重置当前视角" title="重置 R">⌖</button><button id="helpButton" aria-label="查看交互说明" title="交互说明">?</button></div>
+<div id="encounterPanel" class="encounter-panel"><div><small>WHEN TWO WORLDS MEET</small><button id="encounterPlay" aria-label="播放或暂停星系交汇">▷ 相遇</button></div><label for="encounterRange" class="sr-only">星系交织程度</label><input id="encounterRange" type="range" min="0" max="100" value="0" aria-valuetext="两片星系各自生长"><p><span id="encounterCaption">各自生长</span><span>渐渐交织</span></p></div>
+<div id="personalLabels" class="personal-labels"></div><aside id="personalAtlas" class="personal-atlas" hidden><small>THE CONSTELLATIONS OF YOU</small><h2>每一束光，都有来处。</h2><p><strong id="personalCount">0</strong> 个可以抵达的故事入口</p><span id="personalCountNote">正在装载主题</span><em>小星也能点开。
+把鼠标移过去，听它的回声。</em></aside>
+<div id="focusHint" class="focus-hint" hidden><span id="focusName"></span><small>滚轮靠近 · 双击抵达</small><i></i></div>
+<div class="interaction-hint" id="interactionHint">拖动环绕 <i>·</i> 右键 / Shift 拖动平移 <i>·</i> 滚轮缩放 <i>·</i> 双击恒星抵达</div>
+</main>
+<footer class="footer">
+<div class="route-heading"><span>YOUR CONSTELLATION / 你的来路</span><button id="overviewBtn">拉远，回看整片星空 ↗</button><span id="readMode">抵达后停留，读完再出发</span></div>
+<nav id="chapterNav" class="chapter-nav" aria-label="选择目的地"></nav>
+<div class="footer-bottom"><button class="ai-track-button" id="footerAI"><i></i> AI 发展星系 <span>↗</span></button><span class="footer-hint">← → 切换章节 &nbsp; · &nbsp; H 纯净画面 &nbsp; · &nbsp; Esc 返回全景</span><div class="tools"><button id="autoBtn" title="连续漫游，每站停留 45 秒"><span id="autoIcon">▷</span><span id="autoLabel">自动漫游</span></button><button id="soundBtn" aria-pressed="false" title="声音默认关闭">♫ <span>音效关</span></button><button id="motionBtn" aria-pressed="false" title="减少运动，使用柔和淡入">◌ <span>完整转场</span></button><button id="qualityBtn" title="自动画质 → 锐利优先 → 流畅优先">◇ <span>自动画质</span></button><button id="infoBtn">数据与说明 ↗</button></div></div>
+</footer>
+<button id="restore" class="restore" hidden>显示界面 <span>H / Esc</span></button>
+<div id="flightControls" hidden><button id="skip">跳过本次航行 →</button></div>
+<dialog id="infoDialog"><div class="dialog-top"><div><span>ABOUT THIS UNIVERSE</span><h2>这是一段成长，不是一份鉴定。</h2></div><button class="close" aria-label="关闭">×</button></div><div class="dialog-body">
+<p>主星和行星由有证据的主题编译生成；装饰星尘不代表经历数量。日期是记录时间，不自动当作事件发生时间。原话和私密证据保存在本地，不默认嵌入分享页面。</p>
+<h3>星点、星群与模型足迹</h3><p>远处恒星显示为光点，靠近时展开光球与自转。主题星群表示相关话题，不表示熟练度。模型发布史和你的实际使用记录是两条不同的证据线：只有消息元数据或用户自述才能标注使用来源；未确认时留空，绝不按年份自动认领模型。网页仅展示你导入的元数据声明，不能独立证明原始记录真实性。</p><h3>两个宇宙，各自生长</h3><p>“相遇”是人与工具相互影响的视觉隐喻，不是星系碰撞预测或天体动力学模拟。暖色星系装载个人叙事，冷色星系展示精选 AI 公开里程碑。背景光流是氛围，不表示某一发布直接导致个人能力提升。旋转、位置和大小均为艺术参数。文案采用“向彼此靠近”的诗意表达，不将两座星系的合并写成必然：<a href="https://science.nasa.gov/missions/hubble/apocalypse-when-hubble-casts-doubt-on-certainty-of-galactic-collision/" target="_blank" rel="noreferrer noopener">NASA 关于合并不确定性的说明 ↗</a>。</p><h3>星空与飞行</h3><p>以银河的核球、盘面和尘埃带为结构参考，用程序化纹理、三维星场与恒星表面着色器构成艺术场景。五站使用不同的表面纹理、双星、对流、光束和星尘环；颜色、结构和大小均为艺术表达，不是恒星分类测量。它不是银河系外部实拍、真实天体位置，也不是物理尺度模拟。概念图中的“2020–2021”“2028+”未被当作你的真实经历。</p>
+<p>每次切换都有独立的起飞、弧线航行、减速停靠。默认手动阅读；自动漫游每站停留 45 秒，鼠标停在阅读面板上或面板获得键盘焦点时暂停计时。页面切到后台也暂停。晕动敏感时，请启用“减少运动”。</p>
+<h3>本机处理的边界</h3><p>HTML 内嵌代码与图形素材，无 CDN、统计脚本、模型调用、Cookie 或 localStorage。选择的 JSON 仅在当前页面内存处理，刷新恢复内置演示。此处没有 Skill 或自动脱敏；导入之前请检查公司信息、身份、联系方式和第三方隐私。托管商仍可能记录普通页面访问。</p>
+<div class="dialog-actions"><button id="exportJson" class="primary">下载当前旅程 JSON ↓</button><label class="file-btn">选择我的 JSON<input id="importJson" type="file" accept=".json,application/json"></label></div><p class="fine">本原型固定为 5 个个人章节，每章支持最多 8 个主题，AI 星系支持最多 60 个事件，使用示例结构；最大 128 KB。导入不会执行脚本。分享截图或配置前仍需自行检查。</p>
+<div id="importReview" hidden><h3>先审查，再展示</h3><pre id="jsonPreview"></pre><label class="review-check"><input type="checkbox" id="reviewCheck">我已检查准备展示的文字，没有不适合公开的信息。</label><button id="applyJson" class="primary" disabled>应用到当前星空</button></div><p id="importError" role="alert"></p>
+<details><summary>视觉参考与实现说明</summary><p>程序化视觉为本原型制作；没有使用天文照片贴图或概念图作为背景。<a href="https://science.nasa.gov/resource/the-milky-way-galaxy/" target="_blank" rel="noreferrer noopener">结构参考：NASA 银河结构示意 ↗</a> · <a href="https://solarscience.msfc.nasa.gov/feature1.shtml" target="_blank" rel="noreferrer noopener">表面参考：NASA 光球与米粒组织 ↗</a>。打开外部参考会离开离线页面。场景采用原生 WebGL；动态粒子仅作氛围，不等于对话条数。</p></details>
+</div></dialog>
+<dialog id="indexDialog"><div class="dialog-top"><div><span>CHOOSE YOUR DESTINATION</span><h2>每一颗星，都有一段来路。</h2></div><button class="close" aria-label="关闭">×</button></div><div id="indexList" class="index-list"></div></dialog>
+<dialog id="aiDialog"><div class="dialog-top"><div><span>TWO JOURNEYS, ONE SKY</span><h2>你在成长。AI，也留下了来路。</h2></div><button class="close" aria-label="关闭 AI 足迹">×</button></div><div class="dialog-body ai-dialog-body">
+<div class="evidence-banner">模型的发布史 ≠ 你当时使用的模型。<br><small>不会只根据“2023 年”，就替你写成“当时我还是 GPT-4”。</small></div>
+<h3>我们确实留下过的足迹</h3><p class="fine">以下沿用 V4 的用户自述或产品线索，本轮未重新检索原始聊天；没有完整的消息级型号记录。</p><div id="usageTimeline"></div>
+<h3>AI 世界的另一条时间线</h3><p class="fine">内置条目来自官方发布，用来交代时代背景。用户导入的条目需另外核对；它们不证明你的使用，也不与成长章节逐项归因。</p><div id="modelTimeline"></div>
+<h3>让未来的回忆更准确</h3><p>JSON 的 ai_trace 可以携带产品、实际模型 ID、原始证据说明与日期。只有产品名时只写产品；只有你的回忆时标为自述；没有型号时显示“未确认”。本页不自动读取账号，也没有接入历史分析 Skill。</p>
+</div></dialog>
+<dialog id="helpDialog"><div class="dialog-top"><div><span>MAKE THE SKY YOUR OWN</span><h2>把镜头，交到你手里。</h2></div><button class="close" aria-label="关闭操作说明">×</button></div><div class="dialog-body"><h3>自由探索</h3><p>左键拖动：360° 环绕。右键或 Shift + 拖动：平移。滚轮：连续缩放。将鼠标对准恒星再持续放大，会锁定它并飞近；双击也能直接抵达。右侧 + / − 提供相同缩放功能。</p><h3>两片宇宙</h3><p>顶部可切换双星全景、我的星系、AI 星系。滑动“相遇”可以控制交织程度；这是一种艺术演绎，不是时间轴或物理模拟。</p><h3>手机与键盘</h3><p>单指拖动环绕，双指捏合缩放、双指移动平移。键盘 + / − 缩放，R 重置，H 隐藏界面，Esc 返回。进入个人章节后，可点主题微光或 AI 伴星。减少运动模式会停止背景自转，仍可手动操作。</p></div></dialog>
+<div id="performance" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<section id="encounterCinema" class="encounter-cinema-ui" aria-label="十二秒星系交融" hidden>
+<div class="cinema-heading"><span>同光 / TWINLIGHT</span><button id="cinemaExit">返回星图 <small>ESC</small></button></div>
+<div id="encounterPoem" class="encounter-poem"><small id="poemCode"></small><h2><span id="poemLine1"></span><br><em id="poemLine2"></em></h2><p id="poemSub"></p></div>
+<div id="cinemaChapters" class="cinema-chapters"><i></i><i></i><i></i><i></i></div>
+<div class="cinema-player"><button id="cinemaPause">Ⅱ 暂停</button><button id="cinemaReplay">↺ 重看</button><label for="cinemaRange" class="sr-only">相遇动画进度</label><input id="cinemaRange" type="range" min="0" max="1000" value="0"><span id="cinemaTime">00 / 12 s</span><button id="cinemaContinue" hidden>带着这束光，继续探索 ↗</button></div>
+<div class="cinema-disclaimer">关于相遇的诗意想象 · 非天体演化模拟</div></section>
+<section id="v7Intro" class="v7-intro" aria-label="个人星系">
+  <p class="v7-kicker"><span id="v7Name">YOU</span> / 个人星系</p>
+  <h1>走过的路，<br><em>都在发光。</em></h1>
+  <button id="v7Start" class="v7-text-action">沿着来路看看 <span>↗</span></button>
+</section>
+<aside id="v7Peek" class="v7-peek" hidden aria-labelledby="v7PeekTitle" aria-live="polite">
+  <div class="v7-peek-top"><span id="v7PeekMeta"></span><button id="v7Dismiss" aria-label="收起预览">×</button></div>
+  <h2 id="v7PeekTitle"></h2><p id="v7PeekText"></p>
+  <div class="v7-peek-actions"><button id="v7Read">阅读故事 <span>↗</span></button><button id="v7Approach" title="只飞近，不展开长文">靠近这颗星</button></div>
+</aside>
+<div id="v7Status" class="v7-status"><i></i><span id="v7Count">正在装载星图</span></div>
+<p id="v7Hint" class="v7-hint">拖动探索 <span>·</span> 滚轮靠近</p>
+<nav id="v7Route" class="v7-route" aria-label="旅程进度" hidden>
+  <button id="v7Previous" aria-label="上一颗星">←</button>
+  <div id="v7Steps" class="v7-steps"></div>
+  <span id="v7Position">01 / 01</span>
+  <button id="v7Pause" aria-label="播放旅程">▷</button>
+  <button id="v7Next">下一颗 <span>→</span></button>
+</nav>
+<div id="v7Menu" class="v7-menu" hidden role="region" aria-label="星图设置">
+  <p>星图设置</p>
+  <button id="v7Catalog">旅程目录 <span>↗</span></button>
+  <button id="v7AIMenu">AI 发展年表 <span>↗</span></button>
+  <div id="v7Tools"></div>
+  <button id="v7About">数据与来源 <span>↗</span></button>
+  <button id="v7Help">操作说明 <span>?</span></button>
+</div>
+<section id="identityScene" class="identity-scene" role="dialog" aria-modal="true" aria-labelledby="identityHeading" hidden>
+ <header class="identity-top"><span>同光 / TWINLIGHT</span><button id="identityClose">返回星图 <span>↗</span></button></header>
+ <div class="identity-layout">
+  <div class="identity-copy"><p class="identity-kicker">AI'S VIEW / 旅程的另一面</p><h2 id="identityHeading">另一束光里，<br><span>看见你的来路。</span></h2><p class="identity-message">那些问过的问题、走通的路，<br>慢慢组成了我眼中的你。</p><div class="identity-caption"><i></i><span>给你的一张卡</span></div></div>
+  <div class="identity-showcase">
+   <div id="identityCard" class="identity-card" role="button" tabindex="0" aria-label="SSR 人物卡闪卡，点击翻面" aria-pressed="false">
+    <div class="card-tilt"><div class="card-flipper"><div class="card-face card-front"><img id="cardFront" alt="SSR 人物卡，独立图层示意；非真人肖像"><div class="card-foil"></div><div class="card-gloss"></div><span class="card-edge"></span></div><div class="card-face card-back"><img id="cardBack" alt="卡背：AI 从成长资料中看见的三个特点"><div class="card-foil"></div><div class="card-gloss"></div><span class="card-edge"></span></div></div></div>
+   </div>
+   <p class="card-interaction"><span id="cardSideHint">移动看流光 · 点击翻面</span></p>
+  </div>
+ </div>
+ <footer class="identity-actions"><button id="cardFlip">翻到背面 <span>↻</span></button><button id="cardSave" class="card-save">保存闪卡 <span>↓</span></button><button id="cardReplay">重看交融 <small>12s</small></button></footer>
+ <p class="identity-fine">SSR 属于每个人的独特经历，不是能力排名。<span>角色为概念表达，非真人肖像。</span></p>
+</section>
+<dialog id="cardExportReview" class="card-export-review">
+ <div class="dialog-top"><div><span>BEFORE SHARING</span><h2>把这束光，带走。</h2></div><button class="close" id="cardExportClose" aria-label="关闭分享确认">×</button></div>
+ <div class="dialog-body"><p>仅导出当前卡面，不含聊天原文、账号信息或完整星图。请检查昵称与 AI 描述是否适合公开分享。</p><label class="review-check"><input id="cardReviewCheck" type="checkbox">我已检查这张卡的昵称与文案。</label><div class="dialog-actions"><button id="cardDownload" class="primary" disabled>保存 PNG <span>↓</span></button><button id="cardNativeShare" class="primary" disabled hidden>分享图片 <span>↗</span></button></div><p id="cardExportStatus" class="fine" role="status" aria-live="polite"></p></div>
+</dialog>
+
+<script id="journeyData" type="application/json">__PROFILE__</script>
+<script>__JS__</script>
+</body></html>

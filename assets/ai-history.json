@@ -1,0 +1,9 @@
+{
+  "verified_at": "2026-10-02",
+  "scope": "curated_historical_anchors_not_complete_timeline",
+  "events": [
+    {"id":"openai-chatgpt-2022","date":"2022-11-30","name":"ChatGPT","provider":"OpenAI","kind":"product","title":"对话成为新的入口","summary":"OpenAI 公开介绍 ChatGPT。公开发展事件，不代表这个用户当时使用过它。","url":"https://openai.com/index/chatgpt/"},
+    {"id":"openai-gpt4-2023","date":"2023-03-14","name":"GPT-4","provider":"OpenAI","kind":"model","title":"一次能力迭代","summary":"OpenAI 发布 GPT-4。这里是历史选点，不是完整年表。","url":"https://openai.com/index/gpt-4-research/"},
+    {"id":"anthropic-claude3-2024","date":"2024-03-04","name":"Claude 3","provider":"Anthropic","kind":"model","title":"新的模型家族","summary":"Anthropic 发布 Claude 3 模型家族。它与本次总结者的署名是两个独立字段。","url":"https://www.anthropic.com/news/claude-3-family"}
+  ]
+}

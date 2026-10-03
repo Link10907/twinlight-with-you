@@ -1,0 +1,386 @@
+{
+  "version": "1.0",
+  "name": "小岚 · 虚构示例",
+  "owner_id": "fictional-lan",
+  "intro": "每一颗微光，都有来处。",
+  "chapters": [
+    {
+      "id": "making",
+      "label": "动手试试",
+      "english": "THE MAKER",
+      "period": "2025-04-01 — 2025-05-08 · 记录日期",
+      "headline": "让想法，有一个小小的起点。",
+      "story": [
+        "一个整理照片的本地脚本已经完成；网页动画还在计划中，加载优化仍在探索。"
+      ],
+      "reflection": "已做的与未做的，都可以如实留下。",
+      "changes": [],
+      "tags": [
+        "本地脚本",
+        "网页动画"
+      ],
+      "transition": "循着微光，走向下一段记录。",
+      "signature": "让想法，有一个小小的起点。",
+      "quotes": [],
+      "topics": [
+        {
+          "id": "local-script",
+          "name": "本地脚本",
+          "title": "完成照片整理脚本。",
+          "body": [
+            "完成照片整理脚本。"
+          ],
+          "quote": null,
+          "status": "已有记录",
+          "provenance": "来自已核对的用户陈述；原始片段保存在本地审查文件中。"
+        },
+        {
+          "id": "web-motion",
+          "name": "网页动画",
+          "title": "计划学习，还未开始。",
+          "body": [
+            "计划学习，还未开始。"
+          ],
+          "quote": null,
+          "status": "计划中",
+          "provenance": "来自已核对的用户陈述；原始片段保存在本地审查文件中。"
+        }
+      ],
+      "letterClosing": "这些记录，是来路，不是定论。",
+      "collaboration": "先核对你留下的话，再写下理解。",
+      "companion_year": 2025,
+      "ai_context_ids": [],
+      "ai_trace": {
+        "product": "未确认",
+        "model_id": null,
+        "reported_name": null,
+        "status": "unknown",
+        "source": "本章未绑定消息级模型证据",
+        "note": "不由日期、词语或总结者反推历史模型。"
+      }
+    },
+    {
+      "id": "melody",
+      "label": "留一点声音",
+      "english": "THE LISTENER",
+      "period": "2025-05-02 — 2025-05-06 · 记录日期",
+      "headline": "在声音里，留出自己的时间。",
+      "story": [
+        "周末的键盘乐器，和一份短句配旋律的小样，让兴趣有了自己的形状。"
+      ],
+      "reflection": "不必把爱好都证明成能力。",
+      "changes": [],
+      "tags": [
+        "键盘与旋律"
+      ],
+      "transition": "循着微光，走向下一段记录。",
+      "signature": "在声音里，留出自己的时间。",
+      "quotes": [],
+      "topics": [
+        {
+          "id": "keyboard",
+          "name": "键盘与旋律",
+          "title": "弹奏、放松，也完成过一个短小样。",
+          "body": [
+            "弹奏、放松，也完成过一个短小样。"
+          ],
+          "quote": null,
+          "status": "已有记录",
+          "provenance": "来自已核对的用户陈述；原始片段保存在本地审查文件中。"
+        }
+      ],
+      "letterClosing": "这些记录，是来路，不是定论。",
+      "collaboration": "先核对你留下的话，再写下理解。",
+      "companion_year": 2025,
+      "ai_context_ids": [],
+      "ai_trace": {
+        "product": "未确认",
+        "model_id": null,
+        "reported_name": null,
+        "status": "unknown",
+        "source": "本章未绑定消息级模型证据",
+        "note": "不由日期、词语或总结者反推历史模型。"
+      }
+    },
+    {
+      "id": "observing",
+      "label": "认真看见",
+      "english": "THE OBSERVER",
+      "period": "2025-03-01 — 2025-03-08 · 记录日期",
+      "headline": "把日常，收进记录。",
+      "story": [
+        "从纸笔观察记录，到第一次拍下月亮，留下的是一次次认真看见。"
+      ],
+      "reflection": "这些记录提示我：你愿意为一个普通瞬间停下来。",
+      "changes": [],
+      "tags": [
+        "月亮照片",
+        "观察手记"
+      ],
+      "transition": "循着微光，走向下一段记录。",
+      "signature": "把日常，收进记录。",
+      "quotes": [],
+      "topics": [
+        {
+          "id": "moon",
+          "name": "月亮照片",
+          "title": "第一次亲自拍下月亮。",
+          "body": [
+            "第一次亲自拍下月亮。"
+          ],
+          "quote": null,
+          "status": "已有记录",
+          "provenance": "来自已核对的用户陈述；原始片段保存在本地审查文件中。"
+        },
+        {
+          "id": "notebook",
+          "name": "观察手记",
+          "title": "六周的纸笔记录。",
+          "body": [
+            "六周的纸笔记录。"
+          ],
+          "quote": null,
+          "status": "已有记录",
+          "provenance": "来自已核对的用户陈述；原始片段保存在本地审查文件中。"
+        }
+      ],
+      "letterClosing": "这些记录，是来路，不是定论。",
+      "collaboration": "先核对你留下的话，再写下理解。",
+      "companion_year": 2025,
+      "ai_context_ids": [],
+      "ai_trace": {
+        "product": "未确认",
+        "model_id": null,
+        "reported_name": null,
+        "status": "unknown",
+        "source": "本章未绑定消息级模型证据",
+        "note": "不由日期、词语或总结者反推历史模型。"
+      }
+    }
+  ],
+  "summary_meta": {
+    "provider": "openai",
+    "display_name": "GPT",
+    "model": null,
+    "generated_at": "2026-10-02T00:00:00Z",
+    "attribution_source": "run_manifest"
+  },
+  "ai_history": [
+    {
+      "id": "openai-chatgpt-2022",
+      "date": "2022-11-30",
+      "name": "ChatGPT",
+      "provider": "OpenAI",
+      "kind": "product",
+      "title": "对话成为新的入口",
+      "summary": "OpenAI 公开介绍 ChatGPT。公开发展事件，不代表这个用户当时使用过它。",
+      "url": "https://openai.com/index/chatgpt/"
+    },
+    {
+      "id": "openai-gpt4-2023",
+      "date": "2023-03-14",
+      "name": "GPT-4",
+      "provider": "OpenAI",
+      "kind": "model",
+      "title": "一次能力迭代",
+      "summary": "OpenAI 发布 GPT-4。这里是历史选点，不是完整年表。",
+      "url": "https://openai.com/index/gpt-4-research/"
+    },
+    {
+      "id": "anthropic-claude3-2024",
+      "date": "2024-03-04",
+      "name": "Claude 3",
+      "provider": "Anthropic",
+      "kind": "model",
+      "title": "新的模型家族",
+      "summary": "Anthropic 发布 Claude 3 模型家族。它与本次总结者的署名是两个独立字段。",
+      "url": "https://www.anthropic.com/news/claude-3-family"
+    }
+  ],
+  "ai_usage": [],
+  "layout": {
+    "version": "1.0",
+    "owner_id": "fictional-lan",
+    "seed": "ec4f1309969f05884a2fbed22dad6735991b7637f1e9bb4451dda09a2ef2b5d2",
+    "stars": [
+      {
+        "id": "making",
+        "position": [
+          -43.0095,
+          5.7046,
+          -11.6686
+        ],
+        "material": 3,
+        "color": [
+          0.4,
+          0.86,
+          1
+        ]
+      },
+      {
+        "id": "melody",
+        "position": [
+          75.5064,
+          6.3046,
+          67.0676
+        ],
+        "material": 3,
+        "color": [
+          0.4,
+          0.86,
+          1
+        ]
+      },
+      {
+        "id": "observing",
+        "position": [
+          37.8435,
+          6.7245,
+          -93.1126
+        ],
+        "material": 1,
+        "color": [
+          0.4,
+          0.7,
+          1
+        ]
+      }
+    ],
+    "topics": [
+      {
+        "id": "local-script",
+        "parent_id": "making",
+        "radius": 1.626,
+        "orbitRadius": 13.626,
+        "eccentricity": 0.0522,
+        "inclination": -0.0578,
+        "nodeAngle": 4.99372,
+        "phase": 0.57526,
+        "material": 1,
+        "color": [
+          0.59,
+          0.64,
+          0.79
+        ]
+      },
+      {
+        "id": "web-motion",
+        "parent_id": "making",
+        "radius": 1.7349,
+        "orbitRadius": 19.6869,
+        "eccentricity": 0.0308,
+        "inclination": 0.2161,
+        "nodeAngle": 5.12037,
+        "phase": 1.77608,
+        "material": 0,
+        "color": [
+          0.68,
+          0.51,
+          0.38
+        ]
+      },
+      {
+        "id": "keyboard",
+        "parent_id": "melody",
+        "radius": 1.8166,
+        "orbitRadius": 13.8166,
+        "eccentricity": 0.0929,
+        "inclination": 0.1719,
+        "nodeAngle": 2.59855,
+        "phase": 6.13804,
+        "material": 2,
+        "color": [
+          0.59,
+          0.64,
+          0.79
+        ]
+      },
+      {
+        "id": "moon",
+        "parent_id": "observing",
+        "radius": 1.6846,
+        "orbitRadius": 13.6846,
+        "eccentricity": 0.0719,
+        "inclination": 0.0772,
+        "nodeAngle": 2.77295,
+        "phase": 3.53243,
+        "material": 4,
+        "color": [
+          0.46,
+          0.72,
+          0.79
+        ]
+      },
+      {
+        "id": "notebook",
+        "parent_id": "observing",
+        "radius": 1.6305,
+        "orbitRadius": 19.6997,
+        "eccentricity": 0.0903,
+        "inclination": 0.1508,
+        "nodeAngle": 2.80121,
+        "phase": 0.65067,
+        "material": 2,
+        "color": [
+          0.59,
+          0.64,
+          0.79
+        ]
+      }
+    ],
+    "layout_digest": "e77cdd716f53cbfb347de33c9e25fd425d7e5bf2bd48cfc76e977437cfb10152"
+  },
+  "persona": {
+    "version": "1.0",
+    "name": "小岚 · 虚构示例",
+    "rarity": "SSR",
+    "title": "拾光者",
+    "english_title": "THE OBSERVER",
+    "edition": "2026.10",
+    "keywords": [
+      "记录",
+      "尝试",
+      "旋律"
+    ],
+    "line": "你把普通时刻，认真收进了自己的世界。",
+    "reflection": "从观察手记、小脚本到旋律小样，这些记录让我看到一个愿意先动手、再慢慢理解的人。这是基于有限材料的印象。",
+    "evidence": [
+      {
+        "title": "记录",
+        "text": "持续六周进行纸笔观察记录。"
+      },
+      {
+        "title": "尝试",
+        "text": "做完了整理照片的本地脚本。"
+      },
+      {
+        "title": "旋律",
+        "text": "周末通过弹键盘乐器放松。"
+      }
+    ],
+    "art_type": "等待独立分层图；没有真人参考时仅为原创角色概念。",
+    "disclaimer": "本卡是本次材料范围内的创作性理解，不是人格诊断或能力排名。每张卡都是 SSR。",
+    "summarizer": {
+      "provider": "openai",
+      "display_name": "GPT",
+      "model": null,
+      "generated_at": "2026-10-02T00:00:00Z",
+      "attribution_source": "run_manifest"
+    },
+    "persona_digest": "2a12b41af8dcc4261ebe014d05d6fb9a0b28433037d7e966c2771a17cd87e7a0",
+    "content_ready": true,
+    "art_status": "placeholder"
+  },
+  "coverage": {
+    "scope": "provided_subset",
+    "start": "2025-03-01T01:00:00Z",
+    "end": "2025-05-09T03:00:00Z",
+    "account_history_complete": false,
+    "description": "仅基于本次可见材料，不代表全部历史。"
+  },
+  "release": {
+    "draft": true,
+    "share_allowed": false
+  },
+  "content_digest": "be21e9d6cfdee4987e04cdb93cce22d94be2b594831deca0fd7f88a0b525b9a0"
+}

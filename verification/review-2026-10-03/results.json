@@ -1,0 +1,131 @@
+{
+  "review_date": "2026-10-03",
+  "fictional_inputs_only": true,
+  "python": "3.12.14",
+  "dependencies": {
+    "jsonschema": "4.26.0",
+    "Pillow": "12.3.0"
+  },
+  "probes": [
+    {
+      "id": "missing_timestamp_order",
+      "category": "defect",
+      "reproduced": true,
+      "source_order": [
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "m5",
+        "m6",
+        "m7",
+        "m8",
+        "m9",
+        "m10"
+      ],
+      "normalized_order": [
+        "m1",
+        "m9",
+        "m8",
+        "m3",
+        "m7",
+        "m6",
+        "m10",
+        "m5",
+        "m2",
+        "m4"
+      ],
+      "retains_explicit_sequence_field": false
+    },
+    {
+      "id": "chatgpt_parent_order",
+      "category": "defect",
+      "reproduced": true,
+      "parent_path_order": [
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "m5",
+        "m6",
+        "m7",
+        "m8",
+        "m9",
+        "m10"
+      ],
+      "normalized_order": [
+        "m6",
+        "m7",
+        "m8",
+        "m4",
+        "m10",
+        "m5",
+        "m2",
+        "m3",
+        "m1",
+        "m9"
+      ]
+    },
+    {
+      "id": "merge_before_reconcile",
+      "category": "defect",
+      "reproduced": true,
+      "chunks": 2,
+      "merge_error": "Unresolved current-state conflict: occupation; use explicit supersedes, not silent overwrite",
+      "valid_after_explicit_supersedes": true
+    },
+    {
+      "id": "nine_repeated_evidences",
+      "category": "scaling_limit",
+      "reproduced": true,
+      "chunks": 9,
+      "merge_error": "facts/0/evidence: validation rule 'maxItems' failed"
+    },
+    {
+      "id": "true_quote_false_narrative",
+      "category": "semantic_boundary",
+      "reproduced": true,
+      "source": "我计划学一点网页动画，还没有开始。",
+      "compiled_claim": "你已经掌握网页动画并完成作品。",
+      "mechanical_verify_ok": true,
+      "semantic_truth_verified_by_code": false
+    },
+    {
+      "id": "all_excluded_coverage",
+      "category": "semantic_boundary",
+      "reproduced": true,
+      "accounted_messages": 10,
+      "user_messages": 10,
+      "facts": 0,
+      "note": "This is message disposition coverage, not fact recall; an empty theme build remains blocked."
+    },
+    {
+      "id": "review_omits_required_items",
+      "category": "review_gap",
+      "reproduced": true,
+      "card_keyword_present": false,
+      "excluded_message_ids_present": [],
+      "source_unknown_dates": 1,
+      "unknown_dates_explicitly_reported": false
+    },
+    {
+      "id": "evidence_disposition_bidirectional_binding",
+      "category": "validation_gap",
+      "reproduced": true,
+      "mechanical_verify_ok": true,
+      "note": "A fact can cite a message whose disposition says excluded; verify only checks disposition -> evidence."
+    },
+    {
+      "id": "layout_lock_topic_churn",
+      "category": "incremental_limit",
+      "reproduced": true,
+      "before_topics": 8,
+      "after_topics": 8,
+      "retained_topics": 1,
+      "vacated_slots": 7,
+      "error": "Retained orbit slots exhausted; explicitly reset layout lock after review"
+    }
+  ],
+  "unexpected_runtime_failures": 0,
+  "semantic_accuracy_estimated": false
+}

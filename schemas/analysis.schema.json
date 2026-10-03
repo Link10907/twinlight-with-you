@@ -1,0 +1,615 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/analysis.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "owner": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        }
+      },
+      "required": [
+        "id",
+        "display_name"
+      ],
+      "additionalProperties": false
+    },
+    "history_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "summary_meta": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "deepseek",
+            "other",
+            "unknown"
+          ]
+        },
+        "display_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 24
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "attribution_source": {
+          "enum": [
+            "run_manifest",
+            "host_metadata",
+            "user_confirmed",
+            "unknown"
+          ]
+        }
+      },
+      "required": [
+        "provider",
+        "display_name",
+        "model",
+        "generated_at",
+        "attribution_source"
+      ],
+      "additionalProperties": false
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+          },
+          "statement": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 350
+          },
+          "kind": {
+            "enum": [
+              "achievement",
+              "practice",
+              "interest",
+              "preference",
+              "question",
+              "plan",
+              "self_description"
+            ]
+          },
+          "speech_context": {
+            "enum": [
+              "autobiographical",
+              "request",
+              "third_party",
+              "hypothetical",
+              "quoted",
+              "unknown"
+            ]
+          },
+          "status": {
+            "enum": [
+              "current",
+              "past",
+              "planned",
+              "uncertain"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "message_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "text_sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "start": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "end": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "quote": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 6000
+                }
+              },
+              "required": [
+                "message_id",
+                "text_sha256",
+                "start",
+                "end",
+                "quote"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 8
+          },
+          "sensitivity": {
+            "enum": [
+              "public",
+              "personal",
+              "sensitive"
+            ]
+          },
+          "review": {
+            "enum": [
+              "accepted",
+              "needs_confirmation",
+              "rejected"
+            ]
+          },
+          "supersedes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+            },
+            "minItems": 0,
+            "maxItems": 10
+          },
+          "conflict_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "kind",
+          "speech_context",
+          "status",
+          "evidence",
+          "sensitivity",
+          "review",
+          "supersedes",
+          "conflict_key"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 2000
+    },
+    "message_dispositions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "fact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+            },
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "reason": {
+            "enum": [
+              "extracted",
+              "not_personal",
+              "third_party",
+              "hypothetical",
+              "greeting",
+              "technical_log",
+              "duplicate",
+              "sensitive_excluded",
+              "insufficient_context"
+            ]
+          }
+        },
+        "required": [
+          "message_id",
+          "fact_ids",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 100000
+    },
+    "themes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 14
+          },
+          "english": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 36
+          },
+          "fact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "headline": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 280
+              },
+              "fact_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "required": [
+              "text",
+              "fact_ids"
+            ],
+            "additionalProperties": false
+          },
+          "paragraphs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 280
+                },
+                "fact_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                  },
+                  "minItems": 1,
+                  "maxItems": 20
+                }
+              },
+              "required": [
+                "text",
+                "fact_ids"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 3
+          },
+          "reflection": {
+            "type": "object",
+            "properties": {
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 280
+              },
+              "fact_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                },
+                "minItems": 1,
+                "maxItems": 20
+              }
+            },
+            "required": [
+              "text",
+              "fact_ids"
+            ],
+            "additionalProperties": false
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 16
+                },
+                "fact_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                  },
+                  "minItems": 1,
+                  "maxItems": 40
+                },
+                "summary": {
+                  "type": "object",
+                  "properties": {
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 280
+                    },
+                    "fact_ids": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                      },
+                      "minItems": 1,
+                      "maxItems": 20
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "fact_ids"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "fact_ids",
+                "summary"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "maxItems": 8
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "english",
+          "fact_ids",
+          "headline",
+          "paragraphs",
+          "reflection",
+          "topics"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 8
+    },
+    "card": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 12
+            },
+            "english_title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "rarity": {
+              "const": "SSR"
+            },
+            "tagline": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 280
+                },
+                "fact_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                  },
+                  "minItems": 1,
+                  "maxItems": 20
+                }
+              },
+              "required": [
+                "text",
+                "fact_ids"
+              ],
+              "additionalProperties": false
+            },
+            "reflection": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 280
+                },
+                "fact_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                  },
+                  "minItems": 1,
+                  "maxItems": 20
+                }
+              },
+              "required": [
+                "text",
+                "fact_ids"
+              ],
+              "additionalProperties": false
+            },
+            "keywords": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 12
+                  },
+                  "fact_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 20
+                  }
+                },
+                "required": [
+                  "label",
+                  "fact_ids"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1,
+              "maxItems": 3
+            },
+            "symbols": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "fact_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 20
+                  }
+                },
+                "required": [
+                  "description",
+                  "fact_ids"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 0,
+              "maxItems": 2
+            },
+            "visual_style": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 600
+            },
+            "portrait_mode": {
+              "enum": [
+                "original_character",
+                "user_reference"
+              ]
+            },
+            "reference_consent": {
+              "type": "boolean"
+            },
+            "basis_fact_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+              },
+              "minItems": 1,
+              "maxItems": 100
+            }
+          },
+          "required": [
+            "title",
+            "english_title",
+            "rarity",
+            "tagline",
+            "reflection",
+            "keywords",
+            "symbols",
+            "visual_style",
+            "portrait_mode",
+            "reference_consent",
+            "basis_fact_ids"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "owner",
+    "history_digest",
+    "summary_meta",
+    "facts",
+    "message_dispositions",
+    "themes",
+    "card"
+  ],
+  "additionalProperties": false
+}

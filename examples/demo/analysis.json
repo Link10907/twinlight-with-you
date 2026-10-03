@@ -1,0 +1,488 @@
+{
+  "schema_version": "1.0",
+  "owner": {
+    "id": "fictional-lan",
+    "display_name": "小岚 · 虚构示例"
+  },
+  "history_digest": "bc9940fb6a0913074eec5ca062365cadc15a584f917d1cf8cdeafb6eee5ce863",
+  "summary_meta": {
+    "provider": "openai",
+    "display_name": "GPT",
+    "model": null,
+    "generated_at": "2026-10-02T00:00:00Z",
+    "attribution_source": "run_manifest"
+  },
+  "facts": [
+    {
+      "id": "fact-notes",
+      "statement": "持续六周进行纸笔观察记录。",
+      "kind": "practice",
+      "speech_context": "autobiographical",
+      "status": "current",
+      "evidence": [
+        {
+          "message_id": "msg_586a23d9fca6e9c2dfa922e3",
+          "text_sha256": "551682f398521063e6b285090c3082781e2857b561973cedd8870595cfa338da",
+          "start": 0,
+          "end": 22,
+          "quote": "我开始用纸笔做每周观察记录，已经持续了六周。"
+        }
+      ],
+      "sensitivity": "personal",
+      "review": "accepted",
+      "supersedes": [],
+      "conflict_key": null
+    },
+    {
+      "id": "fact-moon",
+      "statement": "自己第一次拍下月亮。",
+      "kind": "achievement",
+      "speech_context": "autobiographical",
+      "status": "past",
+      "evidence": [
+        {
+          "message_id": "msg_986222d45cbb3d528f11f3ef",
+          "text_sha256": "ee162708e72848284ff2341598e4d3e1479af5cddd378fdf5979b18c7e8d5887",
+          "start": 0,
+          "end": 25,
+          "quote": "我上周第一次拍下月亮，这张照片是我自己用相机拍的。"
+        }
+      ],
+      "sensitivity": "personal",
+      "review": "accepted",
+      "supersedes": [],
+      "conflict_key": null
+    },
+    {
+      "id": "fact-script",
+      "statement": "做完了整理照片的本地脚本。",
+      "kind": "achievement",
+      "speech_context": "autobiographical",
+      "status": "past",
+      "evidence": [
+        {
+          "message_id": "msg_075ec578704180099584271b",
+          "text_sha256": "d5adccb50e8def687e458b7b33762eec10baaf8ed7edc0be66953a8205020067",
+          "start": 0,
+          "end": 29,
+          "quote": "我喜欢用小模型验证想法，最近做完了一个整理照片的本地脚本。"
+        }
+      ],
+      "sensitivity": "personal",
+      "review": "accepted",
+      "supersedes": [],
+      "conflict_key": null
+    },
+    {
+      "id": "fact-motion-plan",
+      "statement": "计划学习网页动画，尚未开始。",
+      "kind": "plan",
+      "speech_context": "autobiographical",
+      "status": "planned",
+      "evidence": [
+        {
+          "message_id": "msg_e9f9e6490e8bec0052f99b2e",
+          "text_sha256": "de57560654d1deab259c998d80eeccbb6fd2aad18c9484b8e19dceb55030312f",
+          "start": 0,
+          "end": 17,
+          "quote": "我计划学一点网页动画，还没有开始。"
+        }
+      ],
+      "sensitivity": "personal",
+      "review": "accepted",
+      "supersedes": [],
+      "conflict_key": null
+    },
+    {
+      "id": "fact-music",
+      "statement": "周末通过弹键盘乐器放松。",
+      "kind": "interest",
+      "speech_context": "autobiographical",
+      "status": "current",
+      "evidence": [
+        {
+          "message_id": "msg_fac6c14f78c548aa2afb3b89",
+          "text_sha256": "3b20f0bc250488a5761ae5ac274fb4cb6bfe78a5e87426f8c5cf4b65f6ea0619",
+          "start": 0,
+          "end": 25,
+          "quote": "周末我会弹一会儿键盘乐器，这让我从工作中放松下来。"
+        }
+      ],
+      "sensitivity": "personal",
+      "review": "accepted",
+      "supersedes": [],
+      "conflict_key": null
+    },
+    {
+      "id": "fact-song",
+      "statement": "把短句配进旋律，完成过一份短小样。",
+      "kind": "achievement",
+      "speech_context": "autobiographical",
+      "status": "past",
+      "evidence": [
+        {
+          "message_id": "msg_864a4dca4cbce36418b5e44e",
+          "text_sha256": "9f957f2f6aad51c6c185b6db4fb3674a59833fd0778e316ffd33b49795ec6a99",
+          "start": 0,
+          "end": 28,
+          "quote": "我试过把自己写的短句配进一段旋律，做出了一份很短的小样。"
+        }
+      ],
+      "sensitivity": "personal",
+      "review": "accepted",
+      "supersedes": [],
+      "conflict_key": null
+    },
+    {
+      "id": "fact-question",
+      "statement": "询问网页加载优化的方法。",
+      "kind": "question",
+      "speech_context": "request",
+      "status": "uncertain",
+      "evidence": [
+        {
+          "message_id": "msg_72dda4cd40528124d1fb4ff0",
+          "text_sha256": "73f348d0205d55a9098a2a14f3fbe0cfe1513703f6ba77cca05ea1a1c25b3803",
+          "start": 0,
+          "end": 10,
+          "quote": "怎么让网页加载更快？"
+        }
+      ],
+      "sensitivity": "personal",
+      "review": "accepted",
+      "supersedes": [],
+      "conflict_key": null
+    },
+    {
+      "id": "fact-preference",
+      "statement": "希望保留过程，不把兴趣自动写成能力。",
+      "kind": "preference",
+      "speech_context": "autobiographical",
+      "status": "current",
+      "evidence": [
+        {
+          "message_id": "msg_4736a56cf2432a963123f462",
+          "text_sha256": "207e4707ff6830426fc19da526b16f2fc5335847c71b8ad9a3a98a49bf67181a",
+          "start": 0,
+          "end": 26,
+          "quote": "我的偏好是保留过程记录，不用把每个兴趣写成专业能力。"
+        }
+      ],
+      "sensitivity": "personal",
+      "review": "accepted",
+      "supersedes": [],
+      "conflict_key": null
+    }
+  ],
+  "message_dispositions": [
+    {
+      "message_id": "msg_586a23d9fca6e9c2dfa922e3",
+      "fact_ids": [
+        "fact-notes"
+      ],
+      "reason": "extracted"
+    },
+    {
+      "message_id": "msg_986222d45cbb3d528f11f3ef",
+      "fact_ids": [
+        "fact-moon"
+      ],
+      "reason": "extracted"
+    },
+    {
+      "message_id": "msg_075ec578704180099584271b",
+      "fact_ids": [
+        "fact-script"
+      ],
+      "reason": "extracted"
+    },
+    {
+      "message_id": "msg_e9f9e6490e8bec0052f99b2e",
+      "fact_ids": [
+        "fact-motion-plan"
+      ],
+      "reason": "extracted"
+    },
+    {
+      "message_id": "msg_c47372afdee5935348ce0ba3",
+      "fact_ids": [],
+      "reason": "third_party"
+    },
+    {
+      "message_id": "msg_fac6c14f78c548aa2afb3b89",
+      "fact_ids": [
+        "fact-music"
+      ],
+      "reason": "extracted"
+    },
+    {
+      "message_id": "msg_864a4dca4cbce36418b5e44e",
+      "fact_ids": [
+        "fact-song"
+      ],
+      "reason": "extracted"
+    },
+    {
+      "message_id": "msg_72dda4cd40528124d1fb4ff0",
+      "fact_ids": [
+        "fact-question"
+      ],
+      "reason": "extracted"
+    },
+    {
+      "message_id": "msg_3431f4bfefaffd0354d240a5",
+      "fact_ids": [],
+      "reason": "hypothetical"
+    },
+    {
+      "message_id": "msg_4736a56cf2432a963123f462",
+      "fact_ids": [
+        "fact-preference"
+      ],
+      "reason": "extracted"
+    }
+  ],
+  "themes": [
+    {
+      "id": "observing",
+      "label": "认真看见",
+      "english": "THE OBSERVER",
+      "fact_ids": [
+        "fact-notes",
+        "fact-moon"
+      ],
+      "headline": {
+        "text": "把日常，收进记录。",
+        "fact_ids": [
+          "fact-notes",
+          "fact-moon"
+        ]
+      },
+      "paragraphs": [
+        {
+          "text": "从纸笔观察记录，到第一次拍下月亮，留下的是一次次认真看见。",
+          "fact_ids": [
+            "fact-notes",
+            "fact-moon"
+          ]
+        }
+      ],
+      "reflection": {
+        "text": "这些记录提示我：你愿意为一个普通瞬间停下来。",
+        "fact_ids": [
+          "fact-notes",
+          "fact-moon"
+        ]
+      },
+      "topics": [
+        {
+          "id": "notebook",
+          "label": "观察手记",
+          "fact_ids": [
+            "fact-notes"
+          ],
+          "summary": {
+            "text": "六周的纸笔记录。",
+            "fact_ids": [
+              "fact-notes"
+            ]
+          }
+        },
+        {
+          "id": "moon",
+          "label": "月亮照片",
+          "fact_ids": [
+            "fact-moon"
+          ],
+          "summary": {
+            "text": "第一次亲自拍下月亮。",
+            "fact_ids": [
+              "fact-moon"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "making",
+      "label": "动手试试",
+      "english": "THE MAKER",
+      "fact_ids": [
+        "fact-script",
+        "fact-motion-plan",
+        "fact-question"
+      ],
+      "headline": {
+        "text": "让想法，有一个小小的起点。",
+        "fact_ids": [
+          "fact-script",
+          "fact-motion-plan",
+          "fact-question"
+        ]
+      },
+      "paragraphs": [
+        {
+          "text": "一个整理照片的本地脚本已经完成；网页动画还在计划中，加载优化仍在探索。",
+          "fact_ids": [
+            "fact-script",
+            "fact-motion-plan",
+            "fact-question"
+          ]
+        }
+      ],
+      "reflection": {
+        "text": "已做的与未做的，都可以如实留下。",
+        "fact_ids": [
+          "fact-script",
+          "fact-motion-plan",
+          "fact-question"
+        ]
+      },
+      "topics": [
+        {
+          "id": "local-script",
+          "label": "本地脚本",
+          "fact_ids": [
+            "fact-script"
+          ],
+          "summary": {
+            "text": "完成照片整理脚本。",
+            "fact_ids": [
+              "fact-script"
+            ]
+          }
+        },
+        {
+          "id": "web-motion",
+          "label": "网页动画",
+          "fact_ids": [
+            "fact-motion-plan"
+          ],
+          "summary": {
+            "text": "计划学习，还未开始。",
+            "fact_ids": [
+              "fact-motion-plan"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "melody",
+      "label": "留一点声音",
+      "english": "THE LISTENER",
+      "fact_ids": [
+        "fact-music",
+        "fact-song",
+        "fact-preference"
+      ],
+      "headline": {
+        "text": "在声音里，留出自己的时间。",
+        "fact_ids": [
+          "fact-music",
+          "fact-song",
+          "fact-preference"
+        ]
+      },
+      "paragraphs": [
+        {
+          "text": "周末的键盘乐器，和一份短句配旋律的小样，让兴趣有了自己的形状。",
+          "fact_ids": [
+            "fact-music",
+            "fact-song",
+            "fact-preference"
+          ]
+        }
+      ],
+      "reflection": {
+        "text": "不必把爱好都证明成能力。",
+        "fact_ids": [
+          "fact-music",
+          "fact-song",
+          "fact-preference"
+        ]
+      },
+      "topics": [
+        {
+          "id": "keyboard",
+          "label": "键盘与旋律",
+          "fact_ids": [
+            "fact-music",
+            "fact-song"
+          ],
+          "summary": {
+            "text": "弹奏、放松，也完成过一个短小样。",
+            "fact_ids": [
+              "fact-music",
+              "fact-song"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "card": {
+    "title": "拾光者",
+    "english_title": "THE OBSERVER",
+    "rarity": "SSR",
+    "tagline": {
+      "text": "你把普通时刻，认真收进了自己的世界。",
+      "fact_ids": [
+        "fact-notes",
+        "fact-moon"
+      ]
+    },
+    "reflection": {
+      "text": "从观察手记、小脚本到旋律小样，这些记录让我看到一个愿意先动手、再慢慢理解的人。这是基于有限材料的印象。",
+      "fact_ids": [
+        "fact-notes",
+        "fact-script",
+        "fact-song"
+      ]
+    },
+    "keywords": [
+      {
+        "label": "记录",
+        "fact_ids": [
+          "fact-notes"
+        ]
+      },
+      {
+        "label": "尝试",
+        "fact_ids": [
+          "fact-script"
+        ]
+      },
+      {
+        "label": "旋律",
+        "fact_ids": [
+          "fact-music"
+        ]
+      }
+    ],
+    "symbols": [
+      {
+        "description": "一册展开的观察手记",
+        "fact_ids": [
+          "fact-notes"
+        ]
+      },
+      {
+        "description": "一道轻微弯曲的旋律光线",
+        "fact_ids": [
+          "fact-song"
+        ]
+      }
+    ],
+    "visual_style": "原创月夜幻想插画。精细线条，低饱和靛蓝与柔金。人物优先、装饰克制；不复制现有游戏角色。保持用户批准的构图，人物、背景、前景和卡框独立分层。",
+    "portrait_mode": "original_character",
+    "reference_consent": false,
+    "basis_fact_ids": [
+      "fact-notes",
+      "fact-moon",
+      "fact-script",
+      "fact-song",
+      "fact-music"
+    ]
+  }
+}

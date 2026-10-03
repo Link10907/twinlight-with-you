@@ -1,0 +1,5 @@
+.chapter-nav{grid-template-columns:repeat(var(--chapter-count,5),minmax(0,1fr))}
+.skill-draft{position:fixed;z-index:70;left:50%;bottom:12px;transform:translateX(-50%);padding:5px 12px;border:1px solid #cbb27c55;border-radius:20px;background:#060c16b8;color:#cab894;font:10px system-ui;pointer-events:none}
+@media(max-width:600px){.chapter-nav{overflow-x:auto}.chapter-link strong{font-size:9px}.v7-steps{gap:8px}}
+
+.skill-art-notice{font:10px/1.8 var(--sans);letter-spacing:.8px;color:#bcae91;margin:8px 0 12px;text-align:center}

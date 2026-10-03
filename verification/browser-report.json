@@ -1,0 +1,129 @@
+{
+  "environment": "Linux Chromium desktop + emulated touch. No Safari/real-device performance claim.",
+  "checks": [
+    {
+      "name": "Data-derived star/planet count",
+      "passed": true,
+      "detail": 3
+    },
+    {
+      "name": "Browser accepts compiled profile",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Unknown author is never guessed",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Overview uses point LOD",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Focus only shows selected star detail",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "AI galaxy has an introduction",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Question names actual summary author",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Question precedes card",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Unapproved exports disabled",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "CSS fallback has independent real layers",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Fallback layer transform responds",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Drag changes angle without accidental flip",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Flip works",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "No horizontal overflow desktop",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "No horizontal overflow mobile",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Mobile card remains within viewport",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Touch flip works",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Reduced-motion manual reveal",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "Reduced motion stops card sway",
+      "passed": true,
+      "detail": null
+    },
+    {
+      "name": "No page exceptions",
+      "passed": true,
+      "detail": []
+    },
+    {
+      "name": "No external requests",
+      "passed": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "WebGL fallback: Error: WebGL unavailable\n    at initWebGL (<anonymous>:223:150)\n    at start (<anonymous>:1516:65)\n    at <anonymous>:1521:1",
+    "Layered CSS fallback: Error: WebGL unavailable",
+    "WebGL fallback: Error: WebGL unavailable\n    at initWebGL (<anonymous>:223:150)\n    at start (<anonymous>:1516:65)\n    at <anonymous>:1521:1",
+    "Layered CSS fallback: Error: WebGL unavailable",
+    "WebGL fallback: Error: WebGL unavailable\n    at initWebGL (<anonymous>:223:150)\n    at start (<anonymous>:1516:65)\n    at <anonymous>:1521:1",
+    "Layered CSS fallback: Error: WebGL unavailable"
+  ],
+  "external_requests": [],
+  "webgl": false,
+  "webgl_unverified": "Both shader compilation and GPU particle rendering unverified in this environment.",
+  "ok": true,
+  "not_tested": [
+    "Safari",
+    "physical phone",
+    "real-history semantic accuracy",
+    "sustained device performance"
+  ]
+}

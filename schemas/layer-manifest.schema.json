@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/layer-manifest.schema.json",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "persona_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "art_status": {
+      "enum": [
+        "placeholder",
+        "generated",
+        "approved"
+      ]
+    },
+    "reference_consent": {
+      "type": "boolean"
+    },
+    "assets": {
+      "type": "object",
+      "properties": {
+        "background": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "effects": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "lineart": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "spirit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        }
+      },
+      "required": [
+        "background",
+        "subject",
+        "effects",
+        "text",
+        "lineart",
+        "spirit"
+      ],
+      "additionalProperties": false
+    },
+    "depths": {
+      "type": "object",
+      "properties": {
+        "background": {
+          "type": "number",
+          "maximum": -0.05,
+          "minimum": -0.4
+        },
+        "subject": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 0.6
+        },
+        "effects": {
+          "type": "number",
+          "minimum": 0.15,
+          "maximum": 0.7
+        },
+        "text": {
+          "const": 0
+        }
+      },
+      "required": [
+        "background",
+        "subject",
+        "effects",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 0,
+      "maxLength": 1500
+    }
+  },
+  "required": [
+    "schema_version",
+    "persona_digest",
+    "art_status",
+    "reference_consent",
+    "assets",
+    "depths",
+    "notes"
+  ],
+  "additionalProperties": false
+}

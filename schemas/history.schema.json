@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/history.schema.json",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "source",
+    "coverage",
+    "messages",
+    "history_digest"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "source": {
+      "type": "object"
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "scope",
+        "account_history_complete"
+      ],
+      "properties": {
+        "account_history_complete": {
+          "const": false
+        }
+      }
+    },
+    "messages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "platform": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          },
+          "conversation_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "native_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant",
+              "system",
+              "tool"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 20000000
+          },
+          "text_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "locator": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 600
+          },
+          "branch": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "nontext_parts": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "id",
+          "platform",
+          "conversation_id",
+          "native_id",
+          "role",
+          "text",
+          "text_sha256",
+          "timestamp",
+          "model",
+          "locator",
+          "branch",
+          "nontext_parts"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 1000000
+    },
+    "history_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "persona_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "art_status": "generated",
+  "reference_consent": false,
+  "assets": {
+    "background": "background.png",
+    "subject": "subject.png",
+    "spirit": "spirit.png",
+    "effects": "effects.png",
+    "text": "text.png",
+    "lineart": "lineart.png"
+  },
+  "depths": {
+    "background": -0.25,
+    "subject": 0.4,
+    "effects": 0.5,
+    "text": 0
+  },
+  "notes": "Replace the digest from art-brief, supply genuine layers, and visually review before approved."
+}

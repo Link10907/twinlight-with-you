@@ -1,0 +1,132 @@
+{
+  "version": "1.0",
+  "owner_id": "fictional-lan",
+  "seed": "ec4f1309969f05884a2fbed22dad6735991b7637f1e9bb4451dda09a2ef2b5d2",
+  "stars": [
+    {
+      "id": "making",
+      "position": [
+        -43.0095,
+        5.7046,
+        -11.6686
+      ],
+      "material": 3,
+      "color": [
+        0.4,
+        0.86,
+        1
+      ]
+    },
+    {
+      "id": "melody",
+      "position": [
+        75.5064,
+        6.3046,
+        67.0676
+      ],
+      "material": 3,
+      "color": [
+        0.4,
+        0.86,
+        1
+      ]
+    },
+    {
+      "id": "observing",
+      "position": [
+        37.8435,
+        6.7245,
+        -93.1126
+      ],
+      "material": 1,
+      "color": [
+        0.4,
+        0.7,
+        1
+      ]
+    }
+  ],
+  "topics": [
+    {
+      "id": "local-script",
+      "parent_id": "making",
+      "radius": 1.626,
+      "orbitRadius": 13.626,
+      "eccentricity": 0.0522,
+      "inclination": -0.0578,
+      "nodeAngle": 4.99372,
+      "phase": 0.57526,
+      "material": 1,
+      "color": [
+        0.59,
+        0.64,
+        0.79
+      ]
+    },
+    {
+      "id": "web-motion",
+      "parent_id": "making",
+      "radius": 1.7349,
+      "orbitRadius": 19.6869,
+      "eccentricity": 0.0308,
+      "inclination": 0.2161,
+      "nodeAngle": 5.12037,
+      "phase": 1.77608,
+      "material": 0,
+      "color": [
+        0.68,
+        0.51,
+        0.38
+      ]
+    },
+    {
+      "id": "keyboard",
+      "parent_id": "melody",
+      "radius": 1.8166,
+      "orbitRadius": 13.8166,
+      "eccentricity": 0.0929,
+      "inclination": 0.1719,
+      "nodeAngle": 2.59855,
+      "phase": 6.13804,
+      "material": 2,
+      "color": [
+        0.59,
+        0.64,
+        0.79
+      ]
+    },
+    {
+      "id": "moon",
+      "parent_id": "observing",
+      "radius": 1.6846,
+      "orbitRadius": 13.6846,
+      "eccentricity": 0.0719,
+      "inclination": 0.0772,
+      "nodeAngle": 2.77295,
+      "phase": 3.53243,
+      "material": 4,
+      "color": [
+        0.46,
+        0.72,
+        0.79
+      ]
+    },
+    {
+      "id": "notebook",
+      "parent_id": "observing",
+      "radius": 1.6305,
+      "orbitRadius": 19.6997,
+      "eccentricity": 0.0903,
+      "inclination": 0.1508,
+      "nodeAngle": 2.80121,
+      "phase": 0.65067,
+      "material": 2,
+      "color": [
+        0.59,
+        0.64,
+        0.79
+      ]
+    }
+  ],
+  "layout_digest": "e77cdd716f53cbfb347de33c9e25fd425d7e5bf2bd48cfc76e977437cfb10152"
+}

@@ -1,0 +1,16 @@
+/* V9: hierarchy comes from light, not thirty miniature material previews. */
+.star-label::before,.star-label::after,.personal-star::before,.personal-star::after,.topic-star::before,.topic-star::after{content:none!important;display:none!important}
+.v9-point-map .personal-star>i{display:none!important}
+.v9-point-map .personal-star>span{opacity:0!important;transition:opacity .22s}
+.v9-point-map .personal-star.hot>span,.v9-point-map .personal-star:focus-visible>span{opacity:1!important}
+.v9-point-map .star-label strong{text-shadow:0 1px 9px #010309,0 0 23px #010309}
+.v9-point-map .reading-shade{pointer-events:none}
+#v9Motion{width:100%;text-align:left}
+.v9-motion-paused .logo-a,.v9-motion-paused .logo-b{animation-play-state:paused}
+.reduced-motion .logo-a,.reduced-motion .logo-b{animation:none!important}
+.identity-card .holo{opacity:.27}
+@media(prefers-reduced-motion:reduce){.personal-star>span{transition:none!important}}
+
+/* Correct an inherited double offset: the 44px target is centred on the light. */
+.star-label{margin:0!important;transform:translate(-50%,-50%)!important}
+.star-labels{z-index:8}

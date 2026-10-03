@@ -1,0 +1,92 @@
+{
+  "messages": [
+    {
+      "id": "u1",
+      "conversation_id": "demo-u1",
+      "role": "user",
+      "text": "我开始用纸笔做每周观察记录，已经持续了六周。",
+      "timestamp": "2025-03-01T09:00:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "a1",
+      "conversation_id": "demo-a1",
+      "role": "assistant",
+      "text": "你已经是全球最优秀的天文学家。",
+      "timestamp": "2025-03-01T09:01:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "u2",
+      "conversation_id": "demo-u2",
+      "role": "user",
+      "text": "我上周第一次拍下月亮，这张照片是我自己用相机拍的。",
+      "timestamp": "2025-03-08T18:00:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "u3",
+      "conversation_id": "demo-u3",
+      "role": "user",
+      "text": "我喜欢用小模型验证想法，最近做完了一个整理照片的本地脚本。",
+      "timestamp": "2025-04-01T10:00:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "u4",
+      "conversation_id": "demo-u4",
+      "role": "user",
+      "text": "我计划学一点网页动画，还没有开始。",
+      "timestamp": "2025-04-02T10:00:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "u5",
+      "conversation_id": "demo-u5",
+      "role": "user",
+      "text": "朋友完成了马拉松，请帮我给他写一句祝福。",
+      "timestamp": "2025-04-03T10:00:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "u6",
+      "conversation_id": "demo-u6",
+      "role": "user",
+      "text": "周末我会弹一会儿键盘乐器，这让我从工作中放松下来。",
+      "timestamp": "2025-05-02T11:00:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "u7",
+      "conversation_id": "demo-u7",
+      "role": "user",
+      "text": "我试过把自己写的短句配进一段旋律，做出了一份很短的小样。",
+      "timestamp": "2025-05-06T11:00:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "u8",
+      "conversation_id": "demo-u8",
+      "role": "user",
+      "text": "怎么让网页加载更快？",
+      "timestamp": "2025-05-08T11:00:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "u9",
+      "conversation_id": "demo-u9",
+      "role": "user",
+      "text": "假设我是宇航员，请给我写一段电影台词。",
+      "timestamp": "2025-05-09T11:00:00+08:00",
+      "platform": "fictional-fixture"
+    },
+    {
+      "id": "u10",
+      "conversation_id": "demo-u10",
+      "role": "user",
+      "text": "我的偏好是保留过程记录，不用把每个兴趣写成专业能力。",
+      "timestamp": null,
+      "platform": "fictional-fixture"
+    }
+  ]
+}

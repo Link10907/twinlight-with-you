@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/layout.schema.json",
+  "type": "object",
+  "required": [
+    "version",
+    "owner_id",
+    "seed",
+    "stars",
+    "topics",
+    "layout_digest"
+  ],
+  "properties": {
+    "version": {
+      "const": "1.0"
+    },
+    "owner_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+    },
+    "seed": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "stars": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "material": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "color": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "material",
+          "color"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+          },
+          "parent_id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{1,63}$"
+          },
+          "radius": {
+            "type": "number",
+            "minimum": 0.5,
+            "maximum": 6
+          },
+          "orbitRadius": {
+            "type": "number",
+            "minimum": 8,
+            "maximum": 80
+          },
+          "eccentricity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 0.5
+          },
+          "inclination": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1
+          },
+          "nodeAngle": {
+            "type": "number"
+          },
+          "phase": {
+            "type": "number"
+          },
+          "material": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "color": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "minItems": 3,
+            "maxItems": 3
+          }
+        },
+        "required": [
+          "id",
+          "parent_id",
+          "radius",
+          "orbitRadius",
+          "eccentricity",
+          "inclination",
+          "nodeAngle",
+          "phase",
+          "material",
+          "color"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 0,
+      "maxItems": 64
+    },
+    "layout_digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  },
+  "additionalProperties": false
+}
