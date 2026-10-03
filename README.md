@@ -6,21 +6,27 @@
 
 > 当前版本：1.0.0。示例完全虚构。演示里的星盘是明确标注的分层占位素材，不是假装生成好的专属人物插画。
 
+通用的是材料处理、证据规则和页面模板。每个人的经历、主题、关键词、人物设定与图像只来自其本次提供并经审查的资料。默认安装包不附示例人物内容；源码中的虚构 demo 仅用于明确的演示或测试，不能充当个人资料缺省值。
+
 ## 不想手动跑命令：直接交给 AI
 
 第一次看提取和分析效果，上传或复制 [`prompts/06-smoke-test.txt`](prompts/06-smoke-test.txt) 到一个新聊天即可。模型答完后，自己对照 [`examples/smoke/expected.txt`](examples/smoke/expected.txt)；不要提前把答案给模型。这轮只测理解与指令遵循，不要求安装 Python 或生图。
 
 用自己的历史生成网页：把完整 skill 文件夹交给 Codex / Claude Code / Cursor，或在具备文件和代码能力的网页 AI 中提供 ZIP 和历史文件，然后发送：
 
-> 使用 twinlight-with-you，读取 SKILL.md 和 references/quickstart.md。你负责环境检查、提取、消歧、验证和本地构建，我只提供历史材料并审查结果。先完成审查稿；没有代码能力就标注程序未验证，没有生图工具就明确占位，不自动公开。
+> 使用 twinlight-with-you，读取 SKILL.md 和 references/quickstart.md。只用我本次提供的历史，从空分析开始，不读取 demo 或别人的经历。你负责环境检查、提取、消歧、验证和构建，我只提供材料并审查结果。先完成审查稿，再在可用的 HTML/Artifact 预览里直接给我看，并提供单文件 HTML；没有代码能力就标注程序未验证，没有生图工具就明确占位，不自动公开。
 
 平台入口与完整方法见 [`START_HERE.txt`](START_HERE.txt) 和 [`references/quickstart.md`](references/quickstart.md)。Claude 网页支持自定义 skill ZIP；ChatGPT 网页的原生分发与普通附件不同，不能承诺任意网站上传 ZIP 就能执行。入口已按官方文档核对，实际可用性取决于账号与工具权限。
 
-维护者可运行 `python scripts/package_skill.py --out outputs/twinlight-with-you.zip` 生成一个顶层 skill 文件夹的分发包；它不包含真实历史、Git 数据、评审截图或小样本标准答案。使用者接收包后不需要执行打包命令。
+维护者可运行 `python scripts/package_skill.py --out outputs/twinlight-with-you.zip` 生成默认分发包，不含任何示例历史、预写的个人分析或人物 profile。演示包另用 `python scripts/package_skill.py --include-demo --out outputs/twinlight-with-you-demo.zip`。两者都排除真实历史、Git 数据、评审截图与小样本标准答案。使用者接收包后不需要执行打包命令。
+
+**观看已生成的单文件 HTML 无需 Node.js、Python 或本地服务器，浏览器打开即可。** 生成新页面需要 Python，可由 AI 宿主处理。宿主支持交互式 HTML 预览时优先在聊天内打开；不能承诺所有 ChatGPT 网页账号都具备该能力。详见 [`references/preview.md`](references/preview.md)。
 
 ## 先运行示例
 
 以下是维护者/宿主的本地命令。普通用户可以让有工具能力的 AI 执行。
+
+demo 命令适用于源码仓库或单独演示包；默认个人使用包不会自动退回到示例数据。可公开的虚构输入与展示 JSON 在 [`examples/demo/history-input.json`](examples/demo/history-input.json) 和 [`examples/demo/profile.json`](examples/demo/profile.json)。
 
 需要 Python 3.10+。Node.js 用于 JS 语法检查；Chromium + Playwright 用于浏览器测试，不是普通用户打开页面的前提。
 

@@ -14,12 +14,20 @@ One fixed, offline-capable visual template; personalized, reviewed JSON; separat
 
 Read `references/workflow.md` before a full run. Read `references/extraction.md` and the actual JSON schemas before extraction. Read `references/art-direction.md` before generating images. Read `references/privacy.md` before any external tool or public output. See `README.md` for tested local commands.
 
+## Separate the workflow from a person's data
+
+For a personal run, use only this run's explicitly supplied history and confirmed preferences. Start with a new empty analysis from `init-analysis` and a distinct owner ID. Never seed facts, chapters, card keywords, symbols or artwork from a maintainer's experience, another user's run, `examples/demo/`, smoke-test messages, or a prewritten profile. Examples are test inputs only when the user explicitly requests that test. Read schemas for structure, not example biographies for content.
+
+The default distribution ZIP contains no example history or prewritten personal analysis. A separate `--include-demo` bundle contains explicitly fictional test data. Even when working in the full repository, do not read those datasets during personal extraction. If materials are missing, ask for the missing source or deliver an empty/unvalidated review; do not silently fall back to the demo.
+
+Incremental reuse is allowed only for the same confirmed owner and authorized prior artifacts. Create a fresh workspace for another person; never carry forward another owner's layout, release receipt or image layers. A fixed visual template is reusable; a person's narrative and portrait are not.
+
 ## Simple entry and effect testing
 
 For first-time use, web-chat trials or a request to test the skill, read `references/quickstart.md`. Users provide materials and review the result; the host handles commands, JSON and evidence offsets. Resolve scripts from the actual skill directory, not an assumed current working directory.
 
 - An explicit small-sample analysis trial can use the self-contained `prompts/06-smoke-test.txt`. Return source-linked judgments and a limited summary; label program validation unrun. Do not read `examples/smoke/expected.txt` before producing the answer.
-- A request to preview the fixed interface can run the fictional demo. Its prewritten analysis does not measure model extraction quality.
+- A request to preview the fixed interface can run the fictional demo from the source repository or separate demo bundle. Its prewritten analysis does not measure model extraction quality. Do not switch a personal run to demo mode to obtain a successful render.
 - With supplied real history and available file/code tools, run the full sequence below. Without code tools, deliver an explicitly unvalidated analysis review. Without image tools, retain placeholder status.
 
 Do not turn a limited test into a full build, image generation or release unless the user's request calls for it. Check actual tools and dependencies; installing a skill does not grant account-history access.
@@ -33,7 +41,7 @@ Do not turn a limited test into a full build, image generation or release unless
 5. **No invented precision.** Message timestamp is not necessarily event time. Missing dates remain unknown. Frequency is not proficiency. Stars and SSR are never an ability ranking.
 6. **Specific author, not a selector.** Use the actual author of this summary: GPT for OpenAI, Claude for Anthropic, etc., recorded from host/run metadata. Do not infer it from export origin, historical mentions, browser identity or the most frequently used product. Model version may be null. Do not invent a provider when unknown.
 7. **Consent before release.** Keep raw history, review quotes, photos, private analyses and approval receipts local. Build a draft first; human review is required before recording approval. Do not self-approve the user's identity or publish a site/repository implicitly.
-8. **Independent art layers.** Preserve the approved original fantasy style. A single flat poster, a repeated poster in several planes, or rectangular cutouts are not a finished layered card. Missing image capability means `art_status=placeholder`, not a fabricated completion claim.
+8. **Independent art layers.** Use this run's agreed visual style. The default fantasy palette is a configurable aesthetic, not evidence of the person's preferences. A single flat poster, a repeated poster in several planes, or rectangular cutouts are not a finished layered card. Missing image capability means `art_status=placeholder`, not a fabricated completion claim.
 
 ## Execution sequence
 
@@ -96,7 +104,9 @@ After the person explicitly approves the text AND final images, record a `share`
 
 ### 6 — Deliver
 
-Deliver the standalone HTML, public `profile.json`, `layout.lock.json`, editable artwork layers/brief and a small validation report. Keep history/quotes/review/receipts out of a public bundle. Explain remaining gaps and whether artwork is placeholder/generated/approved. Do not present passing tests as proof of semantic accuracy.
+Read `references/preview.md`. Deliver the standalone HTML and open it in the host's available interactive HTML/Artifact preview so the user can view the result immediately. Reuse the generated file; do not rewrite the template or expose private source evidence to create a preview. If that capability is absent or WebGL is blocked, report the actual limitation and return the downloadable HTML for direct browser opening. Viewing the finished single file needs no Node.js, Python, package installation or local server.
+
+Also deliver public `profile.json`, `layout.lock.json`, editable artwork layers/brief and a small validation report. Keep history/quotes/review/receipts out of a public bundle. Explain remaining gaps and whether artwork is placeholder/generated/approved. Do not present passing tests as proof of semantic accuracy or claim a hosted preview was tested when only local compilation ran.
 
 ## Incremental update
 

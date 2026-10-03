@@ -63,7 +63,10 @@ def main(argv=None):
         elif args.cmd=='merge-extractions':
             merged=merge_chunks(load(args.history),load(args.draft),args.manifest,args.results);save(args.out,merged);result={'ok':True,'facts':len(merged['facts']),'state':'reconcile_before_narrative'}
         elif args.cmd=='validate-art':result=validate_layers(args.manifest,args.persona_digest)
-        elif args.cmd=='demo':result=build(load(ROOT/'examples/demo/history.json'),load(ROOT/'examples/demo/analysis.json'),args.out)
+        elif args.cmd=='demo':
+            check((ROOT/'examples/demo/history.json').is_file() and (ROOT/'examples/demo/analysis.json').is_file(),
+                  'This personal-use package has no fictional demo. Use the source repository or the separately packaged --include-demo bundle for an explicit demo run.')
+            result=build(load(ROOT/'examples/demo/history.json'),load(ROOT/'examples/demo/analysis.json'),args.out)
         else:
             h,a=load(args.history),load(args.analysis)
             if args.cmd=='verify':

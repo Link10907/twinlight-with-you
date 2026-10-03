@@ -73,7 +73,7 @@ def art_brief(analysis: dict, persona_digest: str) -> dict:
             "typography":{"title":card["title"],"english_title":card["english_title"],"rarity":"SSR",
                           "signature":(analysis["summary_meta"]["display_name"] or "总结来源未标注")+" 眼中的你",
                           "keywords":[k["label"] for k in card["keywords"]]},
-            "rules":["Preserve the approved original illustration style and character composition.",
+            "rules":["Use this run's visual_style and character concept; never reuse another owner's portrait or symbols.",
                      "Subject/effects/text must have real alpha; background must be opaque and repaired behind the removed subject.",
                      "Do not leave the character in the background: that causes ghost faces during parallax.",
                      "Do not bake rainbow foil, typography or SSR badges into the subject image.",
