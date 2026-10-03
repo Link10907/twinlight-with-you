@@ -14,6 +14,16 @@ One fixed, offline-capable visual template; personalized, reviewed JSON; separat
 
 Read `references/workflow.md` before a full run. Read `references/extraction.md` and the actual JSON schemas before extraction. Read `references/art-direction.md` before generating images. Read `references/privacy.md` before any external tool or public output. See `README.md` for tested local commands.
 
+## Simple entry and effect testing
+
+For first-time use, web-chat trials or a request to test the skill, read `references/quickstart.md`. Users provide materials and review the result; the host handles commands, JSON and evidence offsets. Resolve scripts from the actual skill directory, not an assumed current working directory.
+
+- An explicit small-sample analysis trial can use the self-contained `prompts/06-smoke-test.txt`. Return source-linked judgments and a limited summary; label program validation unrun. Do not read `examples/smoke/expected.txt` before producing the answer.
+- A request to preview the fixed interface can run the fictional demo. Its prewritten analysis does not measure model extraction quality.
+- With supplied real history and available file/code tools, run the full sequence below. Without code tools, deliver an explicitly unvalidated analysis review. Without image tools, retain placeholder status.
+
+Do not turn a limited test into a full build, image generation or release unless the user's request calls for it. Check actual tools and dependencies; installing a skill does not grant account-history access.
+
 ## Non-negotiable rules
 
 1. **Available is not complete.** Only read authorized, accessible materials. A model memory is a discovery lead, not a transcript. Never say “all our chats” without a complete, verifiable scope; this version always labels account coverage incomplete.
