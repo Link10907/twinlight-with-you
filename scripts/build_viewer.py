@@ -7,13 +7,11 @@ import json
 import re
 import shutil
 import sys
-import tempfile
 from pathlib import Path
-from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from twinlight_core.common import ROOT, load  # noqa: E402
-from twinlight_core.site import LITE_DEPTHS, _png_uri, placeholder_layers, template_parts  # noqa: E402
+from twinlight_core.site import LITE_DEPTHS, template_parts, uri  # noqa: E402
 
 DEFAULT_BASE = "https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/"
 VIEWER = ROOT / "assets" / "viewer"
@@ -21,13 +19,12 @@ VIEWER = ROOT / "assets" / "viewer"
 
 def bundle() -> dict:
     html_t, _ = template_parts()
-    with tempfile.TemporaryDirectory() as tmp:
-        placeholder_layers(Path(tmp), "0" * 64)
-        sub = Image.open(Path(tmp) / "subject.png").convert("RGBA")
-        placeholder = {"subject": _png_uri(sub)}
+    # Keep maintained procedural fixtures byte-stable across Pillow/zlib platforms.
+    # Neither asset carries a biography or a person's illustration.
+    placeholder = {"subject": uri(VIEWER / 'placeholder-subject.png')}
     return {"version": "lite-1", "schema": load(ROOT / "schemas" / "lite.schema.json"), "template": html_t,
             "aiHistory": load(ROOT / "assets" / "ai-history.json")["events"], "placeholder": placeholder,
-            "clear": _png_uri(Image.new("RGBA", (4, 4))),
+            "clear": uri(VIEWER / 'clear.png'),
             "depths": {k: v for k, v in LITE_DEPTHS.items()},
             "prompt": (ROOT / "PROMPT.md").read_text(encoding="utf-8"),
             "example": (ROOT / "examples" / "lite" / "example.json").read_text(encoding="utf-8")}
