@@ -1,14 +1,14 @@
 ---
 name: twinlight-with-you
-description: Create a personal Twinlight galaxy and SSR card from the person's authorized materials, using the fixed offline page template and directly generated independent artwork layers. Use for Twinlight, a personal star map, or an AI impression of the user. Supports a lightweight reviewed impression or source-anchored analysis of supplied chat exports.
+description: Generate a person’s own definition card, personal SSR card or Twinlight galaxy from their authorized materials. Use for “生成我的定义卡”, “专属卡片”, Twinlight, a personal star map or an AI impression of the user. Reuse the offline renderer while generating original, independently layered artwork for each person; supports a reviewed impression or source-anchored chat analysis.
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
   template: "Twinlight V10-derived"
 ---
 
 # Twinlight · 与你同光
 
-The user can simply ask: “根据你实际了解的我，做我的 Twinlight，完成后直接给我看。” Produce their own galaxy, narrative and SSR card in the existing template. Keep commands, JSON and layer management inside the agent's workflow.
+The user can simply ask: “根据你实际了解的我，生成我的定义卡，完成后直接给我看。” Treat personal definition-card and exclusive-card requests as this skill. Produce their own SSR card, galaxy and personal narrative with the existing Twinlight renderer. Keep commands, JSON and layer management inside the agent's workflow; show the requested card first when it is the user’s focus.
 
 ## Choose the source depth
 
@@ -16,7 +16,7 @@ The user can simply ask: “根据你实际了解的我，做我的 Twinlight，
 - **Strict:** when supplied exports and quote-level provenance are requested, read `references/workflow.md` and `references/extraction.md`; use the actual schemas and `prompts/00` through `05` as relevant. Start with an empty `init-analysis` scaffold. Every fact needs a user-message quotation, exact span and hash; every public claim points to reviewed fact IDs.
 - **Explicit test or demo:** read `references/quickstart.md`. Examples are only inputs to that requested test. A prewritten demo render does not test model extraction quality.
 
-Check file, code, image and preview capabilities yourself. Ask at most 2–3 short questions if the person's materials are insufficient. Show the proposed text for their confirmation; do not confirm on their behalf. Resolve technical validation errors internally where possible, and expose a specific blocker only when it needs the user's information or decision.
+Check file, code, image and preview capabilities yourself. Ask at most 2–3 short questions if the person's materials are insufficient. Show the proposed public text for their confirmation; do not confirm on their behalf. Reuse clear approval of the exact current materials and preferences already given in this conversation, without asking again. Resolve technical validation errors internally where possible, and expose a specific blocker only when it needs the user's information or decision.
 
 ## Every person starts from their own materials
 
@@ -31,15 +31,11 @@ The default skill ZIP contains no example biographies. The separate fictional de
 
 ## One artwork workflow in both modes
 
-Read `references/art-direction.md` before image generation. First generate a personal, text-free 3:4 **prototype** to fix the scene and visual concept. The current `art_prompt` and explicit preferences take precedence; the subject may be a person, an object or an abstract symbol. Use a default illustration style only when none is specified, without imposing a moonlit scene or a human character. Then reference the prototype to **directly generate** the same-canvas opaque background, real-alpha subject and effects, plus optional spirit. The prototype is a reference, never a substitute repeated across several planes.
+Read `references/art-direction.md` before image generation; it holds the actual-canvas lock, layer responsibilities, visual acceptance and bounded retry procedure. Default to the existing compact parallax/foil renderer and refined hand-painted fantasy illustration. The current person's confirmed subject, symbolism, style and colors take precedence; people, animals, objects and abstract forms are all valid.
 
-Do not remove backgrounds, key green screens, convert painted checkerboards, crop the subject or move it into a standard slot. The image tool must output real transparency and the agreed canvas; incompatible files require regeneration. The program creates an independent transparent SSR/title/frame layer and derives registered lineart from the subject. Style defaults are aesthetic choices; the current person's explicit preferences take precedence. With no authorized photo, describe the result as an original concept character, not their likeness.
+Generate a personal text-free 3:4 prototype, then use that same image as reference for directly generated native background, alpha subject and sparse foreground layers. Lock the prototype's actual dimensions and composition before the layer calls. The program produces accurate SSR/title/frame typography independently and derives registered lineart from the final subject. Never matte, cut out, crop or reposition the artwork. With no authorized photo, describe the result as an original concept, not their likeness.
 
-- Independent layers: `art_mode=layered`; generated artwork still requires visual review before `art_status=approved`.
-- Prototype only: `art_mode=static`; no internal depth claim.
-- No image tool: `art_mode=placeholder`; deliver an honest placeholder and the brief.
-
-Use `card-spec` / the current `next` output for lite prompts and `art-brief` for strict binding. The layer manifest is `card/layers.json`; see `examples/layers.example.json` for structure only. Verify alpha, dimensions and bindings; inspect front and both sides. The shader offers compact layered parallax and foil, not a volumetric body or a delivered Blender/GLB pipeline.
+Use `card-spec` / the current `next` output for lite prompts and `art-brief` for strict binding. Run mechanical checks and inspect the assembled card before calling the layered card complete. Repair only failed layers, with at most two regeneration attempts per layer. If native layers remain unavailable, honestly deliver a `static` prototype or a `placeholder` with the brief. `generated` alone is not `approved`; the shader is compact planar parallax, not a delivered volumetric body or Blender/GLB pipeline.
 
 ## Preview and consent
 

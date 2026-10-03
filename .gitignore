@@ -18,5 +18,6 @@ __pycache__/
 node_modules/
 .DS_Store
 verification/browser/
+verification/browser-pipeline/
 verification/*-home.png
 verification/*-card.png

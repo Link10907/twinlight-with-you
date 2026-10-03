@@ -30,14 +30,22 @@ function musicSync(){soundControls.forEach(b=>{b.setAttribute('aria-pressed',Str
 async function musicToggle(on){v10.musicChosen=true;state.sound=on;if(on){try{if(audio)await audio.resume();await bgm.play();}catch(e){state.sound=false;toast('点一下音乐按钮，即可开始播放。');}}else{bgm.pause();if(audio)audio.suspend().catch(()=>{});}musicSync();}
 $('soundBtn').onclick=()=>musicToggle(!state.sound);musicSync();
 document.addEventListener('visibilitychange',()=>{if(document.hidden){bgm.pause();if(state.encounterCinematic){v10.base=v10.time;v10.anchor=performance.now();}}else{v10.anchor=performance.now();v10.base=v10.time;if(state.sound)bgm.play().catch(()=>{});}});
-function v10MergeProgress(){const t=v10.time;if(t<3.2)return rangeEase(0,3.2,t)*.018;return mix(.018,.995,rangeEase(3.2,10.6,t));}
+// A shared tangent joins the introduction to first passage without a stop or
+// sudden acceleration. The outer discs already respond while AI lights up.
+function v10MergeProgress(){
+ const t=clamp(v10.time,0,10.6),intro=t<=3.2,h=intro?3.2:7.4,x=intro?t/h:(t-3.2)/h;
+ const a=intro?0:.115,b=intro?.115:.995,m0=(intro?.020:.055)*h,m1=(intro?.055:0)*h;
+ return (2*x*x*x-3*x*x+1)*a+(x*x*x-2*x*x+x)*m0+(-2*x*x*x+3*x*x)*b+(x*x*x-x*x)*m1;
+}
+// Match the shader's smoothstep exactly so captions follow the moving cores.
+function v10MotionEase(a,b,t){const x=clamp((t-a)/(b-a));return x*x*(3-2*x);}
 function v10Birth(){return rangeEase(.25,3.1,v10.time);}
 function v10GalaxyPoint(g=1,offset=[0,0,0]){
  const p=v10MergeProgress(),mobile=state.w<701?1:0;
- const approach=rangeEase(0,.32,p),pass=rangeEase(.26,.53,p),ret=rangeEase(.53,.84,p),end=rangeEase(.82,1,p);let sep=Math.max(0,mix(149,32,approach)+42*pass-72*ret);
+ const approach=v10MotionEase(0,.32,p),pass=v10MotionEase(.26,.53,p),ret=v10MotionEase(.53,.84,p),end=v10MotionEase(.82,1,p);let sep=Math.max(0,mix(149,32,approach)+42*pass-72*ret);
  const turn=-.38+.8*approach+1.78*pass+2.45*ret+end*.75,sgn=g?1:-1;
  const core=[Math.cos(turn)*sep*sgn,12*Math.sin(turn)*sep/100*sgn,Math.sin(turn)*sep*.65*sgn];
- const dist=(570-94*Math.sin(Math.PI*rangeEase(0,.54,p))+85*rangeEase(.4,.68,p)-77*rangeEase(.75,1,p))*mix(1,1.65,mobile),az=.06+p*.31;
+ const dist=(570-94*Math.sin(Math.PI*v10MotionEase(0,.54,p))+85*v10MotionEase(.4,.68,p)-77*v10MotionEase(.75,1,p))*mix(1,1.65,mobile),az=.06+p*.31;
  const eye=[Math.sin(az)*dist,dist*.65,Math.cos(az)*dist*.65],target=[0,mix(5,-9,mobile),0],fw=norm(sub(target,eye)),right=norm(cross(fw,[0,1,0])),up=cross(right,fw),d=sub(add(core,offset),eye),z=dot(d,fw);
  return{x:(dot(d,right)/(.49*state.w/state.h*z)*.5+.5)*state.w,y:(.5-(dot(d,up)/(.49*z)+mix(.11,.23,mobile))*.5)*state.h};
 }

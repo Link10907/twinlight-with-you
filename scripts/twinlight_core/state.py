@@ -81,6 +81,18 @@ def _reopen(state: dict, stage: str, reason: str) -> None:
 
 
 def art_inputs(p: dict) -> dict:
+    choice = load(p["choice"]) if p["choice"].is_file() else {}
+    mode = choice.get("mode") or ("placeholder" if choice.get("placeholder") is True else None)
+    check(mode in (None, "static", "placeholder"), "卡图选择只能是 static 或 placeholder；恢复独立图层时清除 choice.json")
+    if mode == "placeholder":
+        return {}
+    if mode == "static":
+        for role in ("prototype", "portrait"):
+            hits = [p["card"] / (role + ext) for ext in IMAGE_EXT if (p["card"] / (role + ext)).is_file()]
+            check(len(hits) <= 1, f"card/ 里有多个 {role} 图片，只保留一个")
+            if hits:
+                return {role: hits[0]}
+        raise ContractError("静态降级需要现有 card/prototype 或 portrait 图片；请先保存原型，或明确选择 placeholder")
     found = {}
     manifest = p["card"] / "layers.json"
     if manifest.is_file(): found["layers"] = manifest
@@ -175,7 +187,8 @@ def check_stage(ws: Path) -> dict:
         try:
             found = art_inputs(p)
             if not found:
-                check(p["choice"].is_file() and load(p["choice"]).get("placeholder") is True,
+                choice = load(p["choice"]) if p["choice"].is_file() else {}
+                check(choice.get("mode") == "placeholder" or choice.get("placeholder") is True,
                       "card/ 里没有图片，也没有选择占位卡（art --placeholder）")
             from .site import lite_layers
             profile = lite.to_profile(_profile_data(p), generated_at=state["created_at"])
@@ -183,16 +196,16 @@ def check_stage(ws: Path) -> dict:
             _pass(state, stage, {"fingerprint": _art_fingerprint(p), "art_status": art["art_status"], "art_mode": art["art_mode"],
                                  "binding": art["binding"], "native_full_canvas": art["native_full_canvas"],
                                  "files": {k: str(v) for k, v in found.items()}})
-        except ContractError as exc:
+        except (ContractError, OSError, ValueError, TypeError, KeyError) as exc:
             _fail(state, stage, [{"path": "card/", "code": "art", "message": str(exc)}])
     elif stage == "build":
         from .site import build_lite
-        found = art_inputs(p)
         try:
+            found = art_inputs(p)
             report = build_lite(_profile_data(p), p["site"], generated_at=state["created_at"], confirmed=True,
                                 **_art_kwargs(found))
             _pass(state, stage, {**report, "html_sha256": sha(p["html"])})
-        except ContractError as exc:
+        except (ContractError, OSError, ValueError, TypeError, KeyError) as exc:
             _fail(state, stage, [{"path": "site/", "code": "build", "message": str(exc)}])
     elif stage == "visual":
         _visual(state, p)
@@ -209,29 +222,48 @@ def check_stage(ws: Path) -> dict:
 
 
 def _visual(state: dict, p: dict) -> None:
+    out = p["visual"]
+    rep = out / "report.json"
+    try:
+        out.mkdir(parents=True, exist_ok=True)
+        # A report must come from this invocation, even after a rebuild or retry.
+        rep.unlink(missing_ok=True)
+    except OSError as exc:
+        _fail(state, "visual", [{"path": "visual/", "code": "io", "message": str(exc)}]); return
     try:
         import playwright  # noqa: F401
     except ImportError:
         _pass(state, "visual", {"verified": False, "reason": "当前环境没有 Playwright，无法做浏览器检查"}, status="skipped"); return
-    out = p["visual"]; out.mkdir(parents=True, exist_ok=True)
     try:
         proc = subprocess.run([sys.executable, str(ROOT / "scripts" / "verify_browser.py"), "--html", str(p["html"]), "--out", str(out)],
                               capture_output=True, text=True, timeout=600)
     except subprocess.TimeoutExpired:
         _fail(state, "visual", [{"path": "visual/", "code": "timeout", "message": "浏览器检查超过 10 分钟"}]); return
-    rep = out / "report.json"
+    except OSError as exc:
+        _fail(state, "visual", [{"path": "visual/", "code": "browser", "message": str(exc)}]); return
     if not rep.is_file():
-        _pass(state, "visual", {"verified": False, "reason": "浏览器无法启动：" + (proc.stderr.strip().splitlines() or ["未知原因"])[-1][:300]}, status="skipped"); return
-    report = load(rep)
-    launch_failed = not report.get("checks") and "Executable" in str(report.get("failure", ""))
-    if launch_failed:
+        message = "本次浏览器检查没有生成报告"
+        if proc.stderr.strip():
+            message += "：" + proc.stderr.strip().splitlines()[-1][:300]
+        _fail(state, "visual", [{"path": "visual/report.json", "code": "missing_report", "message": message}]); return
+    try:
+        report = load(rep)
+        check(isinstance(report, dict) and isinstance(report.get("checks"), list), "本次浏览器检查报告格式不正确")
+        detail = {"verified": True, "webgl": report.get("webgl"), "checks": len(report["checks"]),
+                  "failed": [c["name"] for c in report["checks"] if not c["passed"]],
+                  "screenshots": sorted(x.name for x in out.glob("*.png")), "html_sha256": sha(p["html"])}
+    except (ContractError, OSError, ValueError, TypeError, KeyError) as exc:
+        _fail(state, "visual", [{"path": "visual/report.json", "code": "invalid_report", "message": str(exc)}]); return
+    failure = str(report.get("failure", ""))
+    unavailable_browser = not report["checks"] and any(x in failure.lower() for x in (
+        "executable doesn't exist", "executable does not exist", "browser executable not found",
+        "host system is missing dependencies to run browsers", "error while loading shared libraries"))
+    if unavailable_browser:
         _pass(state, "visual", {"verified": False, "reason": "浏览器无法启动：" + str(report.get("failure"))[:300]}, status="skipped"); return
-    detail = {"verified": True, "webgl": report.get("webgl"), "checks": len(report.get("checks", [])),
-              "failed": [c["name"] for c in report.get("checks", []) if not c["passed"]], "screenshots": sorted(x.name for x in out.glob("*.png"))}
-    if report.get("ok"):
+    if proc.returncode == 0 and report.get("ok") is True and report["checks"] and not detail["failed"] and not failure:
         _pass(state, "visual", detail)
     else:
-        _fail(state, "visual", [{"path": "visual/", "code": "browser", "message": report.get("failure") or "浏览器检查未通过"}])
+        _fail(state, "visual", [{"path": "visual/", "code": "browser", "message": failure or f"本次浏览器检查未通过（退出码 {proc.returncode}）"}])
 
 
 def confirm(ws: Path, user_reply: str) -> dict:
@@ -245,21 +277,43 @@ def confirm(ws: Path, user_reply: str) -> dict:
     return {"ok": True, "next": next_action(ws)}
 
 
-def choose_placeholder(ws: Path) -> dict:
+def choose_art(ws: Path, mode: str) -> dict:
     p = paths(ws); state = _load(ws)
-    check(current(state) == "art", f"现在不是卡图阶段（当前：{STAGE_CN.get(current(state))}）")
-    check(not art_inputs(p), "card/ 里已经有图片；要用占位卡请先删掉这些图片")
-    save(p["choice"], {"placeholder": True, "at": now()})
+    integrity(state, p)
+    check(current(state) in ("art", "build", "visual", "report", "done") and state["stages"]["review"]["status"] == "passed",
+          f"卡图模式只能在当前文案已确认后选择（当前：{STAGE_CN.get(current(state))}）")
+    check(mode in ("static", "placeholder", "layered"), "卡图模式只能是 static、placeholder 或 layered")
+    if mode == "static":
+        # Validate the selection before replacing an existing choice.
+        for role in ("prototype", "portrait"):
+            hits = [p["card"] / (role + ext) for ext in IMAGE_EXT if (p["card"] / (role + ext)).is_file()]
+            check(len(hits) <= 1, f"card/ 里有多个 {role} 图片，只保留一个")
+            if hits:
+                from .site import lite_layers
+                lite_layers(**{role: hits[0]})
+                break
+        else:
+            raise ContractError("静态降级需要现有 card/prototype 或 portrait 图片；请先保存原型，或明确选择 placeholder")
+    if mode == "layered":
+        p["choice"].unlink(missing_ok=True)
+    else:
+        save(p["choice"], {"mode": mode, "placeholder": mode == "placeholder", "at": now()})
+    _reopen(state, "art", "明确选择卡图模式：" + mode + "；保留现有图片")
+    save(p["state"], state)
     return check_stage(ws)
+
+
+def choose_placeholder(ws: Path) -> dict:
+    return choose_art(ws, "placeholder")
 
 
 def unblock(ws: Path, note: str) -> dict:
     p = paths(ws); state = _load(ws)
     stage = current(state)
     check(stage != "done" and state["stages"][stage]["status"] == "blocked", "当前阶段没有被阻塞")
-    check(len(note.strip()) >= 1, "--note 需要写明用户怎么说")
+    check(len(note.strip()) >= 1, "--note 需要写明实际技术修复、降级或用户决定；不能伪造本人确认")
     state["stages"][stage].update({"status": "pending", "attempts": 0})
-    _event(state, stage, "用户介入后解除阻塞：" + note.strip()[:300])
+    _event(state, stage, "解除技术阻塞：" + note.strip()[:300])
     save(p["state"], state)
     return next_action(ws)
 
@@ -281,9 +335,11 @@ def next_action(ws: Path) -> dict:
         s = state["stages"][stage]
         out.update({"status": s["status"], "attempts": s["attempts"], "max_attempts": MAX_ATTEMPTS})
         if s["status"] == "blocked":
-            out["do"] = ["已连续 3 次没有通过，停止自动修复。",
-                         "把下面 errors 用通俗中文告诉用户，问用户想怎么处理（例如删掉某个主题、缩短某段话）。",
-                         f"按用户意见修改后运行：{cmd('unblock', '--workspace', w, '--note', '<用户的原话>')}，然后重新运行 check。"]
+            out["do"] = ["相同流程已连续 3 次没有通过，先根据 errors 查明原因，不重复无变化的检查。",
+                         "格式、文件、图层和浏览器等技术问题由你修复；仅缺少本人资料或需要新内容决定时询问用户。",
+                         f"实际修复后运行：{cmd('unblock', '--workspace', w, '--note', '<实际技术修复或用户决定>')}，然后重新运行 check。unblock 不替代本人文案确认。"]
+            if stage == "art":
+                out["do"].append(f"独立图层仍不合格时保留全部素材，用 {cmd('art', '--workspace', w, '--static')} 选择现有原型；无合格原型则用 {cmd('art', '--workspace', w, '--placeholder')}。明确降级可恢复检查。")
             out["errors"] = s["errors"]
             return out
     if stage == "profile":
@@ -317,7 +373,8 @@ def next_action(ws: Path) -> dict:
                    "SSR、卡框和当前称号在独立 text 层排版；lineart 从最终 subject 的原像素推导，不重新画。unused spirit 交付同尺寸透明 PNG。",
                    f"保存全部层文件，并按 card_spec.manifest_template 写 {card}/layers.json；绑定本次 persona_digest，未视觉审查时 art_status=generated。",
                    "若工具只能生成一张原型，保留为 static 静态预览、景深为0，不宣称分层完成。若没有生图工具，使用明确 placeholder。",
-                   f"无图时运行 {cmd('art', '--workspace', w, '--placeholder')}；生成好原型或图层后运行 then。"],
+                   f"已有失败图层时不删除素材：静态降级运行 {cmd('art', '--workspace', w, '--static')}；占位运行 {cmd('art', '--workspace', w, '--placeholder')}。恢复原生图层可运行 {cmd('art', '--workspace', w, '--layered')} 清除降级选择。",
+                   "降级选择会优先于现有图层；默认保留该选择，不因目录里的其他素材自动改模式。生成好当前选择的原型或图层后运行 then。"],
             "then": cmd("check", "--workspace", w)})
         if state["stages"]["art"]["errors"]: out["errors"] = state["stages"]["art"]["errors"]
     elif stage in ("build", "visual", "report"):

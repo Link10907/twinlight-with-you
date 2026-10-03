@@ -25,10 +25,16 @@ class CardPackage(unittest.TestCase):
         self.manifest = native_fixture(self.root / 'native', self.owner)
 
     def test_portable_keeps_all_original_files_and_refuses_another_owner(self):
+        manifest = load(self.manifest)
+        manifest['composition'] = {'version': '1.0', 'persona_digest': self.owner,
+                                   'canvas': {'width': 600, 'height': 800},
+                                   'subject_bounds': [.19, .24, .62, .82]}
+        save(self.manifest, manifest)
         save(self.root / 'data.json', self.data)
         package(self.manifest, self.root / 'card.json', self.root / 'data.json')
         card = load(self.root / 'card.json')
         self.assertEqual(card['canvas'], [600, 800])
+        self.assertEqual(card['composition'], manifest['composition'])
         for role, uri in card['layers'].items():
             self.assertEqual(base64.b64decode(uri.split(',', 1)[1]), (self.root / 'native' / (role+'.png')).read_bytes())
         other = copy.deepcopy(self.data)

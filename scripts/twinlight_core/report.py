@@ -5,12 +5,14 @@ import html
 import io
 from pathlib import Path
 from PIL import Image
-from .common import load
+from .common import ContractError, check, load, local_asset, schema_check
 from . import lite
-from .state import STAGES, STAGE_CN, paths, art_inputs
+from .state import STAGES, STAGE_CN, paths, art_inputs, sha
 
 STATUS = {"passed": ("通过", "ok"), "skipped": ("未验证", "warn"), "failed": ("未通过", "bad"),
           "blocked": ("已阻塞", "bad"), "pending": ("未开始", "idle")}
+ART_STATUS = {"generated": ("已生成独立图层", "ok"), "approved": ("已审阅独立图层", "ok"),
+              "static": ("静态原型（未分层）", "warn"), "placeholder": ("占位卡面", "warn")}
 SHOTS = [("home", "桌面 · 首页"), ("detail", "桌面 · 主题详情"), ("card", "桌面 · SSR 卡"),
          ("mobile-home", "手机 · 首页"), ("mobile-card", "手机 · SSR 卡")]
 CSS = """
@@ -31,11 +33,127 @@ figcaption{color:var(--dim);font-size:12px;margin-top:6px}.card{display:flex;gap
 """
 
 
-def _thumb(path: Path, width: int) -> str:
+def _thumb(path: Path, width: int, *, preserve_alpha: bool = False) -> str:
+    check(path.stat().st_size <= 24 * 1024 * 1024, "Preview file too large")
     with Image.open(path) as im:
-        im = im.convert("RGB"); im.thumbnail((width, width * 3))
-        s = io.BytesIO(); im.save(s, format="JPEG", quality=82)
-    return "data:image/jpeg;base64," + base64.b64encode(s.getvalue()).decode("ascii")
+        check(im.format in ("PNG", "JPEG", "WEBP"), "Preview must be a raster PNG/JPEG/WebP")
+        check(im.width * im.height <= 16_000_000, "Preview dimensions too large")
+        im = im.convert("RGBA" if preserve_alpha else "RGB"); im.thumbnail((width, width * 3))
+        s = io.BytesIO()
+        if preserve_alpha: im.save(s, format="PNG")
+        else: im.save(s, format="JPEG", quality=82)
+    mime = "image/png" if preserve_alpha else "image/jpeg"
+    return "data:" + mime + ";base64," + base64.b64encode(s.getvalue()).decode("ascii")
+
+
+def _art_preview(p: dict, data: dict, state: dict) -> tuple[str, str] | None:
+    """Preview one safe local image, without silently constructing a new composition."""
+    art = state["stages"]["art"]
+    if art["status"] != "passed":
+        return None
+    status = art["detail"].get("art_status")
+    try:
+        found = art_inputs(p)
+        if status == "static":
+            image = next((found[k] for k in ("prototype", "portrait") if k in found), None)
+            if image is None: return None
+            image = local_asset(p["card"], image.relative_to(p["card"]).as_posix())
+            return _thumb(image, 480), "静态原型预览"
+        if status in ("generated", "approved"):
+            if "layers" in found:
+                manifest_path = local_asset(p["card"], "layers.json")
+                manifest = load(manifest_path, max_bytes=256 * 1024)
+                schema_check(manifest, "layer-manifest.schema.json")
+                check(manifest["art_status"] == status, "Artwork status changed since its accepted stage")
+                persona = lite.to_profile(data, generated_at=state["created_at"])["persona"]["persona_digest"]
+                check(manifest["persona_digest"] == persona, "Artwork belongs to a different persona")
+                image = local_asset(manifest_path.parent, manifest["assets"]["subject"])
+            elif "character" in found:
+                image = local_asset(p["card"], found["character"].relative_to(p["card"]).as_posix())
+            else:
+                return None
+            return _thumb(image, 480, preserve_alpha=True), "原生主体层 · 单层预览"
+    except (ContractError, OSError, ValueError, TypeError, KeyError, Image.DecompressionBombError):
+        # A missing, corrupt, stale or unsafe preview must not prevent the report.
+        return None
+    return None
+
+
+def _visual_report(path: Path) -> tuple[dict | None, str | None]:
+    """A failed validator may leave malformed JSON; reporting must still work."""
+    try:
+        report = load(path, max_bytes=4 * 1024 * 1024)
+        check(isinstance(report, dict), "检查报告必须是对象")
+        checks = report.get("checks")
+        check(isinstance(checks, list), "检查报告缺少检查列表")
+        check(all(isinstance(item, dict) and isinstance(item.get("name"), str)
+                  and type(item.get("passed")) is bool for item in checks), "检查列表包含无效项目")
+        for name in ("external_requests", "errors"):
+            check(isinstance(report.get(name, []), list), "检查报告的请求或错误列表格式不正确")
+        return report, None
+    except (ContractError, OSError, ValueError, TypeError, KeyError) as exc:
+        return None, "检查报告无法读取或格式不正确：" + str(exc)[:300]
+
+
+def _visual_section(p: dict, visual: dict) -> list[str]:
+    status = visual["status"]
+    if status == "skipped":
+        return [f"<div class='panel'><span class='badge warn'>未验证</span> {e(visual['detail'].get('reason'))}</div>"]
+    if status not in ("passed", "failed", "blocked"):
+        return ["<div class='panel dim'>尚未运行。</div>"]
+    try:
+        current_sha = sha(local_asset(p["ws"], "site/index.html"))
+    except (ContractError, OSError, ValueError):
+        current_sha = None
+    fresh = bool(current_sha) and visual["detail"].get("html_sha256") == current_sha
+    if status == "passed" and not fresh:
+        return ["<div class='panel'><span class='badge warn'>未验证</span> 页面已变更或缺失，请重新运行浏览器检查。</div>"]
+    try:
+        report_path = local_asset(p["ws"], "visual/report.json")
+        report, diagnostic = _visual_report(report_path)
+    except (ContractError, OSError, ValueError) as exc:
+        report, diagnostic = None, "检查报告无法读取或格式不正确：" + str(exc)[:300]
+    stage_passed = status == "passed"
+    verified = (stage_passed and fresh and visual["detail"].get("verified") is True and report is not None
+                and report.get("ok") is True and bool(report["checks"])
+                and all(item["passed"] for item in report["checks"])
+                and not report.get("errors") and not report.get("failure"))
+    label, cls = ("已验证", "ok") if verified else (("未通过", "bad") if not stage_passed else ("未验证", "warn"))
+    out = [f"<div class='panel'><p><span class='badge {cls}'>{label}</span></p>"]
+    if diagnostic:
+        out.append(f"<p class='err'>{e(diagnostic)}</p>")
+    elif report is not None:
+        if stage_passed and not verified:
+            out.append("<p class='dim'>检查报告未确认本次页面成功完成检查，请重新运行。</p>")
+        webgl = "WebGL 已启用" if report.get("webgl") is True else "WebGL 不可用（降级渲染）" if report.get("webgl") is False else "WebGL 未确认"
+        out.append(f"<p>{e(webgl)} · 外部请求 {len(report.get('external_requests', []))} 个 · 页面异常 {len(report.get('errors', []))} 个</p><table>")
+        for item in report["checks"]:
+            if item["passed"]:
+                pill = "<span class='badge ok'>通过</span>" if verified else "<span class='badge warn'>单项通过</span>"
+            else:
+                pill = "<span class='badge bad'>失败</span>"
+            detail = item.get("detail") if item.get("detail") is not None else ""
+            out.append(f"<tr><td>{pill}</td><td>{e(item['name'])}</td><td class='dim'>{e(detail)}</td></tr>")
+        out.append("</table>")
+        if report.get("failure"):
+            out.append(f"<p class='err'>{e(report['failure'])}</p>")
+    for issue in visual.get("errors", []):
+        if isinstance(issue, dict):
+            out.append(f"<p class='err'>{e(issue.get('message', '检查未通过'))}</p>")
+    out.append("</div>")
+    # Failed-run screenshots may explain the failure; pending/stale images do not.
+    if report is not None and (verified or not stage_passed):
+        out.append("<div class='grid'>")
+        for name, caption in SHOTS:
+            try:
+                image = local_asset(p["ws"], "visual/" + name + ".png")
+                uri = _thumb(image, 900)
+            except (ContractError, OSError, ValueError, Image.DecompressionBombError):
+                continue
+            shown_caption = caption if verified else caption + " · 未通过检查，仅供诊断"
+            out.append(f"<figure><img alt='{e(shown_caption)}' src='{uri}'><figcaption>{e(shown_caption)}</figcaption></figure>")
+        out.append("</div>")
+    return out
 
 
 def e(x) -> str:
@@ -98,13 +216,13 @@ def write_report(ws: Path, state: dict | None = None) -> Path:
             out.append("</table></div>")
             c = data["card"]
             art = st["art"]["detail"]
-            found = art_inputs(p) if st["art"]["status"] == "passed" else {}
-            img = next((found[k] for k in ("portrait", "character") if k in found), None)
+            preview = _art_preview(p, data, state)
+            art_label, art_class = ART_STATUS.get(art.get("art_status"), ("状态未知", "warn")) if st["art"]["status"] == "passed" else ("未检查", "idle")
             out.append("<h2>SSR 卡片</h2><div class='panel card'>")
-            if img: out.append(f"<img alt='卡图' src='{_thumb(img, 480)}'>")
+            if preview: out.append(f"<figure><img alt='{e(preview[1])}' src='{preview[0]}'><figcaption>{e(preview[1])}</figcaption></figure>")
             out.append(f"<div><p><b style='font-size:20px'>{e(c['title'])}</b> <span class='dim'>{e(c['english_title'])}</span></p>"
                        f"<p>{' · '.join(e(k) for k in c['keywords'])}</p><p>{e(c['tagline'])}</p><p class='dim'>{e(c['reflection'])}</p>"
-                       f"<p>卡图状态：<span class='badge {'ok' if art.get('art_status') == 'generated' else 'warn'}'>{'已放入插画' if art.get('art_status') == 'generated' else '占位卡面' if art.get('art_status') else '未检查'}</span></p></div></div>")
+                       f"<p>卡图状态：<span class='badge {art_class}'>{e(art_label)}</span></p></div></div>")
 
     b = st["build"]["detail"]
     if b:
@@ -115,26 +233,7 @@ def write_report(ws: Path, state: dict | None = None) -> Path:
 
     v = st["visual"]
     out.append("<h2>浏览器视觉检查</h2>")
-    if v["status"] == "skipped":
-        out.append(f"<div class='panel'><span class='badge warn'>未验证</span> {e(v['detail'].get('reason'))}</div>")
-    elif v["detail"].get("verified") or v["errors"]:
-        rep_path = p["visual"] / "report.json"
-        rep = load(rep_path) if rep_path.is_file() else {}
-        webgl = "WebGL 已启用" if rep.get("webgl") else "WebGL 不可用（降级渲染）"
-        out.append(f"<div class='panel'><p>{e(webgl)} · 外部请求 {len(rep.get('external_requests', []))} 个 · 页面异常 {len(rep.get('errors', []))} 个</p><table>")
-        for c in rep.get("checks", []):
-            pill = "<span class='badge ok'>通过</span>" if c["passed"] else "<span class='badge bad'>失败</span>"
-            detail = c.get("detail") if c.get("detail") is not None else ""
-            out.append(f"<tr><td>{pill}</td><td>{e(c['name'])}</td><td class='dim'>{e(detail)}</td></tr>")
-        out.append("</table>")
-        if rep.get("failure"): out.append(f"<p class='err'>{e(rep['failure'])}</p>")
-        out.append("</div><div class='grid'>")
-        for name, caption in SHOTS:
-            f = p["visual"] / (name + ".png")
-            if f.is_file(): out.append(f"<figure><img alt='{e(caption)}' src='{_thumb(f, 900)}'><figcaption>{e(caption)}</figcaption></figure>")
-        out.append("</div>")
-    else:
-        out.append("<div class='panel dim'>尚未运行。</div>")
+    out.extend(_visual_section(p, v))
 
     out.append("<h2>边界</h2><div class='panel dim'><ul><li>精简模式的内容来自 AI 对你的印象（记忆与对话），没有逐条核对原始聊天记录。</li>"
                "<li>浏览器检查在本机无头浏览器中进行，不代表 Safari 或真机效果。</li><li>页面不会自动公开；是否分享由你决定。</li></ul></div>")

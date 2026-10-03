@@ -127,8 +127,41 @@ def portable_card(folder):
               for k, fn in manifest['assets'].items()}
     with Image.open(folder / manifest['assets']['background']) as im:
         canvas = list(im.size)
-    return {'twinlight_card': 'layers-1', 'persona_digest': manifest['persona_digest'], 'canvas': canvas,
+    card = {'twinlight_card': 'layers-1', 'persona_digest': manifest['persona_digest'], 'canvas': canvas,
             'layers': layers, 'depths': manifest['depths'], 'art_status': manifest['art_status']}
+    if 'composition' in manifest:
+        card['composition'] = copy.deepcopy(manifest['composition'])
+    return card
+
+
+def composition_fixtures(tmp, persona_digest):
+    """Native test shapes, with explicit locks rather than any person's artwork."""
+    lock = {'version': '1.0', 'persona_digest': persona_digest, 'canvas': {'width': 600, 'height': 800},
+            'subject_bounds': [.19, .24, .61, .81], 'subject_center_region': [.35, .45, .45, .6],
+            'text_safe_regions': [[.04, .03, .65, .14], [.05, .87, .95, .97]],
+            'source_prototype_sha256': 'f' * 64}
+    cases = []
+    for name, field, value in [('valid', None, None), ('other-person', 'persona_digest', '0' * 64),
+                               ('wrong-canvas', 'canvas', {'width': 300, 'height': 400}),
+                               ('shifted-bounds', 'subject_bounds', [.6, .24, .95, .81]),
+                               ('shifted-center', 'subject_center_region', [.05, .05, .15, .15]),
+                               ('text-occupied', None, None)]:
+        folder = tmp / ('composition-' + name)
+        native_fixture(folder, persona_digest)
+        manifest = load(folder / 'layers.json')
+        manifest['composition'] = copy.deepcopy(lock)
+        if field:
+            manifest['composition'][field] = value
+        if name == 'text-occupied':
+            with Image.open(folder / 'effects.png') as im:
+                effects = im.convert('RGBA')
+            ImageDraw.Draw(effects).rectangle([30, 24, 390, 112], fill=(230, 210, 120, 255))
+            effects.save(folder / 'effects.png')
+        save(folder / 'layers.json', manifest)
+        portable = tmp / ('composition-' + name + '.json')
+        save(portable, portable_card(folder))
+        cases.append((name, folder, portable))
+    return cases
 
 
 status, server = 0, None
@@ -144,6 +177,7 @@ with tempfile.TemporaryDirectory() as t:
     Image.new('RGBA', (300, 400)).save(tmp / 'wrong-size/spirit.png')
     native_fixture(tmp / 'other-person', 'f' * 64)
     save(tmp / 'card.json', portable_card(tmp / 'native'))
+    locked_cases = composition_fixtures(tmp, persona_digest)
     try:
         server = ThreadingHTTPServer(('127.0.0.1', 0), partial(QuietHandler, directory=str(a.viewer.resolve().parent)))
         thread = Thread(target=server.serve_forever, daemon=True)
@@ -199,6 +233,23 @@ with tempfile.TemporaryDirectory() as t:
             record('Layer dimensions must match exactly', state(q)['art'] == 'placeholder')
             import_layers(q, manifest_files(tmp / 'other-person'), expected='error')
             record('Artwork from another persona is rejected', state(q)['art'] == 'placeholder')
+
+            for kind in ('manifest', 'portable'):
+                for name, folder, portable in locked_cases:
+                    files = manifest_files(folder) if kind == 'manifest' else str(portable)
+                    import_layers(q, files, expected='layered' if name == 'valid' else 'error')
+                    got = state(q)
+                    if name == 'valid':
+                        record(f'{kind}: current-person composition lock is accepted and retained',
+                               got['art'] == 'layered' and got['composition'] == load(folder / 'layers.json')['composition'])
+                        checks_report = got['compositionChecks']
+                        record(f'{kind}: alpha geometry never claims prototype or visual approval',
+                               checks_report['prototype_hash_verified_by_layer_validator'] is False and
+                               checks_report['quality_verified'] is False and
+                               checks_report['canvas'] == [600, 800])
+                    else:
+                        record(f'{kind}: composition {name} is rejected',
+                               got['art'] == 'placeholder' and 'composition' in got['artError'])
 
             clear_art(q)
             frame = generate(q)

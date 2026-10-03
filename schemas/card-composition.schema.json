@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/card-composition.schema.json",
+  "title": "Optional native-canvas composition lock for one person's card",
+  "type": "object",
+  "$defs": {
+    "rectangle": {
+      "description": "Normalized left, top, right, bottom; origin is the canvas top-left. Left/top must be smaller than right/bottom.",
+      "type": "array",
+      "items": {"type": "number", "minimum": 0, "maximum": 1},
+      "minItems": 4,
+      "maxItems": 4
+    }
+  },
+  "properties": {
+    "version": {"const": "1.0"},
+    "persona_digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "canvas": {
+      "type": "object",
+      "properties": {
+        "width": {"type": "integer", "minimum": 256},
+        "height": {"type": "integer", "minimum": 256}
+      },
+      "required": ["width", "height"],
+      "additionalProperties": false
+    },
+    "source_prototype_sha256": {
+      "description": "Optional selected-prototype checksum; verified by the assembler when that local reference is supplied.",
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "subject_bounds": {"$ref": "#/$defs/rectangle"},
+    "subject_center_region": {
+      "description": "Allowed region for the alpha-weighted center of the whole subject; this is not a face or semantic-focus detector.",
+      "$ref": "#/$defs/rectangle"
+    },
+    "text_safe_regions": {
+      "description": "Only explicitly selected text spaces are checked for foreground alpha occupancy.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/rectangle"},
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "max_text_overlap": {
+      "description": "Maximum occupied pixel fraction of subject/spirit/effects in each explicit text-safe region; default is 0.05.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 0.25
+    }
+  },
+  "required": ["version", "persona_digest", "canvas"],
+  "additionalProperties": false
+}

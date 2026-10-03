@@ -57,11 +57,15 @@ def parser():
                       ('status','Show stage gates'),('report','Write report.html for the workspace')]:
         q=sub.add_parser(name,help=text);q.add_argument('--workspace',type=Path,required=True)
     q=sub.add_parser('confirm',help='Record the person\'s explicit approval of the text');q.add_argument('--workspace',type=Path,required=True);q.add_argument('--user-reply',required=True)
-    q=sub.add_parser('art',help='Choose the template placeholder card');q.add_argument('--workspace',type=Path,required=True);q.add_argument('--placeholder',action='store_true',required=True)
-    q=sub.add_parser('unblock',help='Resume a stage after asking the person');q.add_argument('--workspace',type=Path,required=True);q.add_argument('--note',required=True)
+    q=sub.add_parser('art',help='Explicitly choose native layers, a static prototype or a placeholder');q.add_argument('--workspace',type=Path,required=True)
+    mode=q.add_mutually_exclusive_group(required=True)
+    for name in ('layered','static','placeholder'):mode.add_argument('--'+name,action='store_true')
+    q=sub.add_parser('unblock',help='Resume a stage after repairing its reported problem');q.add_argument('--workspace',type=Path,required=True);q.add_argument('--note',required=True)
     q=sub.add_parser('lite-check',help='Validate a lite JSON (all errors at once)');q.add_argument('input',type=Path)
     q=sub.add_parser('card-spec',help='Write a per-person native-layer card brief and bound manifest template')
     q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
+    q.add_argument('--prototype',type=Path,help='Use the selected prototype\'s native canvas without resizing')
+    q.add_argument('--composition',type=Path,help='Optional current-person composition lock JSON')
     q=sub.add_parser('lite-build',help='Build one HTML from a lite JSON without the state machine')
     q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
     q.add_argument('--portrait',type=Path);q.add_argument('--prototype',type=Path)
@@ -103,7 +107,7 @@ def main(argv=None):
             elif args.cmd=='next':result=fsm.next_action(args.workspace)
             elif args.cmd=='status':result=fsm.status(args.workspace)
             elif args.cmd=='confirm':result=fsm.confirm(args.workspace,args.user_reply)
-            elif args.cmd=='art':result=fsm.choose_placeholder(args.workspace)
+            elif args.cmd=='art':result=fsm.choose_art(args.workspace,'static' if args.static else 'placeholder' if args.placeholder else 'layered')
             elif args.cmd=='unblock':result=fsm.unblock(args.workspace,args.note)
             elif args.cmd=='report':
                 from twinlight_core.report import write_report
@@ -122,7 +126,16 @@ def main(argv=None):
             from twinlight_core.cardgen import card_spec
             report=lite.check_text(args.input.read_text(encoding='utf-8'))
             check(report['ok'],'JSON 未通过校验，先运行 lite-check')
-            spec=card_spec(report['data'],generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'))
+            canvas=None
+            composition=load(args.composition) if args.composition else None
+            if args.prototype:
+                from twinlight_core.site import open_card_image
+                canvas=open_card_image(args.prototype).size
+                if composition and composition.get('source_prototype_sha256'):
+                    import hashlib
+                    check(hashlib.sha256(args.prototype.read_bytes()).hexdigest()==composition['source_prototype_sha256'],
+                          '构图锁对应另一张原型；请使用当前选定的原型')
+            spec=card_spec(report['data'],generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),canvas=canvas,composition=composition)
             save(args.out,spec);result={'ok':True,'out':str(args.out),'persona_digest':spec['persona_digest']}
         elif args.cmd=='lite-build':
             from twinlight_core import lite

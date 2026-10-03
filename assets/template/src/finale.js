@@ -24,8 +24,8 @@ void main(){
  vec3 core=vec3(cos(turn)*sep,12.*sin(turn)*sep/100.,sin(turn)*sep*.65)*(g>.5?1.:-1.);
  float spin=(g>.5?-.1:.1)+p*(1.25+1.7*end)/(.7+rr*.018);
  ang+=spin+u_clock*.026;
- // Outer disc stars are drawn into broad, tapered tidal tails at first pass.
- float tail=ease(.19,.60,p)*(1.-.15*end);
+ // A gentle tide grows during the introduction, then becomes broad tails.
+ float tail=(.22*ease(0.,.13,p)+.78*ease(.10,.60,p))*(1.-.15*end);
  float lobe=pow(.5+.5*cos(ang-1.5-g*2.0),3.);
  float pull=outer*tail*lobe;
  ang+=tail*outer*(1.35+g*.45);
@@ -34,6 +34,12 @@ void main(){
  q.y+=sin(ang*2.+g)*outer*tail*20.;
  q= yaw(g>.5?-.64:-.2)*tilt(g>.5?.53:-.09)*q;
  q+=vec3((g>.5?1.:-1.)*pull*67.,0.,pull*tail*50.);
+ // Facing outer edges begin stretching towards the other galaxy before the
+ // first crossing; the bridge yields to the larger tails during passage.
+ vec2 toward=-core.xz/max(length(core.xz),.001);
+ float facing=pow(max(0.,dot(q.xz/max(length(q.xz),.001),toward)),4.);
+ float earlyTide=.16*ease(0.,.14,p)*(1.-ease(.30,.62,p));
+ q.xz+=toward*earlyTide*outer*facing*52.;
  q+=core;
  // Main body settles while the distant tidal debris remains visible.
  float settle=ease(.62,.99,p)*(1.-outer*.66);

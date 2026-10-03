@@ -177,7 +177,11 @@ class Workflow(unittest.TestCase):
         fsm.check_stage(self.ws)
         self.assertEqual(fsm.status(self.ws)['current'], 'visual')
         Image.new('RGB', (900, 1200), 'teal').save(self.ws / 'card' / 'portrait.png')
-        self.assertEqual(fsm.status(self.ws)['current'], 'art')
+        self.assertEqual(fsm.status(self.ws)['current'], 'visual')
+        chosen = fsm.choose_art(self.ws, 'static')
+        self.assertEqual(chosen['next']['stage'], 'build')
+        self.assertEqual(load(self.ws / 'card' / 'choice.json')['mode'], 'static')
+        self.assertEqual(load(self.ws / 'state.json')['stages']['art']['detail']['art_mode'], 'static')
 
     def test_opaque_character_fails_and_native_layers_pass(self):
         self.write(EXAMPLE); fsm.check_stage(self.ws); fsm.confirm(self.ws, '好的')

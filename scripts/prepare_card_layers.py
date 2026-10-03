@@ -2,6 +2,7 @@
 """Assemble untouched native images with separate typeset text and registered lineart."""
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import shutil
 import sys
@@ -11,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from twinlight_core.art import validate_layers
 from twinlight_core.cardgen import card_spec
-from twinlight_core.common import check, save
+from twinlight_core.common import check, load, save
 from twinlight_core.lite import check_text
 from twinlight_core.site import native_subject, open_card_image, ImageChops_safe
 
@@ -75,11 +76,19 @@ def typography(data: dict, size: tuple[int, int], font: Path) -> Image.Image:
 
 
 def prepare(data: dict, background: Path, subject: Path, effects: Path,
-            out: Path, font: Path) -> dict:
+            out: Path, font: Path, *, composition: dict | None = None,
+            prototype: Path | None = None) -> dict:
     sub = native_subject(subject)
     bg, fx = open_card_image(background), open_card_image(effects)
     check(bg.size == sub.size == fx.size, '直接生成的各层必须使用完全相同的画布；不会裁剪、缩放或重摆')
     check(bg.getchannel('A').getextrema() == (255, 255), '背景必须完整且完全不透明')
+    spec = card_spec(data, generated_at='2000-01-01T00:00:00Z', canvas=sub.size, composition=composition)
+    if prototype:
+        check(open_card_image(prototype).size == sub.size, '原型与独立图层必须保持同一实际画布；请重生成尺寸不符的图层')
+    if composition and composition.get('source_prototype_sha256'):
+        check(prototype is not None, '构图锁绑定了原型，请使用 --prototype 提供同一张参考图')
+        check(hashlib.sha256(prototype.read_bytes()).hexdigest() == composition['source_prototype_sha256'],
+              '构图锁对应另一张原型；请使用当前选定的原型')
     out.mkdir(parents=True, exist_ok=True)
     # Copy files byte for byte. These are newly generated assets, not poster cutouts.
     paths = {}
@@ -93,8 +102,8 @@ def prepare(data: dict, background: Path, subject: Path, effects: Path,
     alpha = sub.getchannel('A')
     edge = ImageChops_safe(alpha.filter(ImageFilter.MaxFilter(5)), alpha.filter(ImageFilter.MinFilter(5)))
     ImageOps.invert(edge).convert('RGB').save(out/'lineart.png')
-    spec = card_spec(data, generated_at='2000-01-01T00:00:00Z')
     manifest = spec['manifest_template']
+    manifest['notes'] = 'Native independent layers assembled for this card; prototype is reference only. Visual review still required.'
     manifest['assets'].update(paths)
     save(out/'layers.json', manifest)
     save(out/'card-spec.json', spec)
@@ -109,10 +118,13 @@ def main():
     p.add_argument('--effects', required=True, type=Path)
     p.add_argument('--out', required=True, type=Path)
     p.add_argument('--font', type=Path)
+    p.add_argument('--prototype', type=Path)
+    p.add_argument('--composition', type=Path)
     a = p.parse_args()
     checked = check_text(a.data.read_text(encoding='utf-8'))
     check(checked['ok'], '先修正人物数据：'+json.dumps(checked['errors'], ensure_ascii=False))
-    result = prepare(checked['data'], a.background, a.subject, a.effects, a.out, font_path(a.font))
+    result = prepare(checked['data'], a.background, a.subject, a.effects, a.out, font_path(a.font),
+                     composition=load(a.composition) if a.composition else None, prototype=a.prototype)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

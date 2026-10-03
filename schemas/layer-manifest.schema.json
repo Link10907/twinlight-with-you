@@ -20,6 +20,9 @@
     "reference_consent": {
       "type": "boolean"
     },
+    "composition": {
+      "$ref": "https://twinlight.invalid/schemas/card-composition.schema.json"
+    },
     "assets": {
       "type": "object",
       "properties": {

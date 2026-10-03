@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 ROOT = Path(__file__).resolve().parents[2]
 
 class ContractError(ValueError):
