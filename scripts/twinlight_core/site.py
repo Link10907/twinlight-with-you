@@ -11,6 +11,9 @@ from .compiler import compile_profile, check_approval
 from .art import validate_layers, asset_digest
 
 TEMPLATE=ROOT/'assets/template'
+TEMPLATE_MODULES={'RENDER':'render','CONTROLS':'controls','V6':'v6','V7':'v7','V8':'v8','FINALE':'finale','V9':'v9','HOLO':'holo-card','V10':'v10','ADAPTER':'adapter'}
+TEMPLATE_CSS=('style','v7','v8','v9','v10','adapter')
+TEMPLATE_MEDIA=(('__TEXTURE__','dust-disc.jpg'),('__SURFACE__','stellar-atlas.jpg'),('__V10_MUSIC__','another-light.mp3'))
 
 def uri(path: Path) -> str:
     suffix=path.suffix.lower()
@@ -78,15 +81,24 @@ def flatten_layers(manifest_path: Path) -> bytes:
 PERSONAL_TOKENS=('PROFILE','CARD_DATA','CARD_LAYERS','V9_CARD_IMAGE','DEPTH_BG','DEPTH_SUBJECT','DEPTH_EFFECTS')
 PERSONAL_RE=re.compile(r'__('+'|'.join(PERSONAL_TOKENS)+r')__')
 
+def template_source_hashes() -> dict[str,str]:
+    """Hash exactly the maintained files consumed by the fixed template."""
+    import hashlib
+    paths=[Path('src')/name for name in ('page.html','app.js','card-art.svg')]
+    paths += [Path('src')/(name+'.js') for name in TEMPLATE_MODULES.values()]
+    paths += [Path('src')/(name+'.css') for name in TEMPLATE_CSS]
+    paths += [Path('assets')/name for _,name in TEMPLATE_MEDIA]
+    return {'assets/template/'+path.as_posix():hashlib.sha256((TEMPLATE/path).read_bytes()).hexdigest()
+            for path in sorted(paths)}
+
 def template_parts() -> tuple[str,str]:
     """Fixed template with only the per-person tokens left. Shared by the CLI and the browser viewer."""
     src=TEMPLATE/'src'; js=(src/'app.js').read_text()
-    modules={'RENDER':'render','CONTROLS':'controls','V6':'v6','V7':'v7','V8':'v8','FINALE':'finale','V9':'v9','HOLO':'holo-card','V10':'v10','ADAPTER':'adapter'}
-    for token,file in modules.items():js=js.replace('__'+token+'__',(src/(file+'.js')).read_text())
-    for token,fn in [('__TEXTURE__','dust-disc.jpg'),('__SURFACE__','stellar-atlas.jpg'),('__V10_MUSIC__','another-light.mp3')]:
+    for token,file in TEMPLATE_MODULES.items():js=js.replace('__'+token+'__',(src/(file+'.js')).read_text())
+    for token,fn in TEMPLATE_MEDIA:
         js=js.replace(token,uri(TEMPLATE/'assets'/fn))
     js=js.replace('__CARD_ART__',safe_script_json((src/'card-art.svg').read_text()))
-    css='\n'.join((src/(f+'.css')).read_text() for f in ['style','v7','v8','v9','v10','adapter'])
+    css='\n'.join((src/(f+'.css')).read_text() for f in TEMPLATE_CSS)
     html=(src/'page.html').read_text().replace('__CSS__',css).replace('__JS__',js)
     left=set(re.findall(r'__([A-Z][A-Z0-9_]+)__',html))
     check(left<=set(PERSONAL_TOKENS), 'Unexpanded template token: '+', '.join(sorted(left-set(PERSONAL_TOKENS))))
@@ -102,11 +114,13 @@ def fill(template: str, values: dict) -> str:
     return PERSONAL_RE.sub(lambda m:values[m.group(1)],template)
 
 def write_site(out: Path, profile: dict, layer_uris: dict, card_image_uri: str, depths: dict) -> str:
+    from .template_origin import record_site
     html_t,js_t=template_parts()
     values=personal_values(profile,layer_uris,card_image_uri,depths)
     html=fill(html_t,values)
     out.mkdir(parents=True,exist_ok=True)
-    (out/'index.html').write_text(html,encoding='utf-8');(out/'compiled-check.js').write_text(fill(js_t,values),encoding='utf-8')
+    (out/'index.html').write_bytes(html.encode('utf-8'));(out/'compiled-check.js').write_bytes(fill(js_t,values).encode('utf-8'))
+    record_site(out,profile,layer_uris,card_image_uri,depths,html_t,template_source_hashes())
     return html
 
 CARD_SIZE=(1080,1440)

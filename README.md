@@ -4,17 +4,18 @@
 
 ## 一句话启动
 
-把项目或完整 skill 包交给 AI，然后说：
+最稳的方式是在同一次消息中上传完整 skill ZIP 并发送以下启动语：
 
-> 根据你实际了解的我，生成我的定义卡，完成后直接给我看。
+> 请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md 并使用完整项目资源，根据你实际了解的我，一次生成我的定义闪卡和 Twinlight HTML，完成后一起给我看。
 
 AI 会自动整理本次材料、生成页面和闪卡，再把完成的卡片接入页面；你不需要再发第二条生成命令。资料充分时直接完成本地草稿，只有必要资料缺失时才问两三个短问题。尚未审阅的内容如实标为草稿，不替你确认，公开发布仍由你决定。
 
-- **有文件和执行工具的 AI**：读取 [SKILL.md](SKILL.md)、[AGENT.md](AGENT.md) 或 [PROMPT.md](PROMPT.md)，直接交付实际 HTML、卡片图片和独立互动预览。
+- **只有链接**：仍可发送同一句启动语。AI 需要能下载完整资源、写文件和执行构建；做原生绘画还需真实图像工具，动态验收还需实际预览能力。只读入口或仓库网页不能算完成。
+- **已加载项目或完整 skill**：可直接说“根据你实际了解的我，生成我的定义卡，完成后直接给我看”。AI 读取 [SKILL.md](SKILL.md)、[AGENT.md](AGENT.md) 或 [PROMPT.md](PROMPT.md)，直接交付实际 HTML、卡片图片和独立互动预览。
 - **只想做其中一个**：明确说“只生成个人星图 HTML”或“只制作专属闪卡”；两个模块可分别运行，闪卡说明见 [CARD.md](CARD.md)。
 - **想要原话出处**：提供聊天导出并要求严格模式，保留来源核对和本人审阅。
 
-AI 读不到项目时，可一次上传对应说明或完整包。明确没有文件/执行工具的聊天宿主不能保证一步完成；AI 应说明具体缺口，只有你选择手动导入时才使用 [离线查看器](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)。查看器是可选工具，不是你的成品 HTML。
+AI 读不到项目时，完整包比单独说明更可靠；说明文字不含实际模板资源。明确没有下载/文件/执行工具的聊天宿主不能保证 HTML 完成；AI 应说明具体缺口并保留可用卡片。只有你选择手动导入时才使用 [离线查看器](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)。查看器是可选工具，不是你的成品 HTML。
 
 ## 内容、卡图与观看
 
@@ -22,7 +23,7 @@ AI 读不到项目时，可一次上传对应说明或完整包。明确没有�
 
 HTML 和闪卡使用独立内部提示词，各自验收、各自修复。页面先独立构建，不依赖生图；卡片可独立预览，完成后自动接入同一人物的 HTML。卡片失败时保留成功的页面和明确标为未完成的卡片预览；页面失败时保留已完成的卡片，继续修页面。图片或数据不能代替实际 HTML，静态原型不能冒充分层闪卡。
 
-页面保留 Twinlight V10 星系、双星交汇与揭卡。完整卡片使用原生独立图层、紧凑层内景深和视角驱动的 foil；独立互动预览也能查看这些效果。PNG 是正面预览，不烘焙动态闪光。
+页面必须由已有 Twinlight V10 固定模板构建，保留星系、双星交汇与揭卡，交付前验收模板来源；资源或执行能力缺失时明确页面未完成。完整卡片使用真实图像工具生成的原生独立图层、紧凑层内景深和视角驱动的 foil；独立互动预览也能查看这些效果。代码几何形、占位或静态 SVG 不算专属 SSR。PNG 是正面预览，不烘焙动态闪光；文件齐全但没有实际运行互动时明确“文件已生成，动态未验证”。
 
 成品 HTML 用现代浏览器直接打开，无需安装 Node.js、Python 或本地服务器。网页内预览取决于宿主工具，HTML 不自动公开。GitHub Pages 只在维护者明确手动发布后作为可选入口；通用查看器独立下载，不进入默认 skill ZIP。
 
@@ -48,6 +49,7 @@ HTML 和闪卡使用独立内部提示词，各自验收、各自修复。页面
 | 原型、独立图层与视觉检查 | [美术契约](references/art-direction.md) |
 | 直接预览与平台边界 | [预览说明](references/preview.md) |
 | 效果实验与分发 | [测试与使用](references/quickstart.md) |
+| 从新原始材料到两份成品的验证 | [新生成实验](references/fresh-generation-eval.md) |
 
 HTML 输入不要求 `art_prompt`，美术只保存在独立 `card/art-brief.txt` 或 Strict 的 `art-direction.json`，不修改页面数据或人物绑定。闪卡支持只含卡片文字的 `card-1` 输入，无需 themes。完整卡片交付原生层及清单、`card.json`、`preview.html` 和 `front.png`；入口自动将匹配卡包用于最终 HTML。两模块失败只修对应部分，保留另一份已成功结果。
 
@@ -58,6 +60,8 @@ python -m unittest discover -s tests -v
 ```
 
 默认 ZIP 只含 skill 与通用资源；演示 ZIP 另加白名单中的虚构数据，始终排除真人 showcase、标准答案、隐藏文件和私人目录。`package-manifest.json` 记录范围和文件哈希。生成新页面需要 Python 3.10+ 与 `requirements.txt`，由 Agent 处理；Node.js 与 Playwright 属于开发检查。
+
+内部先运行 `scripts/bootstrap.py --root <已有项目目录>` 检查资源、版本与 imports；URL 模式先下载 bootstrap，再以 `--out <新目录>` 解析实际 commit 并取得同一 revision 的完整资源。bootstrap 不自动安装依赖、不调用图像工具。每次 HTML 构建自动写 `template-receipt.json`，交付前运行 `twinlight.py verify-site <site目录>` 重新组装并比对文件。验收失败只修资源/构建，不改成自写页面；机械比对不证明视觉质量或动态交互。实际生成和查看仍取决于宿主工具与模型执行，提示词不能保证任何平台都遵守。
 
 Lite 默认是尚未确认的有限印象草稿，保持 `draft=true`、`share_allowed=false`；真实本人确认另行记录，不伪造收据。Strict 保留源引用、状态与本人审阅。机械校验不证明语义蕴含，也不保证跨模型抽取完全一致；冻结数据与素材后构建才是确定性的。生图稳定性来自本次设定、原型、画布锁与验收，不是相同像素复刻。页面支持 1–8 个主主题，每个 0–8 个话题，不强行凑满。
 

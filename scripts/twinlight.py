@@ -79,6 +79,8 @@ def parser():
     q.add_argument('--character','--subject',dest='character',type=Path);q.add_argument('--background',type=Path)
     q.add_argument('--layers',type=Path,help='A six-layer manifest bound to this person\'s card-spec persona_digest')
     q.add_argument('--confirmed',action='store_true',help='The person has reviewed the text; enables card export')
+    q=sub.add_parser('verify-site',help='Read-only fixed-template origin check by independently reconstructing the saved site')
+    q.add_argument('site',type=Path,help='Site directory or its index.html; browser viewer exports are not covered')
     return p
 
 
@@ -108,6 +110,10 @@ def main(argv=None):
             report=validate_chunk(load(args.history),args.manifest,load(args.result))
             print(json.dumps(report,ensure_ascii=False,indent=2));return 0 if report['ok'] else 1
         elif args.cmd=='validate-art':result=validate_layers(args.manifest,args.persona_digest)
+        elif args.cmd=='verify-site':
+            from twinlight_core.template_origin import verify_site
+            result=verify_site(args.site)
+            print(json.dumps(result,ensure_ascii=False,indent=2));return 0 if result['ok'] else 1
         elif args.cmd in ('start','next','check','status','report','confirm','art','unblock'):
             from twinlight_core import state as fsm
             if args.cmd=='start':result=fsm.start(args.workspace,preview_only=args.preview)

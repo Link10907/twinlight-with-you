@@ -26,9 +26,17 @@ def bundle() -> dict:
             "aiHistory": load(ROOT / "assets" / "ai-history.json")["events"], "placeholder": placeholder,
             "clear": uri(VIEWER / 'clear.png'),
             "depths": {k: v for k, v in LITE_DEPTHS.items()},
-            "prompt": (ROOT / "PROMPT.md").read_text(encoding="utf-8"),
-            "cardPrompt": (ROOT / "CARD.md").read_text(encoding="utf-8"),
+            "prompt": instruction_bundle(('PROMPT.md', 'AGENT.md', 'prompts/html-build.md',
+                                           'CARD.md', 'prompts/card-generation.md')),
+            "cardPrompt": instruction_bundle(('CARD.md', 'prompts/card-generation.md',
+                                               'references/art-direction.md')),
             "example": (ROOT / "examples" / "lite" / "example.json").read_text(encoding="utf-8")}
+
+
+def instruction_bundle(paths: tuple[str, ...]) -> str:
+    """Copy the actual module instructions; assets still require the complete package."""
+    return '\n\n'.join('<!-- ' + path + ' -->\n' + (ROOT / path).read_text(encoding='utf-8')
+                        for path in paths)
 
 
 def script_json(value) -> str:

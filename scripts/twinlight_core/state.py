@@ -186,7 +186,8 @@ def check_stage(ws: Path) -> dict:
     s = state["stages"].get(stage)
     result: dict = {"stage": stage, "notes": notes}
     if stage == "done":
-        result["message"] = "全部阶段已完成。"
+        result["message"] = "流程执行结束。卡片是否完整须按实际图像模式、视觉和互动证据另行判断；静态或占位不算完整分层闪卡。"
+        result["completion_scope"] = "pipeline_execution"
     elif s["status"] == "blocked":
         result["message"] = "此阶段已连续失败 3 次。按 next 查明原因并修复或选择实际可交付模式，再继续后续阶段。"
     elif stage == "profile":

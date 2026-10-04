@@ -26,7 +26,10 @@ def package(layers: Path, out: Path, data: Path | None = None) -> dict:
         card['composition'] = manifest['composition']
     save(out, card)
     return {'ok': True, 'out': str(out), 'canvas': report['size'], 'bytes': out.stat().st_size,
-            'persona_digest': manifest['persona_digest']}
+            'persona_digest': manifest['persona_digest'],
+            'mechanical_verified': True, 'quality_verified': False, 'browser_verified': False,
+            'generation_provenance_verified': False,
+            'scope': 'Native-layer packaging only; actual image-tool provenance, visual quality and interaction require separate evidence.'}
 
 
 def main():

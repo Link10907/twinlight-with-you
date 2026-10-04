@@ -31,7 +31,10 @@ class CardPackage(unittest.TestCase):
                                    'subject_bounds': [.19, .24, .62, .82]}
         save(self.manifest, manifest)
         save(self.root / 'data.json', self.data)
-        package(self.manifest, self.root / 'card.json', self.root / 'data.json')
+        report = package(self.manifest, self.root / 'card.json', self.root / 'data.json')
+        self.assertTrue(report['mechanical_verified'])
+        for key in ('quality_verified', 'browser_verified', 'generation_provenance_verified'):
+            self.assertFalse(report[key])
         card = load(self.root / 'card.json')
         self.assertEqual(card['canvas'], [600, 800])
         self.assertEqual(card['composition'], manifest['composition'])

@@ -40,7 +40,8 @@ def preview(layers: Path, out: Path, data: Path | None = None) -> dict:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding='utf-8')
     return {'ok': True, 'out': str(out), 'bytes': out.stat().st_size, 'persona_digest': manifest['persona_digest'],
-            'canvas': report['size'], 'browser_verified': False}
+            'canvas': report['size'], 'browser_verified': False, 'quality_verified': False,
+            'mechanical_verified': True, 'generation_provenance_verified': False}
 
 
 def main():
