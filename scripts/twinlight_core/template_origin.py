@@ -51,7 +51,8 @@ def verify_site(target: Path) -> dict:
     File names and reported paths are fixed by this verifier, never taken from
     the receipt. No inputs, outputs, receipt or reports are rewritten.
     """
-    from .site import fill, personal_values, template_parts, template_source_hashes
+    from .site import fill, personal_values, template_parts, template_source_hashes, TEMPLATE
+    from .template_lock import verify_lock
     folder=target if target.is_dir() else target.parent
     errors=[]
     checks=[]
@@ -89,6 +90,11 @@ def verify_site(target: Path) -> dict:
         record('Readable maintained template',False,'assets/template','missing_or_invalid_template')
         return result
     recorded_sources=receipt.get('template_source_files_sha256')
+    locked=verify_lock(TEMPLATE,sources,assembled_sha256=sha256(html_template.encode('utf-8')),builder_version=VERSION)
+    record('Maintainer template lock matches current resources',locked['ok'],
+           'assets/template/template-lock.json','template_lock_mismatch')
+    for error in locked['errors']:
+        errors.append(error)
     record('Template source set unchanged',isinstance(recorded_sources,dict) and
            set(recorded_sources)==set(sources),'assets/template','template_source_set_changed')
     for path,sha in sources.items():

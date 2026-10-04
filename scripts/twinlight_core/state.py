@@ -142,6 +142,12 @@ def integrity(state: dict, p: dict) -> list[str]:
         _reopen(state, "art", "卡图或卡片预览在通过检查后被修改"); notes.append("卡图已修改或卡片预览已变动，需重新检查并重新构建")
     if st["build"]["status"] == "passed" and sha(p["html"]) != st["build"]["detail"].get("html_sha256"):
         _reopen(state, "build", "site/index.html 在构建后被修改"); notes.append("HTML 被改动，需重新构建")
+    elif st["build"]["status"] == "passed":
+        from .template_origin import verify_site
+        verified = verify_site(p["site"])
+        if not verified['ok']:
+            _reopen(state, "build", "固定模板收据、资源或构建输入已失效")
+            notes.append("固定模板验收失效，需重新构建并验收")
     return notes
 
 
@@ -229,12 +235,15 @@ def check_stage(ws: Path) -> dict:
             _fail(state, stage, [{"path": "card/", "code": "art", "message": str(exc)}])
     elif stage == "build":
         from .site import build_lite
+        from .template_origin import verify_site
         try:
             found = art_inputs(p)
             report = build_lite(_profile_data(p), p["site"], generated_at=state["created_at"],
                                 confirmed=state["stages"]["review"]["status"] == "passed",
                                 **_art_kwargs(found))
-            _pass(state, stage, {**report, "html_sha256": sha(p["html"])})
+            verified = verify_site(p["site"])
+            check(verified['ok'], '固定模板来源验收失败，不能进入完成状态')
+            _pass(state, stage, {**report, "html_sha256": sha(p["html"]), "template_verification": verified})
         except (ContractError, OSError, ValueError, TypeError, KeyError) as exc:
             _fail(state, stage, [{"path": "site/", "code": "build", "message": str(exc)}])
     elif stage == "visual":

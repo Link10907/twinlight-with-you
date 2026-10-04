@@ -89,7 +89,7 @@ def art_prompts(card: dict, *, canvas=None, composition: dict | None = None) -> 
         "text": "\n".join([
             f"SSR、卡框与文字默认由程序排版为独立 text 层，真实透明、同一 {size} 画布，depth=0。",
             "排版只使用当前卡的 title、english_title、keywords、tagline 与当前总结者署名，不沿用示例文案。",
-            "也可独立生图生成 text 层，但必须逐字核对、保持真实 alpha 与同画布坐标；不能把文字烧进 subject 或 background。",
+            "文字层只由程序精确排版，不调用图像模型画字；逐字核对、保持真实 alpha 与同画布坐标，不把文字烧进 subject 或 background。",
         ]),
     }
 

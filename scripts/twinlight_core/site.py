@@ -115,12 +115,17 @@ def fill(template: str, values: dict) -> str:
 
 def write_site(out: Path, profile: dict, layer_uris: dict, card_image_uri: str, depths: dict) -> str:
     from .template_origin import record_site
+    from .template_lock import verify_lock, sha256
     html_t,js_t=template_parts()
+    sources=template_source_hashes()
+    locked=verify_lock(TEMPLATE,sources,assembled_sha256=sha256(html_t.encode('utf-8')),builder_version=VERSION)
+    check(locked['ok'], '固定模板版本校验失败；恢复本次完整发布资源，不在个人任务中重新锁定模板：'+
+          ', '.join(e['code'] for e in locked['errors']))
     values=personal_values(profile,layer_uris,card_image_uri,depths)
     html=fill(html_t,values)
     out.mkdir(parents=True,exist_ok=True)
     (out/'index.html').write_bytes(html.encode('utf-8'));(out/'compiled-check.js').write_bytes(fill(js_t,values).encode('utf-8'))
-    record_site(out,profile,layer_uris,card_image_uri,depths,html_t,template_source_hashes())
+    record_site(out,profile,layer_uris,card_image_uri,depths,html_t,sources)
     return html
 
 CARD_SIZE=(1080,1440)

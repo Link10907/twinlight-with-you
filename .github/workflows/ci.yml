@@ -16,6 +16,7 @@ jobs:
         with:
           node-version: '22'
       - run: python -m pip install -r requirements-dev.txt
+      - run: python scripts/lock_template.py
       - run: python -m unittest discover -s tests -v
       - run: python scripts/twinlight.py demo --out outputs/demo
       - run: python scripts/twinlight.py demo --pipeline --out outputs/demo-pipeline
@@ -26,6 +27,43 @@ jobs:
       - run: python scripts/check_capacity.py
       - run: python scripts/verify_browser.py --html outputs/demo/index.html --out verification/browser --require-webgl
       - run: python scripts/verify_browser.py --html outputs/demo-pipeline/index.html --out verification/browser-pipeline --require-webgl
+      - run: python scripts/verify_layout.py --out verification/layout --skip-continuous
+      - name: Default independent modules, controlled resume and automatic integration
+        run: |
+          mkdir -p verification/controlled
+          python scripts/twinlight.py run tests/fixtures/lite/valid.json --workspace runs/controlled --mode both > verification/controlled/first.json
+          python - <<'EOF'
+          import sys
+          from pathlib import Path
+          sys.path.insert(0, 'scripts')
+          sys.path.insert(0, 'tests')
+          from twinlight_core.common import load
+          from twinlight_core.lite import persona_digest
+          from test_card_art import native_fixture
+          first = load(Path('verification/controlled/first.json'))
+          assert first['status'] == 'needs_card', first['status']
+          assert Path(first['outputs']['html']).is_file()
+          # Synthetic fixtures exercise orchestration, not fresh image generation or art quality.
+          native_fixture(Path('runs/controlled/native'), persona_digest(load(Path('tests/fixtures/lite/valid.json'))))
+          EOF
+          python scripts/twinlight.py run tests/fixtures/lite/valid.json --workspace runs/controlled --mode both --layers runs/controlled/native/layers.json > verification/controlled/final.json
+          python - <<'EOF'
+          from pathlib import Path
+          import sys
+          sys.path.insert(0, 'scripts')
+          from twinlight_core.common import load
+          from twinlight_core.template_origin import verify_site
+          result = load(Path('verification/controlled/final.json'))
+          assert result['status'] == 'files_ready', result['status']
+          assert result['dynamic_verified'] is True
+          assert result['quality_verified'] is False
+          assert result['generation_provenance_verified'] is False
+          assert result['stages']['html']['reused'] is True
+          for key in ('html', 'card_front', 'card_preview', 'card_pack', 'html_with_card'):
+              assert Path(result['outputs'][key]).is_file(), key
+          assert verify_site(Path(result['outputs']['html_with_card']))['ok']
+          assert load(Path('runs/controlled/site-with-card/profile.json'))['release'] == {'draft': True, 'share_allowed': False}
+          EOF
       - name: Compatibility local preview, end to end through the state machine
         run: |
           TL="python scripts/twinlight.py"
@@ -82,4 +120,5 @@ jobs:
             verification/
             runs/ci/report.html
             runs/ci/visual/
+            runs/controlled/browser/
           if-no-files-found: ignore

@@ -260,7 +260,7 @@ function artPrompts(card){
    '只有本次设定明确包含同伴或中景象征时才生成，不要为凑层数添加人格含义；不使用时交付同尺寸全透明 PNG。不要重画主角。',alpha,noText].join('\n'),
   text:['SSR、卡框与文字默认由程序排版为独立 text 层，真实透明、同一 1080×1440 画布，depth=0。',
    '排版只使用当前卡的 title、english_title、keywords、tagline 与当前总结者署名，不沿用示例文案。',
-   '也可独立生图生成 text 层，但必须逐字核对、保持真实 alpha 与同画布坐标；不能把文字烧进 subject 或 background。'].join('\n')};
+   '文字层只由程序精确排版，不调用图像模型画字；逐字核对、保持真实 alpha 与同画布坐标，不把文字烧进 subject 或 background。'].join('\n')};
 }
 
 const api={parse,normalize,validate,checkText,repairPrompt,toProfile,layoutFromSpec,providerOf,ownerId,sha256,digest,canonical,sha256Canonical,personaDigest,stripTrailingCommas,BASIS,artPrompts};

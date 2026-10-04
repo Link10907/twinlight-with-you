@@ -14,7 +14,7 @@ from unittest import mock
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
 from twinlight_core import lite, site
-from twinlight_core.common import load, save
+from twinlight_core.common import load, save, ContractError
 from twinlight_core.template_origin import verify_site
 
 AT='2026-10-03T00:00:00Z'
@@ -112,6 +112,25 @@ class TemplateOrigin(unittest.TestCase):
         self.assertEqual(old['template_sha256'],new['template_sha256'])
         self.assertNotEqual(old['persona_digest'],new['persona_digest'])
         self.assertNotEqual(old['render_inputs_sha256'],new['render_inputs_sha256'])
+
+    def test_changed_template_before_build_cannot_approve_its_own_new_receipt(self):
+        template=self.root/'changed-template';shutil.copytree(site.TEMPLATE,template)
+        css=template/'src/v10.css';css.write_bytes(css.read_bytes()+b'\nbody{background:red}\n')
+        out=self.root/'replaced-style-site'
+        with mock.patch.object(site,'TEMPLATE',template):
+            with self.assertRaisesRegex(ContractError,'固定模板版本校验失败'):
+                site.write_site(out,self.profile,LAYERS,'auto',DEPTHS)
+        self.assertFalse(out.exists())
+
+    def test_missing_lock_invalidates_existing_site_without_rewriting_it(self):
+        template=self.root/'unlocked-template';shutil.copytree(site.TEMPLATE,template)
+        (template/'template-lock.json').unlink()
+        before=self.files()
+        with mock.patch.object(site,'TEMPLATE',template):
+            result=verify_site(self.out)
+        self.assertFalse(result['ok'])
+        self.assertIn('missing_or_invalid_template_lock',self.codes(result))
+        self.assertEqual(self.files(),before)
 
     def test_lite_and_strict_builds_share_receipt_and_verification(self):
         lite_out=self.root/'lite'

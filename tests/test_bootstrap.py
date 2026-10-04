@@ -1,5 +1,6 @@
 """Acquisition must fail explicitly rather than permit a substitute design."""
 import io
+import hashlib
 import json
 import stat
 import sys
@@ -19,10 +20,19 @@ SHA = 'a' * 40
 
 def archive(extra=(), omit=()):
     stream = io.BytesIO()
+    template_files = {name: hashlib.sha256(b'maintained resource').hexdigest()
+                      for name in bootstrap.REQUIRED
+                      if name.startswith('assets/template/') and not name.endswith('template-lock.json')}
+    lock = {'schema_version': 'template-lock-1', 'builder_version': 'test',
+            'source_files_sha256': template_files, 'assembled_template_sha256': '0' * 64}
     with zipfile.ZipFile(stream, 'w') as zipped:
         for name in bootstrap.REQUIRED:
             if name not in omit:
-                zipped.writestr('twinlight-with-you-' + SHA + '/' + name, 'maintained resource')
+                content = ('maintained resource' if name != 'assets/template/template-lock.json'
+                           else json.dumps(lock))
+                if name == 'scripts/twinlight_core/template_lock.py':
+                    content = (ROOT / name).read_text()
+                zipped.writestr('twinlight-with-you-' + SHA + '/' + name, content)
         for name, content in extra:
             zipped.writestr(name, content)
     return stream.getvalue()
@@ -91,6 +101,16 @@ class ResourceBootstrap(unittest.TestCase):
             result = bootstrap.check_root(self.out)
         self.assertFalse(result['ok'])
         self.assertFalse(result['package_manifest_verified'])
+
+    def test_modified_template_rejected_before_any_personal_build(self):
+        bootstrap.unpack(archive(), self.out, SHA)
+        (self.out / 'assets/template/src/v10.css').write_text('different local design')
+        result = bootstrap.check_root(self.out)
+        self.assertTrue(result['resource_complete'])
+        self.assertFalse(result['template_lock']['ok'])
+        self.assertFalse(result['ok'])
+        self.assertIn('locked_template_source_changed',
+                      {error['code'] for error in result['template_lock']['errors']})
 
 
 if __name__ == '__main__':

@@ -10,7 +10,8 @@ AI 自动完成个人星图 HTML 和专属分层闪卡，把成品卡片接入�
 
 只有链接时，也可用上述入口，但 AI 必须能下载完整资源、写文件和执行构建。
 已加载完整项目或 skill 时，可直接说“根据你实际了解的我，生成我的定义卡，完成后直接给我看”。
-Codex、Claude Code、Cursor 等 Agent 可直接读取 SKILL.md 或 AGENT.md。
+有文件与执行能力的网页或 Agent 可读取 SKILL.md 或 AGENT.md，使用同一流程控制器。
+生图、透明图层和动态预览能力分别检查，不绑定 Codex，也不承诺所有 AI 网页均能执行。
 
 如果明确只要其中一个，可说“只生成个人星图 HTML”或“只制作专属闪卡”。
 独立闪卡说明：https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/CARD.md

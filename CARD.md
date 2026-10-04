@@ -6,9 +6,9 @@
 
 ## 输入与美术
 
-使用完整项目中的相对资源与脚本，由 AI 处理 Python 3.10+、requirements 与已授权图像工具。已有项目先用 `scripts/bootstrap.py --root <项目目录>` 检查资源和运行时；链接模式按 `PROMPT.md` 取得同一实际 revision 的完整资源。自己判断实际能力，不让用户运行内部命令。缺工具时说明具体缺口，保留已有预览，不能把静态图称为完整分层闪卡；HTML 未完成也不阻止本模块独立制作。
+使用完整项目中的相对资源与脚本，由 AI 处理 Python 3.10+、requirements 与已授权图像工具。已有项目先用 `scripts/bootstrap.py --root <项目目录>` 检查资源和运行时；链接模式按 `PROMPT.md` 取得同一实际 revision 的完整资源。生成前按 [references/platform-adapters.md](references/platform-adapters.md) 检查真实图像工具、参考图、原生透明能力及中文字体；`prepare_card_layers.py` 可自动找字体或接受 `--font <实际字体文件>`。缺字体先修排字环境，不能让生图模型画字。自己检查，不让用户运行内部命令。缺工具保留已有预览与 HTML，明确分层卡未完成。
 
-读取 [references/art-direction.md](references/art-direction.md)。每人使用独立卡片目录，保留用户明确提示、可见参考与最新修改。未指定的画风、形象和配色由 AI 自主选择，保证作品辨识度与完成度，不发审美问卷。
+读取 [references/art-direction.md](references/art-direction.md)。每人使用独立卡片目录，保留用户明确提示、可见参考与最新修改。未指定的画风、形象和配色由 AI 自主选择，保证作品辨识度与完成度，不发审美问卷。Lite/card-1 默认由入口 `run --mode both|card` 记录待办；生成装层后交回同一 `run --layers <manifest>` 自动续跑。控制器不代替实际生图或视觉判断，也不替 Strict 绕过审核。
 
 默认读取入口已校验的 `twinlight.json`，作为只读输入取得昵称、实际总结者和 card 文字；不能修改 HTML 内容来换画风。明确只做卡片、没有星系数据时，可单独写 `card-input.json`，遵循 `schemas/card-input.schema.json`：`twinlight="card-1"`、name、summarizer 与 card 的 title、english_title、keywords、tagline、reflection，无需 themes。两种输入的相同身份文字得到相同人物绑定。
 
@@ -52,4 +52,4 @@ Strict 按同一契约独立排字与登记图层，再用省略 `--data` 的 pa
 
 只修失败层，每层最多重生成两次；必要时按美术契约做一次明确构图修订，保留旧素材和记录，不重开无限重试。仍失败就保留原型或占位预览，明确卡片未完成，保留已成功的 HTML。卡片技术问题不改只读文字、人物绑定或页面。
 
-按实际范围交付卡包文件、独立互动预览和正面图，分别说明文件完成、视觉验收和动态检查；静态/占位仍明确分层闪卡未完成。入口自动将完成且匹配卡包交给 HTML 模块，无需用户再次要求，也不要求额外本人批准才能交付私人草稿。接入失败只修导入，不重做卡片；HTML 失败也保留此卡片。仅在明确只做闪卡时止于本模块。公开发布仍需本人明确授权，见 [references/privacy.md](references/privacy.md)。
+按实际范围交付卡包文件、独立互动预览和正面图，分别说明文件完成、视觉验收和动态检查；静态/占位仍明确分层闪卡未完成。手动模块命令使用上面的 `card.json`；默认控制器输出为 `run/card/card-pack.json`，内容契约相同，以实际报告路径为准。入口自动将完成且匹配卡包交给 HTML 模块，无需用户再次要求，也不要求额外本人批准才能交付私人草稿。接入失败只修导入，不重做卡片；HTML 失败也保留此卡片。仅在明确只做闪卡时止于本模块。公开发布仍需本人明确授权，见 [references/privacy.md](references/privacy.md)。

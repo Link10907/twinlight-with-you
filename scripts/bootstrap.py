@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import importlib
 import importlib.metadata
+import importlib.util
 import io
 import json
 import re
@@ -25,6 +26,8 @@ REQUIRED = (
     'references/privacy.md', 'references/workflow.md', 'references/extraction.md',
     'references/layout.md', 'references/sources.md', 'references/quickstart.md',
     'references/fresh-generation-eval.md',
+    'references/platform-adapters.md', 'assets/template/template-lock.json',
+    'scripts/lock_template.py',
     'scripts/twinlight.py', 'scripts/prepare_card_layers.py',
     'scripts/package_card.py', 'scripts/preview_card.py', 'scripts/verify_browser.py',
     'requirements-dev.txt', 'assets/lite/lite.js',
@@ -32,7 +35,7 @@ REQUIRED = (
     'assets/card-preview/bootstrap.js',
 )
 CORE = ('__init__', 'art', 'cardgen', 'common', 'compiler', 'evidence', 'extraction',
-        'history', 'layout', 'lite', 'report', 'showcase', 'site', 'state', 'template_origin')
+        'history', 'layout', 'lite', 'report', 'showcase', 'site', 'state', 'template_origin', 'template_lock', 'run')
 SCHEMAS = ('analysis', 'approval', 'art-direction', 'card-composition', 'card-input',
            'chunk-result', 'evidence-reference', 'history', 'layer-manifest', 'layout', 'lite')
 TEMPLATE = ('adapter.css', 'adapter.js', 'app.js', 'card-art.svg', 'controls.js',
@@ -130,13 +133,26 @@ def check_root(root: Path) -> dict:
             (root / relative).resolve().is_relative_to(root) and (root / relative).is_file()
             and hashlib.sha256((root / relative).read_bytes()).hexdigest() == expected
             for relative, expected in files.items())
-    return {'ok': not missing and runtime_ok and package_verified is not False,
+    locked = {'ok': False, 'errors': [{'code': 'template_lock_unavailable'}]}
+    verifier = root / 'scripts/twinlight_core/template_lock.py'
+    if verifier.is_file():
+        try:
+            spec = importlib.util.spec_from_file_location('twinlight_bootstrap_lock', verifier)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            sources = {name: value for name, value in hashes.items()
+                       if name.startswith('assets/template/') and name != 'assets/template/template-lock.json'}
+            locked = module.verify_lock(root / 'assets/template', sources)
+        except (OSError, ValueError, TypeError, AttributeError, ImportError, SyntaxError):
+            pass
+    return {'ok': not missing and runtime_ok and package_verified is not False and locked['ok'],
             'resource_complete': not missing, 'resource_root': str(root),
             'required_files_sha256': hashes, 'missing_resources': missing,
             'package_manifest_verified': package_verified,
+            'template_lock': locked,
             'runtime': {'python': sys.version.split()[0], 'minimum_python': '3.10',
                         'dependencies': dependencies, 'missing_dependencies': unavailable, 'ok': runtime_ok},
-            'scope': 'Resource availability only; no HTML build, model analysis, image generation or visual verification.'}
+            'scope': 'Resource/runtime and release-local template lock only; no HTML build, model analysis, image generation or visual verification.'}
 
 
 def main() -> int:

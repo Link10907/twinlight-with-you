@@ -48,6 +48,7 @@ HTML 和闪卡使用独立内部提示词，各自验收、各自修复。页面
 | 严格提取、原话核对与增量更新 | [工作流](references/workflow.md)、[提取规则](references/extraction.md) |
 | 原型、独立图层与视觉检查 | [美术契约](references/art-direction.md) |
 | 直接预览与平台边界 | [预览说明](references/preview.md) |
+| 不同网页和 Agent 的能力接入 | [平台适配](references/platform-adapters.md) |
 | 效果实验与分发 | [测试与使用](references/quickstart.md) |
 | 从新原始材料到两份成品的验证 | [新生成实验](references/fresh-generation-eval.md) |
 
@@ -61,7 +62,9 @@ python -m unittest discover -s tests -v
 
 默认 ZIP 只含 skill 与通用资源；演示 ZIP 另加白名单中的虚构数据，始终排除真人 showcase、标准答案、隐藏文件和私人目录。`package-manifest.json` 记录范围和文件哈希。生成新页面需要 Python 3.10+ 与 `requirements.txt`，由 Agent 处理；Node.js 与 Playwright 属于开发检查。
 
-内部先运行 `scripts/bootstrap.py --root <已有项目目录>` 检查资源、版本与 imports；URL 模式先下载 bootstrap，再以 `--out <新目录>` 解析实际 commit 并取得同一 revision 的完整资源。bootstrap 不自动安装依赖、不调用图像工具。每次 HTML 构建自动写 `template-receipt.json`，交付前运行 `twinlight.py verify-site <site目录>` 重新组装并比对文件。验收失败只修资源/构建，不改成自写页面；机械比对不证明视觉质量或动态交互。实际生成和查看仍取决于宿主工具与模型执行，提示词不能保证任何平台都遵守。
+内部先运行 `scripts/bootstrap.py --root <已有项目目录>` 检查资源、运行时与模板锁；URL 模式先取得同一实际 revision 的完整资源。默认通过 `twinlight.py run <input.json> --workspace <新目录> --mode both` 管理独立模块、续跑和真实验收，缺图层时 AI 按 `next_action` 完成美术并继续，不让用户再发生成指令。程序保留成功页面与卡片，只重试失败模块；文件或验收收据改变后重新检查，连续失败达到上限时报告具体问题。
+
+每份 HTML 构建前核对 `assets/template/template-lock.json`，构建后用 `verify-site` 独立重建比对；不能通过改模板并写一张新收据替代已维护的效果。`scripts/lock_template.py --write` 仅用于维护者审查有意的模板修改后更新发布，个人生成不调用它。机械比对不证明语义或审美，真实浏览器结果与未测项目分别记录。跨平台共用内容、模板与控制器；当前没有部署网页构建服务，也没有认证任意 AI 网站的一步执行能力。
 
 Lite 默认是尚未确认的有限印象草稿，保持 `draft=true`、`share_allowed=false`；真实本人确认另行记录，不伪造收据。Strict 保留源引用、状态与本人审阅。机械校验不证明语义蕴含，也不保证跨模型抽取完全一致；冻结数据与素材后构建才是确定性的。生图稳定性来自本次设定、原型、画布锁与验收，不是相同像素复刻。页面支持 1–8 个主主题，每个 0–8 个话题，不强行凑满。
 

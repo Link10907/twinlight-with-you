@@ -81,6 +81,14 @@ def parser():
     q.add_argument('--confirmed',action='store_true',help='The person has reviewed the text; enables card export')
     q=sub.add_parser('verify-site',help='Read-only fixed-template origin check by independently reconstructing the saved site')
     q.add_argument('site',type=Path,help='Site directory or its index.html; browser viewer exports are not covered')
+    q=sub.add_parser('run',help='Controlled independent HTML/card drafts, real gates and resumable one-request delivery')
+    q.add_argument('input',type=Path);q.add_argument('--workspace',type=Path,required=True)
+    q.add_argument('--mode',choices=['html','card','both'],default='both')
+    q.add_argument('--layers',type=Path,help='Actually generated native manifest; a missing card is returned as next_action')
+    q.add_argument('--art-prompt-file',type=Path,help='Independent current-person art brief; does not modify content')
+    q.add_argument('--font',type=Path,help='Usable Chinese typography font for pending native card generation; completed layers do not require it')
+    q.add_argument('--browser',help='Actual installed Chrome/Chromium executable')
+    q.add_argument('--no-browser',action='store_true',help='Explicitly leave dynamic rendering unverified')
     return p
 
 
@@ -114,6 +122,12 @@ def main(argv=None):
             from twinlight_core.template_origin import verify_site
             result=verify_site(args.site)
             print(json.dumps(result,ensure_ascii=False,indent=2));return 0 if result['ok'] else 1
+        elif args.cmd=='run':
+            from twinlight_core.run import run
+            result=run(args.input,args.workspace,mode=args.mode,layers=args.layers,
+                       art_prompt_file=args.art_prompt_file,browser=args.browser,no_browser=args.no_browser,font=args.font)
+            print(json.dumps(result,ensure_ascii=False,indent=2))
+            return 1 if result['status'] in ('failed','partial_success') else 0
         elif args.cmd in ('start','next','check','status','report','confirm','art','unblock'):
             from twinlight_core import state as fsm
             if args.cmd=='start':result=fsm.start(args.workspace,preview_only=args.preview)

@@ -14,12 +14,20 @@ p = Path("<本次目录>/bootstrap.py"); p.parent.mkdir(parents=True, exist_ok=T
 subprocess.run([sys.executable, str(p), "--out", str(p.parent / "project")], check=True)
 ```
 
-取得资源后读取项目中的 [AGENT.md](https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/AGENT.md)，自动编排两份独立内部提示词：[HTML 构建](https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/prompts/html-build.md) 与 [闪卡生成](https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/prompts/card-generation.md)。以本次取得的同一 revision 文件为准；明确只要页面或只要闪卡时执行对应模块。
+取得资源后读取本次目录中的 `AGENT.md`，使用其中的通用 `run` 控制器管理进度、续跑和验收；内部 [HTML 构建](prompts/html-build.md) 与 [闪卡生成](prompts/card-generation.md) 提示词仍独立。以本次取得的同一 revision 文件为准，不能再从 main 拼入另一版脚本。只要页面或只要闪卡时选择对应 mode；Strict 的逐句来源和本人审阅另走原工作流。
 
-HTML 内容按 [references/lite-content.md](references/lite-content.md) 生成和校验，只使用本次资料与可见对话，不借作者或示例经历。它不要求美术设定，不调用图像工具。资料充分时先完成未确认的本地草稿，不伪造本人确认；实际已确认的确切文字可沿用。
+HTML 内容按 [references/lite-content.md](references/lite-content.md) 生成和校验，只使用本次资料与可见对话，不借作者或示例经历。它不要求美术设定，不调用图像工具。资料充分时先完成未确认私人草稿；当前 `run` 统一保持未确认状态，不伪造本人确认。已有确切文字批准仍有效，确需启用已确认导出时按 `AGENT.md` 使用独立构建验收。
 
-闪卡按 [CARD.md](https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/CARD.md) 单独生成和验收。缺少素材时必须调用本次真实可用的图像工具，保留返回路径/工件、原型、图层与实际看图记录；代码画出的几何形、占位或静态 SVG 不能冒充专属分层 SSR。程序仅负责准确文字、边框、同像素线稿、装层和已有素材的预览。美术保存在自己的目录，不改 HTML 内容或人物绑定。两个模块各自修复失败，保留已完成结果；两者都被请求时自动导入完成且匹配的卡包，不等用户另一条命令。
+根据 [references/platform-adapters.md](references/platform-adapters.md) 检查当前文件、执行、生图、字体和预览能力，不绑定某一平台。Lite 默认实际调用：
 
-每次 HTML 构建生成 `template-receipt.json`，交付前必须实际运行 `PY TL verify-site <本次site目录>`；`PY` 是实际 Python 路径，`TL` 是取得项目的 `scripts/twinlight.py` 绝对路径。此命令重新使用当前固定资源组装并比对输出 HTML。保存实际结果；资源检查、文件存在或口头声明不能替代这次验收。失败则修对应构建问题，不能宣称页面完成。原生层机械检查不能证明画得好、与原型配准或动态交互已通过；没有实际预览时明确“文件已生成，动态未验证”。
+```bash
+PY TL run <本次内容.json> --workspace <本次目录>/run --mode both
+```
 
-最终交付实际卡片预览与用户自己的单文件 `.html`，先给有效文件链接或附件，再打开支持的预览。JSON、命令、通用查看器、图片或源码代码块不能替代已经请求的 HTML 文件。资料不足只问必要的两三个短问题；文件/执行或生图能力缺失时如实报告具体未完成部分，不能宣称已生成完整卡片或页面。不会自动公开发布。
+`PY` 是合格的实际 Python 路径，`TL` 是取得项目的 `scripts/twinlight.py` 绝对路径。保存实际返回的 `run-state.json`、`run-report.json` 和工件路径；读取 `next_action`，由 AI 执行缺少的内部动作。`needs_card` 不要求用户第二次请求。没有浏览器时使用 `--no-browser` 并说明动态未验证，不把“能创建文件”等同于站内完整观看。
+
+闪卡按 [CARD.md](CARD.md) 单独生成和验收。生图前检查本次真实图像工具、原生透明能力和中文字体。保留返回工件、无字原型、图层与实际看图记录；代码几何形、占位或静态 SVG 不能冒充专属分层 SSR。文字仅由程序准确排版；美术保存在自己的目录，不改 HTML 内容或人物绑定。完成图层后由 AI 用同一输入、workspace 和 mode 加 `--layers <实际layers.json>` 续跑，自动接入，不等用户导入命令。两个模块各自修失败，保留已完成结果。
+
+控制器对每次 HTML 构建执行 `verify-site`，保存 `template-receipt.json` 和实际结果；模块单独执行时同样必须运行该验收。它核对维护的模板锁并独立重组比对输出；不能在生产任务中修改或重新锁定模板来过检。文件存在、旧报告或口头声明不能替代验收，失败则修具体问题。原生层机械检查不证明绘画、原型配准或真实生图来源；浏览器报告不证明内容分析和审美。没有实际预览时说明“文件已生成，动态未验证”。
+
+最终交付实际卡片预览与用户自己的单文件 `.html`，先给有效文件链接或附件，再打开支持的预览。JSON、命令、通用查看器、图片或源码代码块不能替代已经请求的 HTML 文件。完成消息保持简洁，实际文件、动态未验与模块未完成分别说清楚。资料不足只问必要的两三个短问题；能力缺失时交付已成功模块并说明具体缺口。当前手动查看器和未来网页服务方案不算自动路线已经完成。不会自动公开发布。

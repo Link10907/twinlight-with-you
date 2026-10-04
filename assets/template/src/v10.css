@@ -7,3 +7,19 @@
 .identity-card.pointer-focus:focus-visible{outline:none!important}.v10-audio.inline{white-space:nowrap;min-width:112px!important;height:auto!important;line-height:1.3}.identity-top .v10-audio.inline{padding:10px 12px}.identity-copy h2{max-width:410px}#identityClose{white-space:nowrap}@media(max-width:700px){.identity-top .v10-audio.inline{min-width:0!important;padding:8px}.identity-top #identityClose{font-size:10px}}
 
 #encounterCinema>.v10-audio{right:calc(5% + 145px);top:42px} @media(max-width:700px){#encounterCinema>.v10-audio{right:calc(4% + 102px);top:20px}}
+
+/* Personal text may contain a single long name; preserve every character. */
+.v10-question h2{width:min(90vw,900px);max-width:100%;min-width:0;overflow-wrap:anywhere}
+.identity-copy{min-width:0}.identity-copy h2,.identity-kicker,.identity-message,.identity-caption span{max-width:100%;overflow-wrap:anywhere}
+.reader h2,.reader h3,.reader .letter-body,.reader .letter-reflection,.v7-peek h2,.v7-peek>p{overflow-wrap:anywhere}
+@media(max-width:700px){
+ .header{gap:clamp(6px,2.5vw,12px);padding:0 clamp(12px,4vw,18px)}
+ .header .brand,.header .header-right{flex-shrink:0}
+ .header nav{min-width:0;margin:0 0 0 auto;gap:clamp(8px,2.5vw,16px)}
+ .header nav button{flex-shrink:0;white-space:nowrap;font-size:clamp(9px,2.65vw,11px);letter-spacing:.2px}
+ .identity-copy h2{width:100%}
+ .v7-route{gap:clamp(5px,1.5vw,10px)}
+ .v7-steps{flex:1;min-width:0;gap:clamp(3px,1vw,7px)}
+ .v7-steps button{flex:1;min-width:0;width:auto;max-width:16px}
+ .v7-route #v7Next,.v7-route #v7Position{flex-shrink:0}
+}

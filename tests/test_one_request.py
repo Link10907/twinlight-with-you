@@ -153,6 +153,14 @@ class OneRequest(unittest.TestCase):
         self.assertTrue(Path(following["html"]).is_file())
         self.assertFalse(following["text_confirmed"])
 
+    def test_deleted_template_receipt_reopens_a_completed_compatibility_run(self):
+        self.start();self.local_review();self.native()
+        self.assertEqual(state.check_stage(self.ws)['next']['stage'],'build')
+        self.assertEqual(self.finish()['stage'],'done')
+        (self.ws/'site/template-receipt.json').unlink()
+        self.assertEqual(state.next_action(self.ws)['stage'],'build')
+        self.assertEqual(load(self.ws/'state.json')['stages']['build']['status'],'pending')
+
     def test_legacy_start_still_waits_for_real_confirmation(self):
         following = self.start(preview=False)
         self.assertIn("confirm", following["then"])

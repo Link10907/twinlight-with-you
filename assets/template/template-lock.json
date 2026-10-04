@@ -1,0 +1,31 @@
+{
+  "schema_version": "template-lock-1",
+  "template_name": "Twinlight V10-derived",
+  "builder_version": "1.5.0",
+  "source_files_sha256": {
+    "assets/template/assets/another-light.mp3": "30104df43eaa3868297e34aa0775bafd04fc1fedb53ffbb0d687de2dd7058d51",
+    "assets/template/assets/dust-disc.jpg": "bcc321fa8d39b6bca850200e3cc19c6b5c6990dec246e920ab3e5fea48a13916",
+    "assets/template/assets/stellar-atlas.jpg": "00ffa58027fa390b5321806f961d19e23b9dac079f70c332055482c41dbd228c",
+    "assets/template/src/adapter.css": "4562db47ff99277767711fee80c65a62027ec25c57f87b613a4464047c4d53a2",
+    "assets/template/src/adapter.js": "1ee24d94cdf4819cf4ff9b5e19e8506b24478c2130651f4a6bf9c8e83fc7ce14",
+    "assets/template/src/app.js": "e15cf2e8b16190510a9fbaa1265e6abe4e0ab03a347d0a560b433379301ebaba",
+    "assets/template/src/card-art.svg": "7e14355836c5fa48845e33cc3850276a99d23b89a0c865c930db821055b264e4",
+    "assets/template/src/controls.js": "084a4c5808bf2b29a87dab775f2d0b41b06d57d2aff404db14a28cc2177c8506",
+    "assets/template/src/finale.js": "f534ec75a2ef82586f8fce7447ed5b557f6bbff228e0d12f26072ee725ac0a38",
+    "assets/template/src/holo-card.js": "eae8adba7eaccce3ea65b84ff5121cbe3d2fd10f4eb8c5e144a80c7558125ea4",
+    "assets/template/src/page.html": "2d273ec9ee7f1065d2d7ee917951f71ad560efe31a438ce09d63ac015a300860",
+    "assets/template/src/render.js": "998b024751a022d6fbee8aeb1c4339e4c2208c6b8f086c682c9001c1f62267d9",
+    "assets/template/src/style.css": "5decf4e1d8e47631d5fd47b9b9ad66a04ca95b287f8e943ed4ee937eb5c5ed21",
+    "assets/template/src/v10.css": "8918ce467ba87e5044bb74f504894b9f60687407eede05c90f0b86f162a26120",
+    "assets/template/src/v10.js": "c459fe3cd30ddbd797a22d42c4a106025484af1cfe275b7867665566800cd310",
+    "assets/template/src/v6.js": "d3a9980d1396be8d59cc69d25d9935e2ad2d92a6092109c5c03b7265de5151da",
+    "assets/template/src/v7.css": "ec48d66dd96fa6c57ef1c7b0dca74d595126a8feaaae9394483c69277862f1f7",
+    "assets/template/src/v7.js": "3d035460c9f22a915accb055bc3cfc37e30ad6b3511139664d8e3b36dd7f1af0",
+    "assets/template/src/v8.css": "d906db0296940166249b6f11ab0c871b632329c4b31e34f5d58badd82524f526",
+    "assets/template/src/v8.js": "61455d31e9f300c2a6d39b9f8dbc6aa7331538696075913d408037eec4c75bca",
+    "assets/template/src/v9.css": "dbc1d8c92db0ea3530a6843b5202fea128cb6415b7e0ab7415095adf844f9a3e",
+    "assets/template/src/v9.js": "440975d63c5a2455bb0e13a154ac0b39106dcdb04ecd04158b97ef584af4d4fb"
+  },
+  "assembled_template_sha256": "691d8901bcad9980416b4b5bb93d084ef1a7a2f1d09eeb450947f66906ba7c90",
+  "scope": "Maintainer-reviewed local release lock; not a signed attestation."
+}

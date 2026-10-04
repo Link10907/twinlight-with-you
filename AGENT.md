@@ -1,56 +1,56 @@
 # Twinlight · 一次请求编排
 
-默认目标是当前用户的独立定义闪卡与实际单文件 HTML。HTML 与闪卡使用不同提示词、输入和验收；由你自动衔接，用户只发起一次请求。明确“只做页面”或“只做闪卡”时，只执行对应模块。
+默认目标是当前用户的独立定义闪卡与可直接打开的单文件 HTML。两个模块使用独立提示词，由通用程序记录进度和核验文件，由宿主 AI 完成资料理解、生图与真实看图。用户只发起一次请求，内部续跑无需再问“继续生成”或“导入”。明确只要 HTML 或只要卡片时，运行对应模式。
 
-## 准备本次内容
+## 取得资源与本次内容
 
-找到实际项目目录，优先解开用户一次提供的完整 skill 包。本文 `PY`、`TL` 代表实际 Python 3.10+ 与 `scripts/twinlight.py` 的绝对路径；不要把宿主有 Python 等同于版本和依赖合格。用本项目 `scripts/bootstrap.py --root <项目目录>` 只读检查完整资源与运行时。
+优先解开用户一次提供的完整 skill 包。本文 `PY`、`TL` 是实际 Python 3.10+ 与项目 `scripts/twinlight.py` 的绝对路径。执行 `PY <项目>/scripts/bootstrap.py --root <项目目录>` 检查完整资源、运行时及维护的模板锁；不要把“宿主有 Python”当成版本和依赖合格。
 
-只有链接且资源缺失时，由 AI 在本次允许目录下载并读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/scripts/bootstrap.py ，再运行 `PY <已下载bootstrap.py> --out <本次目录>/project`。bootstrap 默认解析 main 的实际 commit，再取该 revision 的完整 archive；可用 `--revision <40位SHA>` 固定已知 revision。保存实际检查结果，后续只使用该次取得的同一资源目录。脚本不生图、不自动安装依赖；缺依赖时由 AI 在允许环境修复并重查，不要求用户克隆、操作命令或回答工具问卷。
+只有链接且资源缺失时，按 [PROMPT.md](PROMPT.md) 在允许目录取得 bootstrap 并执行 `--out <本次目录>/project`。bootstrap 解析实际 commit 后下载同一 revision 的完整资源；也接受 `--revision <40位SHA>`。保存获取记录，后续读取该目录的同版文档、脚本与模板。它不生图、不自动安装依赖；AI 在允许环境修复缺失依赖后重查。读取 GitHub 页面、查看器或入口文本不等于安装或执行成功。
 
-检查实际文件、执行、图像和预览能力。完整资源/运行时仍不可用时，记录具体缺口，HTML 尚未完成；独立闪卡模块仍可继续。不能自行重写或简化一个页面冒充固定模板。能读取入口链接、看到查看器或下载 ZIP 均不等于已执行构建。
+按 [references/platform-adapters.md](references/platform-adapters.md) 自行检查文件、执行、图像、字体和预览能力。环境缺口不能通过自写一个相似页面解决；HTML 与独立卡片分别如实记为未完成，保留能够完成的模块。不让用户克隆项目、执行命令或回答工具问卷。
 
-每个人独立目录。按 `references/lite-content.md` 将本次授权资料写入 `twinlight.json`。核对本人/他人、问题/能力、计划/成果与最新身份；不读 examples 补全。署名是本次实际总结者。HTML 数据不要求 `card.art_prompt`；美术放在独立 `card/art-brief.txt`，Strict 使用自己的 `art-direction.json`。卡模块只读内容，不改变称号、叙事或绑定。
+每个人使用独立空目录。根据当前授权资料和可见对话按 [references/lite-content.md](references/lite-content.md) 写 `twinlight.json`；不读 examples 或作者资料补全，不把他人经历、提问、计划或助手猜测写成本人成果。署名为本次实际总结者。明确只做卡片且没有星系数据时，使用 [CARD.md](CARD.md) 的 `card-1` 输入。
 
-资料充分时先完成本地未确认草稿，不停下来要求文案确认，也不代本人确认。无真实确认时不传 `--confirmed`，保持 `draft=true`、`share_allowed=false`。本人已明确同意确切当前文字时才沿用真实确认。资料确实不足时仅问必要的两三个短问题。
+资料充分时先交付未确认私人草稿，不伪造确认；`run` 当前统一生成 `draft=true`、`share_allowed=false` 的草稿。本人已明确同意确切当前文字的授权仍有效，确需启用已确认导出时使用独立 `lite-build --confirmed` 并重新验收，不把它伪记为控制器已确认。Strict 需要逐句来源与本人审阅时，改走 [references/workflow.md](references/workflow.md)，不把 Strict 转为 Lite 绕审核。资料确实不足时仅问必要的两三个短问题。
 
-## 独立完成 HTML
+## 调用控制器并自动续跑
 
-读取 `prompts/html-build.md`，校验并实际用固定模板构建基础页面，不调用图像工具、不等待卡片。每次构建保存 `template-receipt.json`；立即验收模板来源，成功后保留这个结果，供卡片未完成时直接交付：
-
-```bash
-PY TL lite-check <本次目录>/twinlight.json
-PY TL lite-build <本次目录>/twinlight.json --out <本次目录>/site
-PY TL verify-site <本次目录>/site
-```
-
-实际已确认当前文字时才加 `--confirmed`。`verify-site` 重新从当前固定资源组装并比对实际 HTML；未运行或失败不能宣称固定模板交付完成。先修对应问题，不替换成自写网页。按 `references/preview.md` 检查实际交互；浏览器不可用时明确文件验收结果与交互未验证。有完成且匹配的卡包可直接消费；基础 HTML 失败也继续独立卡模块。
-
-## 独立完成闪卡
-
-读取 `prompts/card-generation.md`、`CARD.md` 与 `references/art-direction.md`。本次 `twinlight.json` 为只读文字输入，也可明确使用 standalone `card-1`；无需星系数据才能制作卡片。由 AI 根据本次资料填写独立 brief，用户指定风格优先，不发审美问卷。
-
-优先复用当前绑定且已检查的原生素材；缺少时实际调用图像工具生成无字原型与真实原生层。代码画几何形、模板占位或静态 SVG 不能替代专属绘画；程序只负责排字、边框、同像素线稿、装层和已有素材的预览。禁止抠图、裁切、缩放或借别人的图凑通过。保留本次工具返回路径/工件、原型、各层和简短视觉检查记录；读取原型实际画布，独立精确排字。只重生成失败层，有效素材保留；有限重试与明确未完成模式按美术契约处理。
-
-交付当前绑定的原生清单与素材、`card.json`、独立交互 `card/preview.html`。Lite/card-1 的独立正面可单独生成：
+Lite 默认调用以下通用 CLI，而不是自行列出完成步骤并口头宣称成功：
 
 ```bash
-PY TL render-card <只读输入.json> --layers <完成的卡目录>/layers.json --out <本次目录>/card/front.png
+PY TL run <本次目录>/twinlight.json --workspace <本次目录>/run --mode both
 ```
 
-这条命令只消费素材，不调用生图或构建星图。原型、两层兼容输入或占位正面不能冒充完整六层 SSR。机械通过不证明绘画完成度、原型配准或真实景深/foil；保留实际看图与独立预览记录，未运行的检查明确未验证。卡包文件齐全但未实际运行互动时，只说“文件已生成，动态未验证”，不能说完整验收已完成。Strict 沿用原 persona 绑定和独立卡预览接口，不从其 persona 伪造 Lite/card-1；正面截图只在实际预览后提供。
+只要 HTML 使用 `--mode html`；只要卡片使用 `--mode card`，输入可以为 `card-1`。有实际可用浏览器可传 `--browser <真实Chrome/Chromium路径>`；没有浏览器时使用 `--no-browser` 并保留动态未验证状态。程序排字可传 `--font <实际中文字体文件>`。检查器未运行不能记作通过。
 
-## 自动对接并一起交付
+控制器保存 `run-state.json`、`run-report.json` 与只读 `content.json`，构建并核验固定模板的基础 HTML，再独立处理卡包。读取它实际返回的状态、工件路径、错误及 `next_action`。缺图层时 `needs_card` 是内部待办，不是要求用户第二步；AI 继续独立卡片模块。`repair` 若附带 `pending_actions`，也完成其中独立美术待办，不因 HTML 故障停止卡片。输入一旦冻结不能在同一 workspace 修改；内容确需更新时新建目录，不删除状态或改绑定来伪装续跑。
 
-两者都被请求即包含对接意图。原生卡包完成并验收当前绑定后，自动再次调用 HTML 模块消费它；使用另一个输出目录保留基础成功页面：
+按 `next_action.out` 将美术 brief 保存为独立 `run/card/art-direction.txt`；独立模块也可用 `card/art-brief.txt` 并通过 `--art-prompt-file` 传入。不写入 HTML 内容或人物绑定。按两份模块提示词执行本次需要的动作：[HTML](prompts/html-build.md)、[闪卡](prompts/card-generation.md)。缺素材时先检查真实生图、原生透明输出与中文字体，然后依据当前资料直接生成无字原型和原生层；程序负责排字、卡框、同像素线稿和装层。代码几何图、静态 SVG、他人的素材、抠图或缩放都不能冒充完整专属 SSR。保存真实工具返回、原型、各层和实际看图记录；只有失败层需要有限重试。
+
+完成且匹配的图层包交回同一控制器续跑，用户不再发导入指令：
 
 ```bash
-PY TL lite-build <本次目录>/twinlight.json --layers <完成的卡目录>/layers.json --out <本次目录>/site-with-card
-PY TL verify-site <本次目录>/site-with-card
+PY TL run <本次目录>/twinlight.json --workspace <本次目录>/run --mode both --layers <卡片目录>/assembled/layers.json
 ```
 
-真实确认状态保持一致。HTML 不改图像或美术、不重新生图；导入或模板来源验收失败仅修包/绑定或构建问题，不重画已成功卡片，也不改为自写网页。无法完成卡片时，交付已通过验收的基础 HTML 与实际可用卡预览，说明卡片尚未完成；HTML 失败保留已完成卡片并修对应问题，持续失败则明确 HTML 未完成。不要要求用户再发“生成 HTML”或“导入卡片”。
+以上是图层已经完成时的调用例子；优先执行 `next_action.resume` 给出的实际参数列表，保留当前独立 brief 的 `--art-prompt-file` 与之前的浏览器参数。续跑保持相同输入、workspace 和模式，控制器产物保持未确认草稿。控制器保留基础 HTML，完成独立卡片工件并尝试接入最终 HTML。导入失败只修绑定、包或构建，不能重画成功素材、改上游文字、跳过验收或重写页面。
 
-最后一起提供卡片预览和通过 `verify-site` 的最终实际 HTML 有效链接/附件，打开宿主支持的预览。只简短说明资料范围、实际图像模式、文件验收与真实运行的动态检查；内部 JSON、命令、素材包与报告留作可选附件。文件完成、动态未验和模块未完成分别如实表达，不按流程走到最后就统称完整成功。现代浏览器直接打开已构建的单文件，无需 Node.js、Python 或服务器。不能创建文件/执行代码的宿主如实报告缺口；查看器兼容路线只在用户选择后使用，不伪称一步已经完成。
+## 完成关口与交付
 
-`start --preview` / `next` / `check` 保留为兼容的串行本地草稿入口，执行者需自动走到 done；`render-card` 与 `lite-build` 仍可各自复测。默认两模块编排优先使用上述独立入口，HTML 成功不依赖 card 阶段通过。Strict 按 `references/workflow.md` 与 `references/extraction.md` 保留来源核对和本人审阅；公开发布另需明确指令，见 `references/privacy.md`。
+每份 HTML 保存 `template-receipt.json` 并通过 `verify-site`。它核对维护的模板锁，再从固定资源独立组装比对真实输出；文件存在、旧报告和模型口头说明均不能替代。锁文件属于发布维护资源，生产任务不得运行维护命令重新锁定修改后的模板来凑通过。
+
+完整卡片的机械文件检查、真实生图、视觉意见与动态互动分别记录。`generated` 不等于本人 `approved`；原型、两层兼容或占位属于未完成原生闪卡。卡包齐全但未运行互动时只说“文件已生成，动态未验证”；控制器结束也不自动证明语义和审美。浏览器检查覆盖实际运行项目，长文字、手机、AI 星系介绍、连续交汇、揭卡、返回，以及卡片视差与闪光的观看检查按 [references/preview.md](references/preview.md) 和美术契约处理。
+
+| 控制器状态 | AI 的处理 |
+| --- | --- |
+| `needs_card` | 保留已验收基础 HTML，自动完成 `next_action` 中的美术待办并续跑；缺工具或达到重试上限时说明卡片未完成 |
+| `files_ready` | 所请求文件与实际浏览器检查通过；另核对内容、绘画与原型配准，不自动声称质量已认证 |
+| `dynamic_unverified` | 所请求机械工件已生成，动态检查未完成；交付真实文件并明确该限制 |
+| `partial_success` / `failed` | 读取具体错误，只修失败模块；保留成功工件，不能统称完整双模块成功 |
+
+工件固定保存在 `site/index.html`、`card/front.png`、`card/preview.html`、`card/card-pack.json` 与接入后的 `site-with-card/index.html`。待生图规格和独立提示保存在卡片目录；实际是否完成以本次报告为准，不能因路径约定就声称文件存在。
+
+最终只给实际卡片图片/独立预览和个人 HTML 的有效链接或附件，打开宿主支持的同一文件预览。内部 JSON、命令、素材与报告作为可选附件。按 [references/preview.md](references/preview.md) 区分文件完成、动态未验与模块未完成；不伪造路径。现代浏览器观看已构建的单文件不需 Node.js 或 Python，生成所需环境由 AI 处理。
+
+独立 `lite-build` / `render-card` 保留作模块复测；`start --preview` / `next` / `check` 是兼容串行入口。Strict 仍使用自己的来源审核、构建与卡片绑定接口。公开发布另需明确指令，见 [references/privacy.md](references/privacy.md)。

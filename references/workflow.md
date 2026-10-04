@@ -1,6 +1,6 @@
 # 工作流与工件边界
 
-Lite 的 HTML 执行见 `AGENT.md`；这里保存严格模式的内部内容步骤。HTML 同样可以不带图片独立构建。闪卡只在明确要求时走 `CARD.md`，不作为内容提取或 HTML 的前置任务。命令由宿主执行，不要求用户操作 JSON 或证据偏移。
+Lite 的默认 `run` 执行见 `AGENT.md`；这里保存严格模式的内部内容步骤，不能用 Lite 控制器绕过逐句来源和本人审阅。HTML 同样可以不带图片独立构建。用户请求默认“定义卡和页面”已包含闪卡制作与自动接入意图；明确只要 HTML 时不生成卡片。闪卡走 `CARD.md`，不作为内容提取或基础 HTML 的前置任务。命令由宿主执行，不要求用户操作 JSON 或证据偏移。
 
 ## 严格模式：准备与来源
 
@@ -54,17 +54,19 @@ python scripts/twinlight.py compile private/<run>/history.json private/<run>/ana
 
 ```bash
 python scripts/twinlight.py build private/<run>/history.json private/<run>/analysis.json --out outputs/<run>
+python scripts/twinlight.py verify-site outputs/<run>
 ```
 
 不调用图像工具、不等待卡图，页内艺术卡标为占位。按 `references/preview.md` 交付实际 HTML 与可用预览，检查浏览器载入与基本交互，未运行的检查标明。
 
-## 显式导入完成的卡包
+## 自动接入完成的卡包
 
-只有用户要求导入现成闪卡时才消费已完成、绑定本次 persona 的图层包。制作和美术验收均在独立 `CARD.md` 流程；本流程不读取生图提示，也不修改图片。
+同一次请求需要闪卡与 HTML，即已授权自动消费本次完成、绑定当前 persona 的卡包；不再要求第二次“导入”指令。仅要 HTML 的请求仍可独立完成，现成卡包也可按用户明确导入请求消费。制作和美术验收均在独立 `CARD.md` 流程；本流程不读取生图提示，也不修改图片，不更改原有来源与本人审阅状态。
 
 ```bash
 python scripts/twinlight.py validate-art private/<run>/card/layers.json
 python scripts/twinlight.py build private/<run>/history.json private/<run>/analysis.json --layers private/<run>/card/layers.json --out outputs/<run>-with-card
+python scripts/twinlight.py verify-site outputs/<run>-with-card
 ```
 
 导入失败保留原 HTML，只报告包或绑定问题。不要为通过导入而改图片状态；更改卡面返回独立闪卡流程，重画不重写个人内容与原页面。
