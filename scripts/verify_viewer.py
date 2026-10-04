@@ -275,11 +275,12 @@ with tempfile.TemporaryDirectory() as t:
             record('Static preview retains truthful status', frame.evaluate('()=>DEFAULT_PROFILE.persona.art_status==="static"&&DEFAULT_PROFILE.persona.art_mode==="static"'))
             frame.evaluate('()=>twinlightV10.showCard()')
             frame.wait_for_function('()=>holo.ready||holo.failed', timeout=20000)
+            record('Zero-depth static preview compiles in WebGL', frame.evaluate('()=>holo.ready&&!holo.failed'))
             static_pixels = frame.evaluate('()=>HOLO_LAYERS.background')
             record('Static prototype is kept without cropping', decoded(static_pixels).tobytes() == Image.open(tmp / 'prototype.png').convert('RGBA').tobytes())
             q.screenshot(path=str(a.out / 'viewer-static-card.png'))
             static_html = q.evaluate('()=>twinlightViewer.html()')
-            record('Static template has zero signed depths', all(token in static_html for token in ['bu=parallax(uv,0*uDepth)', 'su=parallax(uv,0*uDepth)', 'eu=parallax(uv,0*uDepth)']))
+            record('Static template has zero signed depths', all(token in static_html for token in ['bu=parallax(uv,float(0)*uDepth)', 'su=parallax(uv,float(0)*uDepth)', 'eu=parallax(uv,float(0)*uDepth)']))
             close_preview(q)
 
             import_layers(q, manifest_files(tmp / 'native'))

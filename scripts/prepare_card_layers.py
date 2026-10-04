@@ -33,13 +33,31 @@ def font_path(explicit: Path | None) -> Path:
     raise ValueError('需要中文字体：使用 --font 指定本机中文字体文件；主体与背景无需处理。')
 
 
-def typography(data: dict, size: tuple[int, int], font: Path) -> Image.Image:
+def typography(data: dict, size: tuple[int, int], font: Path,
+               composition: dict | None = None) -> Image.Image:
     w, h = size
     scale = w / 1080
     text = Image.new('RGBA', size)
     d = ImageDraw.Draw(text)
     gold = (237, 219, 171, 248)
     soft = (236, 229, 206, 242)
+    footer_start, footer_end = .765, .961
+    footer_width = .83
+    footer_regions = [rect for rect in (composition or {}).get('text_safe_regions', [])
+                      if rect[0] <= .35 and rect[2] >= .65 and rect[1] >= .6 and rect[3] >= .98]
+    if footer_regions:
+        region = min(footer_regions, key=lambda rect: rect[1])
+        footer_width = min(footer_width, 2 * min(.5 - region[0], region[2] - .5))
+        if region[1] > .76:
+            footer_start = region[1] + .008
+            footer_end = min(.977, region[3] - .02)
+            check(footer_end - footer_start >= .10,
+                  '底部文字空间不足以清楚排下当前文案；请调整构图或重新生成主体')
+    footer_scale = (footer_end - footer_start) / (.961 - .765)
+
+    def footer(value, y, n, color=soft):
+        position = footer_start + (y - .765) * footer_scale
+        center(value, position, round(n * min(1, footer_scale)), color, max_width=footer_width)
 
     def f(n):
         return ImageFont.truetype(str(font), max(1, round(n * scale)))
@@ -63,15 +81,16 @@ def typography(data: dict, size: tuple[int, int], font: Path) -> Image.Image:
     d.text((w*.94, h*.05), author, font=f(23), anchor='rt', fill=soft,
            stroke_width=1, stroke_fill=(16, 28, 26, 180))
     # A transparent lower scrim belongs to text, never to the source images.
-    for y in range(round(h*.70), h-inset):
-        a = min(185, max(0, round((y/h-.70)/.30*185)))
+    scrim_start = max(.70, footer_start - .075)
+    for y in range(round(h*scrim_start), h-inset):
+        a = min(185, max(0, round((y/h-scrim_start)/(1-scrim_start)*185)))
         d.line((inset+2, y, w-inset-2, y), fill=(8, 24, 25, a))
     c = data['card']
-    center(c['title'], .765, 76, gold)
-    center(c['english_title'].upper(), .835, 25, gold)
-    center(' · '.join(c['keywords']), .877, 25)
-    center(c['tagline'], .916, 23)
-    center('T W I N L I G H T   ·   1 / 1', .961, 17, gold)
+    footer(c['title'], .765, 76, gold)
+    footer(c['english_title'].upper(), .835, 25, gold)
+    footer(' · '.join(c['keywords']), .877, 25)
+    footer(c['tagline'], .916, 23)
+    footer('T W I N L I G H T   ·   1 / 1', .961, 17, gold)
     return text
 
 
@@ -98,7 +117,7 @@ def prepare(data: dict, background: Path, subject: Path, effects: Path,
             shutil.copyfile(source, target)
         paths[role] = target.name
     Image.new('RGBA', sub.size).save(out/'spirit.png')
-    typography(data, sub.size, font).save(out/'text.png')
+    typography(data, sub.size, font, composition).save(out/'text.png')
     alpha = sub.getchannel('A')
     edge = ImageChops_safe(alpha.filter(ImageFilter.MaxFilter(5)), alpha.filter(ImageFilter.MinFilter(5)))
     ImageOps.invert(edge).convert('RGB').save(out/'lineart.png')

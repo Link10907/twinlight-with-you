@@ -31,7 +31,7 @@ vec3 film(vec2 uv){float p=uv.x*.85+uv.y*.55+uView.x*1.5-uView.y*.9;if(uFinish>2
 float sweep(vec2 uv){return pow(.5+.5*sin((uv.x*.72+uv.y*.45+uView.x*1.2+uView.y*.6)*6.283),10.);}
 float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
 void main(){
- vec2 uv=vUv,bu=parallax(uv,__DEPTH_BG__*uDepth),su=parallax(uv,__DEPTH_SUBJECT__*uDepth),eu=parallax(uv,__DEPTH_EFFECTS__*uDepth),pu=parallax(uv,.10*uDepth);
+ vec2 uv=vUv,bu=parallax(uv,float(__DEPTH_BG__)*uDepth),su=parallax(uv,float(__DEPTH_SUBJECT__)*uDepth),eu=parallax(uv,float(__DEPTH_EFFECTS__)*uDepth),pu=parallax(uv,.10*uDepth);
  vec3 col=texture2D(tBackground,clamp(bu,0.,1.)).rgb;
  vec4 sp=texture2D(tSpirit,clamp(pu,0.,1.));col=mix(col,sp.rgb,sp.a*inside(pu));
  vec4 sub=texture2D(tSubject,clamp(su,0.,1.));col=mix(col,sub.rgb,sub.a*inside(su));

@@ -126,6 +126,28 @@ class CardCliQuality(unittest.TestCase):
             self.assemble(out, composition=self.composition)
         self.assertFalse(out.exists())
 
+    def test_footer_text_respects_later_safe_region_without_moving_native_art(self):
+        composition = copy.deepcopy(self.composition)
+        composition['text_safe_regions'] = [[.25, .83, .95, 1]]
+        originals = {role: path.read_bytes() for role, path in self.paths.items()}
+        out = self.root / 'later-footer'
+        self.assemble(out, composition=composition, prototype=self.prototype, font=self.font())
+        text = Image.open(out / 'text.png').convert('RGBA')
+        width, height = text.size
+        # Exclude the outer frame and header, and find actual light lettering,
+        # rather than the translucent dark scrim beneath the text.
+        region = text.crop((int(width*.06), int(height*.2), int(width*.94), int(height*.95)))
+        light = Image.new('L', region.size)
+        light.putdata([255 if r > 160 and g > 160 and b > 120 and a > 220 else 0
+                       for r, g, b, a in region.getdata()])
+        bounds = light.getbbox()
+        self.assertIsNotNone(bounds, 'footer lettering must remain readable')
+        self.assertGreaterEqual(bounds[1] + int(height*.2), int(height*.83))
+        self.assertGreaterEqual(bounds[0] + int(width*.06), int(width*.25) - 3)
+        self.assertLessEqual(bounds[2] + int(width*.06), int(width*.95) + 3)
+        for role, original in originals.items():
+            self.assertEqual((out / (role + '.png')).read_bytes(), original)
+
     def test_prepare_rejects_foreign_owner_and_canvas_lock_before_copying(self):
         for name, updates in [('owner', {'persona_digest': 'f' * 64}),
                               ('canvas', {'canvas': {'width': 1080, 'height': 1440}})]:
