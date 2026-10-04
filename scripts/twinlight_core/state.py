@@ -34,7 +34,8 @@ def sha(path: Path) -> str | None:
 def paths(ws: Path) -> dict:
     ws = ws.resolve()
     return {"ws": ws, "state": ws / "state.json", "profile": ws / "twinlight.json", "card": ws / "card",
-            "choice": ws / "card" / "choice.json", "card_preview": ws / "card" / "front.png",
+            "choice": ws / "card" / "choice.json", "art_brief": ws / "card" / "art-brief.txt",
+            "card_preview": ws / "card" / "front.png",
             "site": ws / "site", "html": ws / "site" / "index.html",
             "visual": ws / "visual", "report": ws / "report.html"}
 
@@ -117,10 +118,11 @@ def _art_fingerprint(p: dict) -> dict:
         if "layers" in found:
             manifest = load(found["layers"])
             files["layer_assets"] = {k: sha(local_asset(p["card"], v)) for k, v in manifest["assets"].items()}
-        return {"files": files, "choice": sha(p["choice"])}
+        return {"files": files, "choice": sha(p["choice"]), "art_brief": sha(p["art_brief"])}
     except (ContractError, OSError, ValueError, TypeError, KeyError):
         # A malformed/deleted resource also invalidates the accepted art stage.
-        return {"invalid_inputs": True, "manifest": sha(p["card"] / "layers.json"), "choice": sha(p["choice"])}
+        return {"invalid_inputs": True, "manifest": sha(p["card"] / "layers.json"), "choice": sha(p["choice"]),
+                "art_brief": sha(p["art_brief"])}
 
 
 def _art_kwargs(found: dict) -> dict:
@@ -214,8 +216,7 @@ def check_stage(ws: Path) -> dict:
                       "card/ 里没有图片，也没有选择占位卡（art --placeholder）")
             from .site import lite_layers, render_card_preview
             data = _profile_data(p)
-            profile = lite.to_profile(data, generated_at=state["created_at"])
-            art = lite_layers(**_art_kwargs(found), expected_persona=profile["persona"]["persona_digest"])
+            art = lite_layers(**_art_kwargs(found), expected_persona=lite.persona_digest(data))
             preview = render_card_preview(data, p["card_preview"], **_art_kwargs(found))
             check(p["card_preview"].is_file() and sha(p["card_preview"]) == preview["sha256"], "本次卡片预览缺失或内容不匹配")
             _pass(state, stage, {"fingerprint": _art_fingerprint(p), "art_status": art["art_status"], "art_mode": art["art_mode"],
@@ -379,7 +380,8 @@ def next_action(ws: Path) -> dict:
             out["errors"] = s["errors"]
             return out
     if stage == "profile":
-        out.update({"read": [str(ROOT / "PROMPT.md")], "write": str(p["profile"]), "schema": str(ROOT / "schemas" / "lite.schema.json"),
+        out.update({"read": [str(ROOT / "PROMPT.md"), str(ROOT / "references" / "lite-content.md")],
+            "write": str(p["profile"]), "schema": str(ROOT / "schemas" / "lite.schema.json"),
             "do": ["按 PROMPT.md 的规则，根据你对用户的了解（你的记忆 + 本次对话）写出 Twinlight JSON，保存到 write 指定的路径。",
                    "对用户了解很少时，先问 2–3 个简短问题再写；不要编造经历或读入示例来补全。",
                    "只写文件，不要让用户手工编辑 JSON。"],
@@ -402,7 +404,19 @@ def next_action(ws: Path) -> dict:
     elif stage == "art":
         from .cardgen import card_spec
         data = _profile_data(p)
-        spec = card_spec(data, generated_at=state["created_at"])
+        try:
+            art_prompt = p["art_brief"].read_text(encoding="utf-8") if p["art_brief"].is_file() else None
+            spec = card_spec(data, generated_at=state["created_at"], art_prompt=art_prompt)
+        except (ContractError, OSError, UnicodeError) as exc:
+            out.update({"read": [str(ROOT / "CARD.md"), str(ROOT / "prompts" / "card-generation.md"),
+                                  str(ROOT / "references" / "art-direction.md")],
+                        "write": str(p["art_brief"]), "art_brief": str(p["art_brief"]), "brief_required": True,
+                        "errors": [{"path": "card/art-brief.txt", "code": "art_brief", "message": str(exc)}],
+                        "do": ["在 write 路径写入本次独立美术 brief（20–1500 字），使用本次授权资料、明确偏好与最新反馈；未指定的设计由你自主选择。",
+                               "不要为了画风或生图补写 card.art_prompt 到 twinlight.json，也不要修改已核对文案、人物绑定或确认记录。",
+                               "写好后运行 then 取得卡片规格；已有绑定合格的成品图层可直接运行 check 消费，渲染不需要新增生图提示。"],
+                        "then": cmd("next", "--workspace", w)})
+            return out
         existing_art = {"validated": False, "source": None, "files": {}}
         asset_errors = []
         selected_mode = None
@@ -430,7 +444,8 @@ def next_action(ws: Path) -> dict:
                         source = "prototype" if "prototype" in found else "portrait"
                         canvas = open_card_image(found[source]).size
                     binding = art["binding"]
-                spec = card_spec(data, generated_at=state["created_at"], canvas=canvas, composition=composition)
+                spec = card_spec(data, generated_at=state["created_at"], canvas=canvas, composition=composition,
+                                 art_prompt=art_prompt)
                 existing_art = {"validated": True, "source": source, "canvas": list(canvas), "binding": binding,
                                 "files": {k: str(v) for k, v in _art_kwargs(found).items()}}
         except (ContractError, OSError, ValueError, TypeError, KeyError) as exc:
@@ -445,6 +460,7 @@ def next_action(ws: Path) -> dict:
             prototype_action = "复用 existing_art 中已校验的本次原型，按它的实际画布生成缺少的原生图层；不要重新生成或裁切原型。"
         out.update({"read": [str(ROOT / "prompts" / "card-generation.md"), str(ROOT / "references" / "art-direction.md")],
             "card_spec": spec, "existing_art": existing_art,
+            "art_brief": str(p["art_brief"]),
             "manifest": str(p["card"] / "layers.json"), "card_preview": str(p["card_preview"]),
             "prototype_prompt": prompts["prototype"], "subject_prompt": prompts["subject"],
             "character_prompt": prompts["character"], "background_prompt": prompts["background"],

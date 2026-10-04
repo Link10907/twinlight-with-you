@@ -26,7 +26,7 @@ jobs:
       - run: python scripts/check_capacity.py
       - run: python scripts/verify_browser.py --html outputs/demo/index.html --out verification/browser --require-webgl
       - run: python scripts/verify_browser.py --html outputs/demo-pipeline/index.html --out verification/browser-pipeline --require-webgl
-      - name: One request local preview, end to end through the state machine
+      - name: Compatibility local preview, end to end through the state machine
         run: |
           TL="python scripts/twinlight.py"
           W=runs/ci

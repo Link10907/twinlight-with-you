@@ -9,13 +9,14 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from threading import Thread
 from urllib.parse import quote, urlsplit
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +25,7 @@ sys.path.insert(0, str(ROOT / 'tests'))
 from twinlight_core import lite  # noqa: E402
 from twinlight_core.common import load, save  # noqa: E402
 from test_card_art import native_fixture  # noqa: E402
+from preview_card import preview as build_card_preview  # noqa: E402
 
 FIX = ROOT / 'tests/fixtures/lite'
 AT = '2026-10-03T00:00:00Z'
@@ -121,6 +123,54 @@ def decoded(uri):
     return Image.open(io.BytesIO(base64.b64decode(uri.split(',', 1)[1]))).convert('RGBA')
 
 
+def exercise_standalone_controls(q, label, touch=False):
+    """Open settings must leave every card action reachable by ordinary input."""
+    activate = q.tap if touch else q.click
+    activate('#holoSettings')
+    activate('[data-finish="3"]')
+    activate('#cardFlip')
+    record(f'Standalone {label} material and flip work with settings open',
+           q.evaluate('()=>__holo.getState().finish===3&&__holo.getState().flipped'))
+    activate('#cardFlip')
+    record(f'Standalone {label} can flip back with settings open',
+           q.evaluate('()=>!__holo.getState().flipped'))
+
+    depth_before = q.evaluate('()=>__holo.getState().depth')
+    depth_box = q.locator('#holoDepth').bounding_box()
+    activate('#holoDepth', position={'x': depth_box['width'] * .25, 'y': depth_box['height'] / 2})
+    depth_clicked = q.evaluate('()=>__holo.getState().depth')
+    q.locator('#holoDepth').press('ArrowRight')
+    depth_keyed = q.evaluate('()=>__holo.getState().depth')
+    record(f'Standalone {label} depth slider accepts pointer and keyboard input',
+           depth_clicked != depth_before and depth_keyed > depth_clicked)
+    foil_before = q.evaluate('()=>__holo.getState().foil')
+    foil_box = q.locator('#holoFoil').bounding_box()
+    activate('#holoFoil', position={'x': foil_box['width'] * .25, 'y': foil_box['height'] / 2})
+    foil_clicked = q.evaluate('()=>__holo.getState().foil')
+    q.locator('#holoFoil').press('ArrowLeft')
+    foil_keyed = q.evaluate('()=>__holo.getState().foil')
+    record(f'Standalone {label} foil slider accepts pointer and keyboard input',
+           foil_clicked != foil_before and foil_keyed < foil_clicked)
+    auto_before = q.evaluate('()=>__holo.getState().auto')
+    activate('#holoAuto')
+    record(f'Standalone {label} automatic motion control is reachable',
+           q.evaluate('()=>__holo.getState().auto') != auto_before)
+    activate('#holoAuto')
+    activate('#holoReset')
+    q.wait_for_function('()=>Math.abs(__holo.getState().y+.14)<.02', timeout=5000)
+    q.locator('#identityCard').press('ArrowRight')
+    q.wait_for_function('()=>__holo.getState().y>0', timeout=5000)
+    q.locator('#identityCard').press('ArrowUp')
+    q.wait_for_function('()=>__holo.getState().x>.03', timeout=5000)
+    q.locator('#identityCard').press('Enter')
+    record(f'Standalone {label} card supports keyboard tilt and flip',
+           q.evaluate('()=>__holo.getState().flipped') and
+           '回车翻面' in q.locator('#identityCard').get_attribute('aria-label'))
+    q.locator('#identityCard').press('Home')
+    record(f'Standalone {label} keyboard reset returns to the front',
+           q.evaluate('()=>!__holo.getState().flipped'))
+
+
 def portable_card(folder):
     manifest = load(folder / 'layers.json')
     layers = {k: 'data:image/png;base64,' + base64.b64encode((folder / fn).read_bytes()).decode('ascii')
@@ -179,7 +229,12 @@ with tempfile.TemporaryDirectory() as t:
     save(tmp / 'card.json', portable_card(tmp / 'native'))
     locked_cases = composition_fixtures(tmp, persona_digest)
     try:
-        server = ThreadingHTTPServer(('127.0.0.1', 0), partial(QuietHandler, directory=str(a.viewer.resolve().parent)))
+        public = tmp / 'public'; public.mkdir()
+        shutil.copyfile(a.viewer, public / a.viewer.name)
+        card_input = tmp / 'card-input.json'
+        save(card_input, {'twinlight': 'card-1', 'name': data['name'], 'summarizer': data['summarizer'], 'card': data['card']})
+        build_card_preview(tmp / 'native/layers.json', public / 'card-preview.html', card_input)
+        server = ThreadingHTTPServer(('127.0.0.1', 0), partial(QuietHandler, directory=str(public)))
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()
         origin = f'http://127.0.0.1:{server.server_port}'
@@ -190,6 +245,28 @@ with tempfile.TemporaryDirectory() as t:
             q.on('pageerror', lambda e: errors.append(str(e)))
             q.on('request', lambda r: network.append(r.url) if r.url.startswith(('http:', 'https:')) and
                  (urlsplit(r.url).hostname != '127.0.0.1' or urlsplit(r.url).port != server.server_port) else None)
+            q.goto(origin + '/card-preview.html', wait_until='load')
+            q.wait_for_function('()=>window.__holo&&(__holo.ready||document.querySelector(".holo-fallback-on"))', timeout=20000)
+            record('Standalone card boots without galaxy content or scripts', q.locator('#cardTitle').inner_text() == data['card']['title'] and q.locator('canvas').count() == 1 and not errors, errors)
+            record('Standalone card uses the shared WebGL renderer', q.evaluate('()=>__holo.ready&&!__holo.getState().fallback'))
+            q.evaluate('()=>{holo.foil=0;holo.depth=1;__holo.setView(0,-.45)}')
+            left = decoded(q.evaluate('()=>document.getElementById("holoCanvas").toDataURL()')).convert('RGB')
+            q.evaluate('()=>__holo.setView(0,.45)')
+            right = decoded(q.evaluate('()=>document.getElementById("holoCanvas").toDataURL()')).convert('RGB')
+            change = sum(ImageChops.difference(left, right).convert('L').getdata()) / (left.width * left.height)
+            record('Standalone card has real internal parallax with foil off', change > .5, round(change, 3))
+            exercise_standalone_controls(q, 'desktop')
+            q.screenshot(path=str(a.out / 'standalone-card.png'))
+            mobile_card = b.new_page(viewport={'width': 390, 'height': 844}, device_scale_factor=2,
+                                     is_mobile=True, has_touch=True, reduced_motion='reduce')
+            mobile_card.on('pageerror', lambda e: errors.append(str(e)))
+            mobile_card.goto(origin + '/card-preview.html', wait_until='load')
+            mobile_card.wait_for_function('()=>window.__holo&&__holo.ready', timeout=20000)
+            exercise_standalone_controls(mobile_card, 'mobile', touch=True)
+            record('Standalone mobile preview fits without horizontal overflow',
+                   mobile_card.evaluate('()=>document.documentElement.scrollWidth<=innerWidth'))
+            mobile_card.screenshot(path=str(a.out / 'standalone-card-mobile.png'), full_page=True)
+            mobile_card.close()
             q.goto(report['local_url'], wait_until='load')
             record('Viewer boots over localhost without script errors', q.evaluate('()=>!!window.twinlightViewer&&!!window.TwinlightLite') and not errors, errors)
             # If an obsolete helper survives, any accidental invocation becomes a visible test failure.
@@ -199,6 +276,13 @@ with tempfile.TemporaryDirectory() as t:
             record('Default entry uses real GitHub source URLs',
                    'https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md' in one and
                    'link10907.github.io' not in one, one)
+            card_one = q.locator('#cardLiner').text_content()
+            html_one = q.locator('#htmlLiner').text_content()
+            record('Default entry requests card and HTML in one invocation',
+                   '一次完成' in one and '独立闪卡预览' in one and 'HTML' in one, one)
+            record('Optional HTML and card entries retain independent prompts',
+                   '只生成' in html_one and 'HTML' in html_one and 'CARD.md' in card_one and '卡片包' in card_one and
+                   q.locator('#copyHtmlPrompt').count() == 1 and q.locator('#copyCardPrompt').count() == 1)
             record('No green-screen upload flow remains', q.locator('#characterFile').count() == 0 and q.locator('#portraitFile').count() == 0)
             q.screenshot(path=str(a.out / 'viewer-home.png'), full_page=True)
 
@@ -275,11 +359,12 @@ with tempfile.TemporaryDirectory() as t:
             record('Static preview retains truthful status', frame.evaluate('()=>DEFAULT_PROFILE.persona.art_status==="static"&&DEFAULT_PROFILE.persona.art_mode==="static"'))
             frame.evaluate('()=>twinlightV10.showCard()')
             frame.wait_for_function('()=>holo.ready||holo.failed', timeout=20000)
+            record('Zero-depth static preview compiles in WebGL', frame.evaluate('()=>holo.ready&&!holo.failed'))
             static_pixels = frame.evaluate('()=>HOLO_LAYERS.background')
             record('Static prototype is kept without cropping', decoded(static_pixels).tobytes() == Image.open(tmp / 'prototype.png').convert('RGBA').tobytes())
             q.screenshot(path=str(a.out / 'viewer-static-card.png'))
             static_html = q.evaluate('()=>twinlightViewer.html()')
-            record('Static template has zero signed depths', all(token in static_html for token in ['bu=parallax(uv,0*uDepth)', 'su=parallax(uv,0*uDepth)', 'eu=parallax(uv,0*uDepth)']))
+            record('Static template has zero signed depths', all(token in static_html for token in ['bu=parallax(uv,float(0)*uDepth)', 'su=parallax(uv,float(0)*uDepth)', 'eu=parallax(uv,float(0)*uDepth)']))
             close_preview(q)
 
             import_layers(q, manifest_files(tmp / 'native'))

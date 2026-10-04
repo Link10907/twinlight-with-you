@@ -1,26 +1,21 @@
 Twinlight · 与你同光
 
-把项目交给你的 AI，然后说：
+把项目或完整 skill 包交给 AI，只说一次：
 
 “根据你实际了解的我，生成我的定义卡，完成后直接给我看。”
 
-“生成我的专属卡片”或“做我的 Twinlight”也可以。
+AI 自动完成个人星图 HTML 和专属分层闪卡，把成品卡片接入页面，一起交付。
+资料充分时直接完成本地草稿；只有必要资料缺失时才问两三个短问题。
+不会替你确认，也不会自动公开。卡片与页面各自生成、各自修复，保留已经成功的结果。
 
-有执行工具的 AI 会用本次授权材料，一次完成本地草稿：独立卡片预览和 HTML 页面。
-资料充分时直接做完，不默认先等文案确认；资料不足时只问两三个短问题。
-命令、JSON、分层和检查由 AI 处理，卡片完成后自动构建页面。
-未确认草稿如实保留未确认状态，不替你确认；文字确认也不等于允许公开发布。
+入口说明：https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md
+已加载项目的 Codex、Claude Code、Cursor 等 Agent 可直接读取 SKILL.md 或 AGENT.md。
 
-明确没有执行工具的聊天 AI：把 PROMPT.md 发给或上传给 AI：
-https://github.com/Link10907/twinlight-with-you/blob/main/PROMPT.md
-这类宿主不能保证一次请求完成卡片与 HTML。可下载查看器，保存 viewer.html 后用浏览器打开，再导入实际交付的内容和素材：
-https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html
+如果明确只要其中一个，可说“只生成个人星图 HTML”或“只制作专属闪卡”。
+独立闪卡说明：https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/CARD.md
+提供聊天导出并要求原话出处时，保留严格模式的来源核对与本人审阅。
 
-Claude Code、Codex、Cursor 等 Agent：让它读取项目里的 SKILL.md 或 AGENT.md。
-提供聊天导出并要求原话出处时，AI 会走严格模式。
-
-默认结果是 card/front.png 和 site/index.html；PNG 是独立正面预览，动态闪卡效果在 HTML 中查看。
-完成的 HTML 可直接用浏览器打开，不需要 Node.js、Python 或服务器。
-GitHub Pages 是维护者手动发布后的可选入口，当前使用不依赖线上部署。
-有分层图就显示分层卡；只有原型图则显示静态插画；不能生图则明确占位。
-每张卡都是 SSR，不是能力排名。页面不会自动公开，是否分享由你决定。
+HTML 可用现代浏览器直接打开，不需要 Node.js、Python 或服务器。
+卡片有独立互动预览；PNG 是正面图片，不能代替真实景深与闪光。
+仅有聊天或生图能力、无法写文件和执行的宿主不能保证一步完成；AI 会说明具体缺口。
+每张卡都是 SSR，不是能力排名。是否公开分享由你决定。

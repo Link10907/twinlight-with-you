@@ -23,6 +23,7 @@ DATA = {
              "tagline": "仅用于本地流程测试。", "reflection": "不描述真实人物。",
              "art_prompt": "仅用于技术测试的原创抽象几何插画，蓝色圆形位于完整竖版画布中央，不描述真实人物。"},
 }
+BRIEF = "本次独立美术设定：原创纸本版画中的折纸罗盘，低饱和蓝绿与细金线，主体清楚，保留上下文字空间。"
 
 
 class OneRequest(unittest.TestCase):
@@ -31,9 +32,9 @@ class OneRequest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.ws = (Path(self.tmp.name) / "run").resolve()
 
-    def start(self, preview=True):
+    def start(self, preview=True, data=None):
         state.start(self.ws, preview_only=preview)
-        save(self.ws / "twinlight.json", copy.deepcopy(DATA))
+        save(self.ws / "twinlight.json", copy.deepcopy(DATA if data is None else data))
         result = state.check_stage(self.ws)
         self.assertEqual(result["next"]["stage"], "review")
         return result["next"]
@@ -335,6 +336,77 @@ class OneRequest(unittest.TestCase):
         self.assertEqual((following["card_spec"]["canvas"]["width"], following["card_spec"]["canvas"]["height"]),
                          (1080, 1440))
         self.assertFalse((self.ws / "card" / "prototype.png").exists())
+
+    def test_optional_art_input_uses_separate_brief_without_changing_html_content(self):
+        data = copy.deepcopy(DATA)
+        data["card"].pop("art_prompt")
+        following = self.start(data=data)
+        self.assertNotIn("角色设定（生图用）", following["preview"])
+        text = (self.ws / "twinlight.json").read_bytes()
+        binding = lite.persona_digest(data)
+        following = self.local_review()
+        self.assertTrue(following["brief_required"])
+        self.assertEqual(following["write"], str(self.ws / "card" / "art-brief.txt"))
+        self.assertTrue(following["errors"])
+        brief = Path(following["write"])
+        brief.write_text("太短", encoding="utf-8")
+        self.assertTrue(state.next_action(self.ws)["brief_required"])
+        brief.write_text(BRIEF, encoding="utf-8")
+        following = state.next_action(self.ws)
+        self.assertEqual(following["card_spec"]["persona_digest"], binding)
+        self.assertIn(BRIEF, following["prototype_prompt"])
+        self.native(size=(1086, 1448))
+        following = state.next_action(self.ws)
+        self.assertEqual(following["card_spec"]["canvas"]["width"], 1086)
+        self.assertIn(BRIEF, following["subject_prompt"])
+        following = self.finish()
+        self.assertTrue(Path(following["card_preview"]).is_file())
+        self.assertTrue(Path(following["html"]).is_file())
+        self.assertFalse(following["text_confirmed"])
+        self.assertEqual((self.ws / "twinlight.json").read_bytes(), text)
+        self.assertNotIn("art_prompt", load(self.ws / "twinlight.json")["card"])
+        self.assertEqual(load(self.ws / "site" / "profile.json")["persona"]["persona_digest"], binding)
+
+    def test_independent_brief_revision_preserves_text_binding_and_confirmation(self):
+        data = copy.deepcopy(DATA)
+        data["card"].pop("art_prompt")
+        self.start(data=data)
+        self.local_review()
+        brief = self.ws / "card" / "art-brief.txt"
+        brief.write_text(BRIEF, encoding="utf-8")
+        original_spec = state.next_action(self.ws)["card_spec"]
+        self.native()
+        self.finish()
+        state.confirm(self.ws, "我确认这份虚构测试文字")
+        self.finish()
+        text = (self.ws / "twinlight.json").read_bytes()
+        html = (self.ws / "site" / "index.html").read_bytes()
+        review = copy.deepcopy(load(self.ws / "state.json")["stages"]["review"])
+        updated = BRIEF + "本次只把美术调整为更克制的珍珠光泽，保持已核对的文字。"
+        brief.write_text(updated, encoding="utf-8")
+        following = state.next_action(self.ws)
+        self.assertEqual(following["stage"], "art")
+        self.assertTrue(following["text_confirmed"])
+        self.assertEqual(following["card_spec"]["persona_digest"], original_spec["persona_digest"])
+        self.assertNotEqual(following["card_spec"]["card_spec_digest"], original_spec["card_spec_digest"])
+        self.assertIn(updated, following["prototype_prompt"])
+        self.assertEqual(load(self.ws / "state.json")["stages"]["review"], review)
+        self.finish()
+        self.assertEqual((self.ws / "twinlight.json").read_bytes(), text)
+        self.assertEqual((self.ws / "site" / "index.html").read_bytes(), html)
+
+    def test_optional_art_input_can_consume_completed_layers_without_new_brief(self):
+        data = copy.deepcopy(DATA)
+        data["card"].pop("art_prompt")
+        self.start(data=data)
+        self.local_review()
+        self.native()
+        following = self.finish()
+        self.assertEqual(following["art_mode"], "layered")
+        self.assertTrue(Path(following["card_preview"]).is_file())
+        self.assertTrue(Path(following["html"]).is_file())
+        self.assertFalse((self.ws / "card" / "art-brief.txt").exists())
+        self.assertNotIn("art_prompt", load(self.ws / "twinlight.json")["card"])
 
 
 if __name__ == "__main__":

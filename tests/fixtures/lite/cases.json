@@ -69,11 +69,10 @@
     "file": "missing_fields.json",
     "expect_ok": false,
     "expect_codes": [
-      "missing",
       "missing"
     ],
     "expect_warnings": 0,
-    "note": "缺字段"
+    "note": "缺必填主题字段；美术提示已独立，不是 HTML 必填字段"
   },
   {
     "file": "wrong_types.json",

@@ -14,7 +14,7 @@ from PIL import Image, ImageDraw
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from twinlight_core import lite, site  # noqa: E402
-from twinlight_core.common import ContractError, load  # noqa: E402
+from twinlight_core.common import ContractError, load, save  # noqa: E402
 from test_card_art import AT, FIXTURE, native_fixture  # noqa: E402
 
 
@@ -183,6 +183,40 @@ class CardPreview(unittest.TestCase):
                                   capture_output=True, text=True, timeout=30)
         self.assertNotEqual(rejected.returncode, 0, rejected.stdout)
         self.assertEqual(input_path.read_bytes(), original_input)
+
+    def test_standalone_card_input_supports_png_and_holo_preview_without_galaxy(self):
+        from preview_card import preview
+        card = copy.deepcopy(self.data["card"])
+        card.pop("art_prompt", None)
+        card_data = {"twinlight": "card-1", "name": self.data["name"], "summarizer": self.data["summarizer"], "card": card}
+        self.persona = lite.persona_digest(card_data)
+        self.manifest = native_fixture(self.root / "native-card", self.persona)
+        input_path = self.root / "card-input.json"
+        save(input_path, card_data)
+        before = input_path.read_bytes()
+        sources = self.source_bytes()
+        out = self.root / "standalone" / "front.png"
+        with mock.patch.object(lite, "to_profile", side_effect=AssertionError("A standalone card has no galaxy")), \
+                mock.patch.object(site, "write_site", side_effect=AssertionError("No galaxy HTML build is needed")):
+            report = site.render_card_preview(card_data, out, layers=self.manifest)
+        self.assert_metadata(report, out, "layered", "generated", "registered_layers")
+        self.assertEqual(self.assert_png(out).tobytes(), compose_registered(self.manifest).tobytes())
+        cli_out = self.root / "standalone" / "cli.png"
+        result = subprocess.run([sys.executable, str(ROOT / "scripts" / "twinlight.py"), "render-card",
+                                 str(input_path), "--layers", str(self.manifest), "--out", str(cli_out)],
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assert_metadata(json.loads(result.stdout), cli_out, "layered", "generated", "registered_layers")
+        preview_path = self.root / "standalone" / "preview.html"
+        preview_report = preview(self.manifest, preview_path, input_path)
+        self.assertEqual(preview_report["persona_digest"], self.persona)
+        self.assertFalse(preview_report["browser_verified"])
+        html = preview_path.read_text(encoding="utf-8")
+        self.assertIn(card_data["card"]["title"], html)
+        self.assertIn(card_data["name"], html)
+        self.assertNotIn(self.data["themes"][0]["label"], html)
+        self.assertEqual(input_path.read_bytes(), before)
+        self.assertEqual(self.source_bytes(), sources)
 
 
 if __name__ == '__main__':

@@ -587,10 +587,6 @@
             "tagline",
             "reflection",
             "keywords",
-            "symbols",
-            "visual_style",
-            "portrait_mode",
-            "reference_consent",
             "basis_fact_ids"
           ],
           "additionalProperties": false

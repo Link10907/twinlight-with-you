@@ -1,0 +1,4 @@
+interface:
+  display_name: "Twinlight · 与你同光"
+  short_description: "一次生成专属闪卡与星系页面，独立制作、自动衔接"
+  default_prompt: "请用 $twinlight-with-you 根据你实际了解的我，生成我的专属定义闪卡和 Twinlight 星系 HTML，完成后一起给我看。"

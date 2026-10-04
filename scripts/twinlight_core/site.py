@@ -195,8 +195,8 @@ def render_card_preview(data: dict, out: Path, *, layers: Path|None=None,
                         prototype: Path|None=None, portrait: Path|None=None,
                         character: Path|None=None, background: Path|None=None) -> dict:
     """Render a registered front independently of HTML; source layers stay untouched."""
-    from .lite import to_profile
-    persona = to_profile(data, generated_at='2000-01-01T00:00:00Z')['persona']['persona_digest']
+    from .lite import persona_digest
+    persona = persona_digest(data)
     art = lite_layers(portrait, character, background, layers=layers, prototype=prototype,
                       expected_persona=persona)
     check(out.suffix.lower() == '.png', '卡片预览输出必须是 PNG')
@@ -266,7 +266,7 @@ def build(history: dict, analysis: dict, out: Path, *, previous: dict|None=None,
     if layers is None:layers=placeholder_layers(out/'artwork-pending',profile['persona']['persona_digest'])
     art_report=validate_layers(layers,profile['persona']['persona_digest'])
     manifest=load(layers)
-    if manifest['art_status']!='placeholder' and analysis['card']:
+    if manifest['art_status']!='placeholder' and analysis['card'] and 'reference_consent' in analysis['card']:
         check(manifest['reference_consent']==analysis['card']['reference_consent'],'Artwork reference consent does not match reviewed persona')
     if approval is not None:
         check_approval(analysis,approval)

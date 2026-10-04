@@ -37,6 +37,7 @@ def parser():
             q.add_argument('--all-errors',action='store_true',help='Report every problem with its JSON path instead of stopping at the first')
         else:q.add_argument('--out',type=Path,required=True)
         if cmd in ['compile','build']:q.add_argument('--layout-lock',type=Path)
+        if cmd=='art-brief':q.add_argument('--art-direction-file',type=Path,help='Independent strict card design; does not modify reviewed HTML content')
         if cmd=='build':q.add_argument('--layers',type=Path);q.add_argument('--approval',type=Path)
         if cmd=='approve':
             q.add_argument('--by',required=True);q.add_argument('--scope',choices=['local_preview','share'],required=True)
@@ -67,6 +68,7 @@ def parser():
     q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
     q.add_argument('--prototype',type=Path,help='Use the selected prototype\'s native canvas without resizing')
     q.add_argument('--composition',type=Path,help='Optional current-person composition lock JSON')
+    q.add_argument('--art-prompt-file',type=Path,help='Independent card art brief; does not change HTML content or binding')
     q=sub.add_parser('render-card',help='Validate and render an independent registered card preview; no image generation or HTML build')
     q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
     q.add_argument('--layers',type=Path);q.add_argument('--prototype',type=Path);q.add_argument('--portrait',type=Path)
@@ -127,10 +129,8 @@ def main(argv=None):
             if not report['ok']:report['repair_prompt']=lite.repair_prompt(report['errors'])
             print(json.dumps(report,ensure_ascii=False,indent=2));return 0 if report['ok'] else 1
         elif args.cmd=='card-spec':
-            from twinlight_core import lite
-            from twinlight_core.cardgen import card_spec
-            report=lite.check_text(args.input.read_text(encoding='utf-8'))
-            check(report['ok'],'JSON 未通过校验，先运行 lite-check')
+            from twinlight_core.cardgen import card_spec, read_card_data
+            data=read_card_data(args.input)
             canvas=None
             composition=load(args.composition) if args.composition else None
             if args.prototype:
@@ -140,16 +140,16 @@ def main(argv=None):
                     import hashlib
                     check(hashlib.sha256(args.prototype.read_bytes()).hexdigest()==composition['source_prototype_sha256'],
                           '构图锁对应另一张原型；请使用当前选定的原型')
-            spec=card_spec(report['data'],generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),canvas=canvas,composition=composition)
+            spec=card_spec(data,generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),canvas=canvas,composition=composition,
+                           art_prompt=args.art_prompt_file.read_text(encoding='utf-8') if args.art_prompt_file else None)
             save(args.out,spec);result={'ok':True,'out':str(args.out),'persona_digest':spec['persona_digest']}
         elif args.cmd=='render-card':
-            from twinlight_core import lite
+            from twinlight_core.cardgen import read_card_data
             from twinlight_core.site import render_card_preview
             check(args.out.resolve()!=args.input.resolve() and not (args.out.exists() and args.out.samefile(args.input)),
                   '卡片预览不能覆盖当前人物 JSON')
-            report=lite.check_text(args.input.read_text(encoding='utf-8'))
-            check(report['ok'],'JSON 未通过校验，先运行 lite-check')
-            result=render_card_preview(report['data'],args.out,layers=args.layers,prototype=args.prototype,
+            data=read_card_data(args.input)
+            result=render_card_preview(data,args.out,layers=args.layers,prototype=args.prototype,
                                        portrait=args.portrait,character=args.character,background=args.background)
         elif args.cmd=='lite-build':
             from twinlight_core import lite
@@ -205,7 +205,9 @@ def main(argv=None):
             elif args.cmd in ['compile','art-brief']:
                 previous=load(args.layout_lock) if getattr(args,'layout_lock',None) else None
                 profile,layout,audit=compile_profile(h,a,previous)
-                if args.cmd=='art-brief':save(args.out,art_brief(a,profile['persona']['persona_digest']));result={'ok':True,'out':str(args.out)}
+                if args.cmd=='art-brief':
+                    save(args.out,art_brief(a,profile['persona']['persona_digest'],load(args.art_direction_file) if args.art_direction_file else None))
+                    result={'ok':True,'out':str(args.out)}
                 else:
                     save(args.out/'profile.json',profile);save(args.out/'layout.lock.json',layout);save(args.out/'audit.json',audit)
                     result={'ok':True,'stars':len(layout['stars']),'planets':len(layout['topics']),'draft':True}

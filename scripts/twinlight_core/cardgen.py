@@ -1,7 +1,23 @@
 """Per-person native-layer briefs. This module never cuts out or uploads an image."""
 from __future__ import annotations
 from copy import deepcopy
-from .common import check, digest
+from .common import check, digest, schema_check
+
+
+def read_card_data(path) -> dict:
+    """Accept standalone card content or existing Lite content without inventing themes."""
+    from . import lite
+    data, _, errors = lite.parse(path.read_text(encoding='utf-8'))
+    check(not errors, '闪卡输入不是有效 JSON')
+    data = lite.normalize(data)
+    if isinstance(data, dict) and data.get('twinlight') == 'lite-1':
+        errors = lite.validate(data)
+    else:
+        schema_check(data, 'card-input.schema.json')
+        errors = []
+        lite._semantic(data, errors)
+    check(not errors, '闪卡内容未通过校验：' + '；'.join(e['path'] + ' ' + e['message'] for e in errors))
+    return data
 
 
 LAYER_ORDER = ("background", "spirit", "subject", "effects", "text")
@@ -29,10 +45,10 @@ def art_prompts(card: dict, *, canvas=None, composition: dict | None = None) -> 
     """Keep the concept personal; keep registration, transparency and typography explicit."""
     desc = str((card or {}).get("art_prompt") or "").strip()
     concept = "本次卡面设定：" + desc
-    style = "遵循本次用户提供的视觉风格、主体与象征物；没有指定时采用细腻原创插画。不要套用示例人物、月夜、服装、性别、肤色或经历。"
+    style = "遵循本次明确偏好、最新审美反馈与 AI 从当前资料自主选择的美术设定，不询问创意选择。画风与主体由行为、气质和卡面表现力共同决定；人物、动物、拟人角色和寓意物件均可，不固定二次元人像、小鹿或某种画法。统一笔触、材质、色彩和光线，保持主体清楚、比例合理、细节精致、象征克制；轮廓、动作或材质需要有本次设计的记忆点，整幅画面的美术语言应有辨识度，仅换物种、换脸、换衣服或加光球不足以形成特色。虚构形象不代表本人真实身份。不要套用示例人物、月夜、服装、性别、肤色或经历。"
     dimensions = canvas_spec(canvas)
     size = f"{dimensions['width']}×{dimensions['height']}"
-    registered_canvas = f"统一 {size}、竖版 3:4 全画布；各层使用同一坐标，保持已选定且检查的原型的构图、比例、姿态与光照。不得裁剪到主体后重新摆位。"
+    registered_canvas = f"统一 {size}、竖版 3:4 全画布；各层使用同一坐标，保持本次选定原型的构图、比例、姿态与光照。不得裁剪到主体后重新摆位。"
     if composition is not None:
         rules = ["严格沿用本次原型的实际画布和构图锁；坐标是左上角为 (0,0)、右下角为 (1,1) 的归一化坐标。"]
         if "subject_bounds" in composition:
@@ -45,8 +61,8 @@ def art_prompts(card: dict, *, canvas=None, composition: dict | None = None) -> 
     alpha = "直接原生生成带真实 alpha 通道的透明 PNG，主体之外透明；不抠图，不去背景，不用纯色幕布，不把灰白棋盘格画成图片。工具不能输出透明层时保留原型为静态预览，并明确分层尚未完成。"
     no_text = "不要画文字、字母、数字、签名、水印、SSR、边框或彩虹镭射；文字与卡框在独立 text 层排版，镭射由渲染器添加。"
     subject = "\n".join([
-        "参考同一张已选定且检查的原型，直接生成收藏闪卡的独立 subject 主体层。", concept, style, registered_canvas,
-        "只保留本次原型的主体、服饰和主要手持物；主体可以是人物，也可以是用户选择的物件或抽象象征。周围的环境归背景层，远景同伴归 spirit 层。",
+        "参考同一张本次选定原型，直接生成收藏闪卡的独立 subject 主体层。", concept, style, registered_canvas,
+        "只保留本次原型的主体、随身细节和主要物件；主体按本次自主选择的设定，可以是人物、动物、拟人角色或寓意物件。周围的环境归背景层，远景同伴归 spirit 层。",
         alpha, no_text,
     ])
     return {
@@ -58,16 +74,16 @@ def art_prompts(card: dict, *, canvas=None, composition: dict | None = None) -> 
         "subject": subject,
         "character": subject,
         "background": "\n".join([
-            "参考同一张已选定且检查的原型，直接生成收藏闪卡的独立 background 场景层。", concept, style, registered_canvas,
+            "参考同一张本次选定原型，直接生成收藏闪卡的独立 background 场景层。", concept, style, registered_canvas,
             "只生成完整场景，不要画主体，不要画人物或主体的影子、替身、残片；主体曾遮住的位置也必须画完整。保持原型的环境、透视与光照，不需要先去掉任何人物。",
             "整张场景必须完全不透明。主体层会单独叠加；不要将完整原型用作背景。", no_text,
         ]),
         "effects": "\n".join([
-            "参考同一张已选定且检查的原型，直接生成收藏闪卡的独立 effects 前景效果层。", concept, style, registered_canvas,
+            "参考同一张本次选定原型，直接生成收藏闪卡的独立 effects 前景效果层。", concept, style, registered_canvas,
             "只绘制本次设定需要的少量前景象征物、光粒或装饰；不要重画主体或场景，不遮住主体的脸及后续文字。", alpha, no_text,
         ]),
         "spirit": "\n".join([
-            "参考同一张已选定且检查的原型，直接生成可选的 spirit 中景伴生层。", concept, style, registered_canvas,
+            "参考同一张本次选定原型，直接生成可选的 spirit 中景伴生层。", concept, style, registered_canvas,
             "只有本次设定明确包含同伴或中景象征时才生成，不要为凑层数添加人格含义；不使用时交付同尺寸全透明 PNG。不要重画主角。", alpha, no_text,
         ]),
         "text": "\n".join([
@@ -78,11 +94,17 @@ def art_prompts(card: dict, *, canvas=None, composition: dict | None = None) -> 
     }
 
 
-def card_spec(data: dict, *, generated_at: str, canvas=None, composition: dict | None = None) -> dict:
+def card_spec(data: dict, *, generated_at: str, canvas=None, composition: dict | None = None,
+              art_prompt: str | None = None) -> dict:
     """A brief and safe manifest template bound to this person's current card content."""
-    from .lite import to_profile
-    profile = to_profile(data, generated_at=generated_at)
-    persona_digest = profile["persona"]["persona_digest"]
+    from .lite import persona_digest as content_digest
+    persona_digest = content_digest(data)
+    visual_card = dict(data['card'])
+    if art_prompt is not None:
+        check(isinstance(art_prompt, str) and 20 <= len(art_prompt.strip()) <= 1500,
+              '独立美术提示需为 20–1500 字')
+        visual_card['art_prompt'] = art_prompt.strip()
+    check(bool(visual_card.get('art_prompt')), '闪卡流程需要美术提示；使用 --art-prompt-file，不必修改 HTML 内容')
     check(composition is None or isinstance(composition, dict), "Composition lock must be an object")
     if canvas is None and composition is not None:
         canvas = composition.get("canvas")
@@ -94,20 +116,20 @@ def card_spec(data: dict, *, generated_at: str, canvas=None, composition: dict |
     spec = {
         "version": "1.0", "generation_status": "brief_only", "persona_digest": persona_digest,
         "card_spec_digest": digest({"name": data["name"], "summarizer": data["summarizer"], "card": data["card"],
-                                    "canvas": actual_canvas, "composition": composition}),
+                                    "art_prompt": visual_card['art_prompt'], "canvas": actual_canvas, "composition": composition}),
         "canvas": actual_canvas, "prototype": {"file": "prototype.png", "role": "reference_only", "included_in_final_layers": False},
         "layer_order": list(LAYER_ORDER), "depths": dict(DEPTHS),
-        "prompts": art_prompts(data["card"], canvas=actual_canvas, composition=composition),
+        "prompts": art_prompts(visual_card, canvas=actual_canvas, composition=composition),
         "typography": {"title": data["card"]["title"], "english_title": data["card"]["english_title"],
                        "keywords": list(data["card"]["keywords"]), "tagline": data["card"]["tagline"],
                        "summarizer": data["summarizer"], "rarity": "SSR"},
-        "rules": ["Generate native independent layers from one selected and inspected prototype; never cut a poster into layers.",
+        "rules": ["Generate native independent layers from one selected prototype; never cut a poster into layers.",
                   "Subject/effects/text use genuine alpha, all layers retain the full shared canvas and coordinates.",
                   "Background is a complete opaque scene with no repeated subject; unused spirit is transparent.",
                   "Lineart is derived from the final subject's exact pixels; it is not redrawn or segmented.",
                   "A dimension or composition mismatch requires regenerating that layer; do not crop, resize or reposition it.",
                   "Prototype-only output is static, with zero parallax; missing image tools means placeholder.",
-                  "Only this person's provided content and authorized style may define the image; examples are not input."],
+                  "Use this person's provided content, explicit preferences and AI-selected art direction; examples are not input."],
         "quality_review": {"required": True, "automatic_approval": False,
                            "checks": ["Same current-person concept, visual style and symbol across independent layers",
                                       "Same native canvas, pose, perspective and light as the selected prototype",

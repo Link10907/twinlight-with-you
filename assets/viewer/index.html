@@ -11,18 +11,27 @@
 <header class="hero">
   <div class="brand"><span class="mark">✦</span> 同光 <small>TWINLIGHT</small></div>
   <h1>一片属于你的星系，<br><span>一张 AI 眼中的你。</span></h1>
-  <p class="lead">交给 AI 制作，在这里查看。内容只留在你的浏览器里。</p>
+  <p class="lead">一句话，一起得到专属闪卡与个人星图。导入的内容只留在你的浏览器里。</p>
 </header>
 <main>
 <section class="step" id="step1">
-  <div class="step-head"><b>1</b><h2>交给你的 AI</h2></div>
-  <div class="copy-row"><code id="oneLiner">读取 __PROMPT_URL__，根据你实际了解的我，做我的 Twinlight，完成后直接给我看。</code><button class="primary" data-copy="oneLiner">复制</button></div>
+  <div class="step-head"><b>1</b><h2>一句话开始</h2></div>
+  <p class="hint">一次请求，完成卡片和页面</p>
+  <div class="copy-row"><code id="oneLiner">请读取 __PROMPT_URL__，根据你实际了解的我，生成我的专属闪卡和个人星图，一次完成并交付独立闪卡预览与可直接打开的单文件 HTML，直接给我看。</code><button class="primary" data-copy="oneLiner">复制启动语</button></div>
   <div class="row"><button id="copyPrompt">复制完整说明</button>
-    <details class="agent"><summary>用 Codex、Claude Code 或 Cursor？</summary>
-      <div class="copy-row"><code id="agentLiner">读取 __AGENT_URL__，根据我提供的材料制作 Twinlight，完成后直接打开成品。</code><button data-copy="agentLiner">复制</button></div>
+    <details class="agent"><summary>AI 读不到链接？</summary>
+      <p class="hint">一次粘贴完整说明即可开始。已有项目或已加载 skill 时，可直接说“根据你实际了解的我，生成我的定义卡，完成后直接给我看”。卡片和页面会一起交付。</p>
     </details>
   </div>
-  <p class="hint">AI 能预览页面时直接观看；它只给出数据时，继续下面两步。</p>
+  <details><summary>只生成个人星图 HTML <small>可选</small></summary>
+    <div class="copy-row"><code id="htmlLiner">请读取 __PROMPT_URL__，这次只生成我的个人星图，交付可直接打开的独立单文件 HTML 并预览；有现成闪卡时可导入，没有也直接完成页面。</code><button data-copy="htmlLiner">复制 HTML 启动语</button></div>
+    <button id="copyHtmlPrompt">复制 HTML 完整说明</button>
+  </details>
+  <details><summary>只制作专属闪卡 <small>可选</small></summary>
+    <div class="copy-row"><code id="cardLiner">请读取 __CARD_URL__，根据你实际了解的我制作专属分层闪卡，遵循我的美术提示，自主完善特色画风，交付带真实景深与闪光的完整卡片包和预览。</code><button data-copy="cardLiner">复制闪卡启动语</button></div>
+    <button id="copyCardPrompt">复制闪卡完整说明</button>
+  </details>
+  <p class="hint">默认由 AI 一次交付闪卡和个人 HTML；下方是可选的手动导入。卡图无法完成时应说明实际模式，并继续交付页面。</p>
 </section>
 <section class="step" id="step2">
   <div class="step-head"><b>2</b><h2>放入 AI 的结果</h2></div>
@@ -30,11 +39,11 @@
   <div class="row"><label class="file-btn">选择数据文件<input id="jsonFile" type="file" accept=".json,.txt,application/json,text/plain"></label><button id="loadExample" class="ghost">试试虚构示例</button></div>
   <div id="checkPanel" class="panel" hidden></div>
   <details id="contentDetails" hidden><summary>查看全部文字</summary><div id="contentPreview"></div></details>
-  <details id="artDetails"><summary>放入卡图 <small>可选</small></summary>
+  <details id="artDetails"><summary>导入已有闪卡 <small>可选</small></summary>
     <div class="row"><label class="file-btn">导入分层卡<input id="layerFiles" type="file" multiple accept=".json,.png,.jpg,.jpeg,.webp,application/json,image/png,image/jpeg,image/webp"></label><label class="file-btn">导入静态原型<input id="prototypeFile" type="file" accept="image/png,image/jpeg,image/webp"></label><button id="clearArt" class="ghost">清空卡图</button></div>
     <p class="hint">选择 AI 给出的卡片包，或同时选择图层清单和图片。原型只有一张完整插画；分层卡使用直接生成的独立图层。</p>
     <img id="artThumb" alt="当前导入的卡面" hidden>
-    <details id="artPromptBox" hidden><summary>让 AI 继续画卡</summary><div id="promptRows"></div></details>
+    <details id="artPromptBox" hidden><summary>用当前内容启动独立闪卡流程</summary><div id="promptRows"></div></details>
   </details>
   <p id="artStatus" class="hint" role="status"></p>
 </section>

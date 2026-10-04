@@ -229,6 +229,13 @@ def owner_id(name: str) -> str:
     return "lite-" + text_hash(name)[:12]
 
 
+def persona_digest(data: dict) -> str:
+    """Shared card/content binding; independent of galaxy fields and timestamps."""
+    provider, display = provider_of(data["summarizer"])
+    author = {"provider": provider, "display_name": display, "attribution_source": "ai_self_reported"}
+    return digest({"owner": owner_id(data["name"]), "card": data["card"], "author": author})
+
+
 def to_profile(data: dict, *, generated_at: str, art_status: str = "placeholder", confirmed: bool = False,
                ai_history: list | None = None, art_mode: str | None = None) -> dict:
     """Map a VALID lite JSON to the fixed template's profile contract."""
@@ -263,8 +270,7 @@ def to_profile(data: dict, *, generated_at: str, art_status: str = "placeholder"
                "disclaimer": "本卡是 AI 对你的创作性印象，不是人格诊断或能力排名。每张卡都是 SSR。",
                "summarizer": meta, "content_ready": True, "art_status": art_status, "art_mode": art_mode}
     # Binding describes the actual person/card, independent of build timestamps.
-    author = {"provider": provider, "display_name": display, "attribution_source": "ai_self_reported"}
-    persona["persona_digest"] = digest({"owner": oid, "card": card, "author": author})
+    persona["persona_digest"] = persona_digest(data)
     layout = layout_from_spec(oid, spec)
     profile = {"version": "1.0", "mode": "lite", "name": data["name"], "owner_id": oid,
                "intro": data.get("intro") or "每一颗微光，都有来处。", "chapters": chapters, "summary_meta": meta,
@@ -289,7 +295,9 @@ def preview_markdown(data: dict) -> str:
         out.append("")
     c = data["card"]
     out += [f"## SSR 卡片 · {c['title']}（{c['english_title']}）", f"关键词：{' · '.join(c['keywords'])}",
-            f"标语：{c['tagline']}", f"背面寄语：{c['reflection']}", "", f"角色设定（生图用）：{c['art_prompt']}", ""]
+            f"标语：{c['tagline']}", f"背面寄语：{c['reflection']}", ""]
+    if c.get("art_prompt"):
+        out += [f"角色设定（生图用）：{c['art_prompt']}", ""]
     return "\n".join(out)
 
 

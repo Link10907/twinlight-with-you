@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/card-input.schema.json",
+  "title": "Standalone flashcard content; no galaxy or HTML required",
+  "type": "object",
+  "properties": {
+    "twinlight": {"const": "card-1"},
+    "name": {"$ref": "https://twinlight.invalid/schemas/lite.schema.json#/properties/name"},
+    "summarizer": {"$ref": "https://twinlight.invalid/schemas/lite.schema.json#/properties/summarizer"},
+    "card": {"$ref": "https://twinlight.invalid/schemas/lite.schema.json#/properties/card"}
+  },
+  "required": ["twinlight", "name", "summarizer", "card"],
+  "additionalProperties": false
+}
