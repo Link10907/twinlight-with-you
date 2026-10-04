@@ -218,7 +218,7 @@ def build(history: dict, analysis: dict, out: Path, *, previous: dict|None=None,
     if layers is None:layers=placeholder_layers(out/'artwork-pending',profile['persona']['persona_digest'])
     art_report=validate_layers(layers,profile['persona']['persona_digest'])
     manifest=load(layers)
-    if manifest['art_status']!='placeholder' and analysis['card']:
+    if manifest['art_status']!='placeholder' and analysis['card'] and 'reference_consent' in analysis['card']:
         check(manifest['reference_consent']==analysis['card']['reference_consent'],'Artwork reference consent does not match reviewed persona')
     if approval is not None:
         check_approval(analysis,approval)

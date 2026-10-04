@@ -4,7 +4,7 @@
 
 card 字段是页内身份文字，也是显式导入闪卡时的内容绑定；它不要求执行生图。
 
-把下面的结构写入本次工作目录的 `twinlight.json`，供校验与 HTML 构建使用；`intro` 与 `card.art_prompt` 可省略，其余按 schema 保留。每个值都由本次资料生成，使用 `schemas/lite.schema.json` 核对，不读取示例人格。JSON 不是结束条件，不要求用户手写或复制内部数据。
+把下面的结构写入本次工作目录的 `twinlight.json`，供校验与 HTML 构建使用；`intro` 可省略，其余按 schema 保留。每个值都由本次资料生成，使用 `schemas/lite.schema.json` 核对，不读取示例人格。只写页面文字，不添加美术提示；JSON 不是结束条件，不要求用户手写或复制内部数据。
 
 ```json
 {
@@ -48,6 +48,5 @@ card 字段是页内身份文字，也是显式导入闪卡时的内容绑定；
 | `card.title` / `english_title` | 2–8 / 最多 28 字；英文只用英文与半角符号 |
 | `card.keywords` | 3–5 个，每个最多 6 字 |
 | `card.tagline` / `reflection` | 最多 30 / 100 字 |
-| `card.art_prompt` | 可省略；兼容旧数据时为 20–1500 字。新闪卡设计保存独立 brief，不修改 HTML 内容。 |
 
 字数按 Unicode 字符计。校验返回修复提示时，只改指出的位置，重新校验完整 JSON；不要换掉已经确认的经历。

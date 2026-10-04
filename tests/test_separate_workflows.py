@@ -13,6 +13,8 @@ from twinlight_core import lite
 from twinlight_core.cardgen import card_spec, read_card_data
 from twinlight_core.common import ContractError, load, save
 from twinlight_core.site import build_lite
+from twinlight_core.site import build as build_strict
+from twinlight_core.compiler import art_brief, compile_profile
 from prepare_card_layers import prepare
 from package_card import package
 from preview_card import preview
@@ -106,6 +108,46 @@ class SeparateWorkflows(unittest.TestCase):
         other = copy.deepcopy(self.card_data); other['name'] = '另一测试者'
         save(self.card_input, other)
         with self.assertRaises(ContractError): preview(manifest, self.root / 'wrong.html', self.card_input)
+
+    def strict_content(self):
+        history = load(ROOT / 'examples/demo/history.json')
+        analysis = load(ROOT / 'examples/demo/analysis.json')
+        for field in ['symbols', 'visual_style', 'portrait_mode', 'reference_consent']:
+            analysis['card'].pop(field, None)
+        return history, analysis
+
+    def test_strict_html_also_finishes_without_art_settings(self):
+        history, analysis = self.strict_content()
+        report = build_strict(history, analysis, self.root / 'strict-html')
+        self.assertTrue(report['ok'])
+        self.assertTrue((self.root / 'strict-html/index.html').is_file())
+        profile, _, _ = compile_profile(history, analysis)
+        native_fixture(self.root / 'strict-native', profile['persona']['persona_digest'])
+        report = build_strict(history, analysis, self.root / 'strict-with-card', layers=self.root / 'strict-native/layers.json')
+        self.assertTrue(report['ok'])
+
+    def test_strict_card_design_does_not_change_reviewed_content_or_binding(self):
+        history, analysis = self.strict_content()
+        original = copy.deepcopy(analysis)
+        profile, _, _ = compile_profile(history, analysis)
+        binding = profile['persona']['persona_digest']
+        with self.assertRaises(ContractError): art_brief(analysis, binding)
+        direction = {'visual_style': BRIEF, 'symbols': ['折纸罗盘']}
+        brief = art_brief(analysis, binding, direction)
+        self.assertEqual(brief['visual_style'], BRIEF)
+        self.assertEqual(brief['persona_digest'], binding)
+        self.assertEqual(analysis, original)
+        save(self.root / 'history.json', history); save(self.root / 'analysis.json', analysis)
+        save(self.root / 'art-direction.json', direction)
+        result = subprocess.run([sys.executable, str(ROOT / 'scripts/twinlight.py'), 'art-brief',
+                                 str(self.root / 'history.json'), str(self.root / 'analysis.json'),
+                                 '--art-direction-file', str(self.root / 'art-direction.json'),
+                                 '--out', str(self.root / 'strict-brief.json')], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(load(self.root / 'strict-brief.json'), brief)
+        self.assertEqual(load(self.root / 'analysis.json'), original)
+        with self.assertRaises(ContractError):
+            art_brief(analysis, binding, dict(direction, portrait_mode='user_reference'))
 
 
 if __name__ == '__main__':

@@ -117,11 +117,11 @@ def verify(history: dict, analysis: dict, complete: bool = True, collect: bool =
         require(card["basis_fact_ids"], "Card persona", "card.basis_fact_ids")
         # A creative title is permitted; psychological diagnosis/ability rankings are not.
         parts = [("tagline", card["tagline"]), ("reflection", card["reflection"])] + \
-                [(f"keywords[{n}]", s) for n, s in enumerate(card["keywords"])] + [(f"symbols[{n}]", s) for n, s in enumerate(card["symbols"])]
+                [(f"keywords[{n}]", s) for n, s in enumerate(card["keywords"])] + [(f"symbols[{n}]", s) for n, s in enumerate(card.get("symbols", []))]
         for name, statement in parts:
             require(statement["fact_ids"], "Card text/symbol", f"card.{name}.fact_ids")
             need(set(statement["fact_ids"]) <= set(card["basis_fact_ids"]), "Card content not covered by persona basis", f"card.{name}.fact_ids")
-        need(card["portrait_mode"] != "user_reference" or card["reference_consent"], "Photo-based likeness needs explicit consent", "card.reference_consent")
+        need(card.get("portrait_mode", "original_character") != "user_reference" or card.get("reference_consent", False), "Photo-based likeness needs explicit consent", "card.reference_consent")
     meta = analysis["summary_meta"]
     names = {"openai": "GPT", "anthropic": "Claude", "google": "Gemini", "deepseek": "DeepSeek"}
     if meta["provider"] in names:

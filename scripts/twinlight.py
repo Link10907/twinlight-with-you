@@ -37,6 +37,7 @@ def parser():
             q.add_argument('--all-errors',action='store_true',help='Report every problem with its JSON path instead of stopping at the first')
         else:q.add_argument('--out',type=Path,required=True)
         if cmd in ['compile','build']:q.add_argument('--layout-lock',type=Path)
+        if cmd=='art-brief':q.add_argument('--art-direction-file',type=Path,help='Independent strict card design; does not modify reviewed HTML content')
         if cmd=='build':q.add_argument('--layers',type=Path);q.add_argument('--approval',type=Path)
         if cmd=='approve':
             q.add_argument('--by',required=True);q.add_argument('--scope',choices=['local_preview','share'],required=True)
@@ -191,7 +192,9 @@ def main(argv=None):
             elif args.cmd in ['compile','art-brief']:
                 previous=load(args.layout_lock) if getattr(args,'layout_lock',None) else None
                 profile,layout,audit=compile_profile(h,a,previous)
-                if args.cmd=='art-brief':save(args.out,art_brief(a,profile['persona']['persona_digest']));result={'ok':True,'out':str(args.out)}
+                if args.cmd=='art-brief':
+                    save(args.out,art_brief(a,profile['persona']['persona_digest'],load(args.art_direction_file) if args.art_direction_file else None))
+                    result={'ok':True,'out':str(args.out)}
                 else:
                     save(args.out/'profile.json',profile);save(args.out/'layout.lock.json',layout);save(args.out/'audit.json',audit)
                     result={'ok':True,'stars':len(layout['stars']),'planets':len(layout['topics']),'draft':True}

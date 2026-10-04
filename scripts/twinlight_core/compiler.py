@@ -61,12 +61,20 @@ def compile_profile(history: dict, analysis: dict, previous: dict | None = None)
     return profile,layout,audit
 
 
-def art_brief(analysis: dict, persona_digest: str) -> dict:
+def art_brief(analysis: dict, persona_digest: str, art_direction: dict | None = None) -> dict:
     card=analysis["card"]
     check(card is not None,"Not enough reviewed persona content for an art brief")
-    return {"schema_version":"1.0","persona_digest":persona_digest,"rarity":"SSR","portrait_mode":card["portrait_mode"],
-            "reference_consent":card["reference_consent"],"visual_style":card["visual_style"],
-            "symbols":[s["description"] for s in card["symbols"]],
+    if art_direction is None:
+        check(bool(card.get('visual_style')), '闪卡需要独立美术设定；使用 --art-direction-file，不必修改 HTML 内容')
+        art_direction = {'visual_style': card['visual_style'], 'symbols': [s['description'] for s in card.get('symbols', [])],
+                         'portrait_mode': card.get('portrait_mode', 'original_character'),
+                         'reference_consent': card.get('reference_consent', False)}
+    schema_check(art_direction, 'art-direction.schema.json')
+    direction = {'portrait_mode': 'original_character', 'reference_consent': False, 'symbols': [], **art_direction}
+    check(direction['portrait_mode'] != 'user_reference' or direction['reference_consent'], 'Photo-based likeness needs explicit consent')
+    return {"schema_version":"1.0","persona_digest":persona_digest,"rarity":"SSR","portrait_mode":direction["portrait_mode"],
+            "reference_consent":direction["reference_consent"],"visual_style":direction["visual_style"],
+            "symbols":direction["symbols"],
             "canvas":{"width":1080,"height":1440,"same_coordinates_for_all_layers":True},
             "layer_order":["background","spirit","subject","effects","text"],
             "depths":{"background":-.25,"subject":.4,"effects":.5,"text":0},

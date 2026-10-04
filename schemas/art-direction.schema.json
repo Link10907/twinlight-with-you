@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://twinlight.invalid/schemas/art-direction.schema.json",
+  "title": "Independent strict card design; never part of HTML content",
+  "type": "object",
+  "properties": {
+    "visual_style": {"type": "string", "minLength": 1, "maxLength": 1500},
+    "symbols": {"type": "array", "items": {"type": "string", "minLength": 1, "maxLength": 120}, "maxItems": 2},
+    "portrait_mode": {"enum": ["original_character", "user_reference"]},
+    "reference_consent": {"type": "boolean"}
+  },
+  "required": ["visual_style"],
+  "additionalProperties": false
+}

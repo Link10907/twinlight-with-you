@@ -4,7 +4,7 @@ Lite 的 HTML 执行见 `AGENT.md`；这里保存严格模式的内部内容步�
 
 ## 严格模式：准备与来源
 
-使用 `prompts/00-intake.md`，确认可用文件、资料范围、稳定匿名 owner ID、当前总结者、角色/照片授权与分享意图。已经明确的偏好与授权不用重复询问。记忆是查找线索，不是用户消息或原始导出；不得将其重包成原始逐句证据。
+使用 `prompts/00-intake.md`，确认可用文件、资料范围、稳定匿名 owner ID、当前总结者与分享意图。已经明确的偏好与授权不用重复询问。记忆是查找线索，不是用户消息或原始导出；不得将其重包成原始逐句证据。
 
 当前对话材料可按文档中的 generic JSON adapter 整理，保留真实可见角色与消息 ID，并标 `current_chat`。不声称读取不可见聊天、删除记录、账户全量历史或图片/语音证据。导出分支不明或形状不支持时报告缺口，不猜格式或换用 demo。
 
@@ -40,7 +40,7 @@ python scripts/twinlight.py merge-extractions private/<run>/history.json private
 
 按 `prompts/03-narrative.md` 填 analysis：1–8 个真实支持的主题，每主题 0–8 个话题。不用题材热度推断能力，不为了页面整齐凑固定组数。没有可支持主题时交付材料缺口，不生成填充经历。
 
-每句公开文案、主题和卡片解读都引用本次可发布 fact IDs；正确引文不自动证明总结语义。卡片按 `prompts/04-character-card.md` 个性化，SSR 恒定，称号是有限印象而非人格测评。
+每句公开文案、主题和页内身份解读都引用本次可发布 fact IDs；正确引文不自动证明总结语义。称号与身份文字也按 `prompts/03-narrative.md`，SSR 恒定，称号是有限印象而非人格测评；美术提示不进入本次内容分析。
 
 ```bash
 python scripts/twinlight.py verify private/<run>/history.json private/<run>/analysis.json --all-errors --out private/<run>/audit.json
@@ -58,24 +58,16 @@ python scripts/twinlight.py build private/<run>/history.json private/<run>/analy
 
 不调用图像工具、不等待卡图，页内艺术卡标为占位。按 `references/preview.md` 交付实际 HTML 与可用预览，检查浏览器载入与基本交互，未运行的检查标明。
 
-## 单独制作卡包与显式导入
+## 显式导入完成的卡包
 
-用户另外要求制作闪卡时，在独立 card 目录执行 `CARD.md` 的美术流程；已有 strict 分析仅作为只读内容来源，可取得绑定本次 persona 的 brief：
-
-```bash
-python scripts/twinlight.py art-brief private/<run>/history.json private/<run>/analysis.json --out private/<run>/card/art-brief.json
-```
-
-只把最少视觉 brief 交给实际授权的图像工具，先直接生成无字原型，再参考它直接生成同画布完整 background、原生透明 subject/effects/可选 spirit。禁止抠图、绿幕去底、棋盘转 alpha、裁剪重摆或重复整图。text/SSR 程序独立排版，lineart 同像素派生。详细尺寸、depth 和验收见 `references/art-direction.md`。
+只有用户要求导入现成闪卡时才消费已完成、绑定本次 persona 的图层包。制作和美术验收均在独立 `CARD.md` 流程；本流程不读取生图提示，也不修改图片。
 
 ```bash
 python scripts/twinlight.py validate-art private/<run>/card/layers.json
 python scripts/twinlight.py build private/<run>/history.json private/<run>/analysis.json --layers private/<run>/card/layers.json --out outputs/<run>-with-card
 ```
 
-图层须绑定本次 persona。实际看正面、左右、透明边和被遮挡背景，视觉核对后才设 `art_status=approved`。像素校验器不会替人判断美感或身份准确。
-
-只有原型如实标为静态插画，不算完成卡包。没有生图工具就报告闪卡未完成，独立保留已交付 HTML。导入只消费已完成且绑定匹配的图层包；换画风或图层失败不重写个人内容与原页面。
+导入失败保留原 HTML，只报告包或绑定问题。不要为通过导入而改图片状态；更改卡面返回独立闪卡流程，重画不重写个人内容与原页面。
 
 ## 本人决定发布
 
@@ -100,6 +92,6 @@ python scripts/twinlight.py build private/<run>/history.json private/<run>/analy
 
 `private/`、`runs/`、`outputs/` 默认不入 Git；整包发给本人不等于允许公开推送。CLI 无网络也不代表宿主 AI 全流程离线。
 
-增量更新仅限同一确认 owner。新导出单独规范化，原生消息同 ID 内容变更需核查；重新锚定 ledger 引用与 hash，不能只替换 history_digest。更新事实与冲突，再按受影响内容重写叙事和卡图 brief。使用 `--layout-lock` 保留既有位置与语义 IDs，超限时显式合并而非截断。
+增量更新仅限同一确认 owner。新导出单独规范化，原生消息同 ID 内容变更需核查；重新锚定 ledger 引用与 hash，不能只替换 history_digest。更新事实与冲突，再按受影响内容重写叙事；卡面更新只在另行要求的闪卡流程处理。使用 `--layout-lock` 保留既有位置与语义 IDs，超限时显式合并而非截断。
 
 冻结证据、分析、素材和 layout lock 后编译可复现；不同模型独立解释仍可能不同。效果实验比较支持性、错误归属、状态、遗漏与可用性，而不是要求措辞完全相同。

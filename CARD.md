@@ -12,15 +12,25 @@
 
 美术设定保存为独立 `art-brief.txt`（20–1500 字），不要为换画风修改 HTML 输入或本人文字。旧数据已有 card.art_prompt 可沿用；独立 brief 优先用于本次图像调用。`PY`、`TL` 是实际 Python 与 scripts/twinlight.py 的绝对路径。
 
+已有 strict 原话分析时，只读 history/analysis 和编译后的 persona，按 `prompts/04-character-card.md` 制定美术。把画风保存为独立 `art-direction.json` 的 visual_style；可另含 symbols 字符串数组、portrait_mode 与真实 reference_consent，见 `schemas/art-direction.schema.json`。不把这些设定写回 analysis：
+
+```bash
+PY TL art-brief <只读history.json> <只读analysis.json> --art-direction-file <卡片目录>/art-direction.json --out <卡片目录>/art-brief.json
+```
+
+strict 卡包沿用这个 persona_digest，按相同美术契约生成和登记图层；用下方打包/预览命令时省略 Lite 的 `--data`，卡面文字取只读 persona。两种来源只影响内容绑定，不降低美术标准。
+
 ## 生图、装层与交付
+
+Lite 或 card-1 内容先取得规格；strict 使用上一节的独立 brief：
 
 ```bash
 PY TL card-spec <只读输入.json> --art-prompt-file <卡片目录>/art-brief.txt --out <卡片目录>/card-spec.json
 ```
 
-按规格与美术契约调用图像工具：无字原型 → 锁定实际画布与构图 → 原生独立 background、透明 subject/effects 和可选 spirit。每次保留本次 brief 与真实透明开关，不抠图、裁切、缩放或移动主体。原型后以 `--prototype` 更新实际尺寸，可用 `--composition` 绑定本次构图锁。
+按规格与美术契约调用图像工具：无字原型 → 锁定实际画布与构图 → 原生独立 background、透明 subject/effects 和可选 spirit。明确提示优先，主体、构图、线条、材质和色彩须形成清楚且精致的整体，不能退化成通用 AI 模板脸。每次保留本次 brief 与真实透明开关，不抠图、裁切、缩放或移动主体。原型后以 `--prototype` 更新实际尺寸，可用 `--composition` 绑定本次构图锁。
 
-无内容 spirit 时可由项目脚本装层；文字与线稿独立派生：
+Lite/card-1 输入且无内容 spirit 时可由项目脚本装层；文字与线稿独立派生。strict 则按同一契约独立排字、登记图层后使用打包/预览命令：
 
 ```bash
 PY <项目>/scripts/prepare_card_layers.py --data <只读输入.json> --art-prompt-file <卡片目录>/art-brief.txt --prototype <卡片目录>/prototype.png --background <卡片目录>/background.png --subject <卡片目录>/subject.png --effects <卡片目录>/effects.png --out <卡片目录>/assembled
