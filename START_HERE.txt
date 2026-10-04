@@ -1,22 +1,10 @@
 Twinlight · 与你同光
 
-复制这一句，发给 Agent 或网页聊天 AI：
+两个独立入口：
 
-请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md，根据你实际了解的我，生成我的专属闪卡和个人星图，自主选择契合我的特色画风，保留分层立体感与闪光，完成后直接给我看。
+HTML：请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md，根据你实际了解的我生成个人星图，交付可直接打开的独立单文件 HTML 并预览。
 
-两种入口用同一句，AI 自己判断工具能力、选择画风并接手制作。
-有工具的 Agent 会取得完整项目、构建并打开成品，无需先安装 skill。
-已有项目或已加载 skill 时，只需说“做我的 Twinlight，完成后直接给我看。”
+闪卡：请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/CARD.md，根据你实际了解的我制作专属分层闪卡，遵循我的美术提示，自主完善特色画风，交付带真实景深与闪光的完整卡片包和预览。
 
-AI 先给你核对文案，再完成卡图；命令、JSON、图层与检查由 AI 处理。
-只有必要资料缺失时才补问。提供聊天导出并要求原话出处时走严格模式。
-
-AI 读不到链接：把包里的 PROMPT.md 全文一次粘贴或作为附件交给它即可启动。
-只有聊天能力时，AI 交付可导入内容和实际取得的素材；下载离线查看器并直接打开：
-https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html
-查看器提供“复制启动语”和“复制完整说明”，也可导入结果观看。
-
-完成的 HTML 可直接用浏览器打开，不需要 Node.js、Python 或服务器。
-GitHub Pages 是维护者手动发布后的可选入口，当前使用不依赖线上部署。
-有分层图就显示分层卡；只有原型图则显示静态插画；不能生图则明确占位。
-每张卡都是 SSR，不是能力排名。页面不会自动公开，是否分享由你决定。
+HTML 不等待生图，闪卡不构建星图页面；需要结合时，将完成的卡片包显式导入 HTML。
+AI 自行处理技术步骤，文字先由本人核对。缺能力应报告未完成，图片不能代替 HTML，原型不能代替分层卡包。

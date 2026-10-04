@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Twinlight · 闪卡预览</title>
+<style>__STYLE__</style>
+</head>
+<body>
+<main>
+  <header><p class="eyebrow">TWINLIGHT · SSR</p><h1 id="cardTitle"></h1><p id="cardOwner"></p></header>
+  <section class="identity-showcase" aria-label="独立闪卡预览">
+    <div id="identityCard" class="identity-card" tabindex="0">
+      <div class="card-tilt"><div class="card-flipper">
+        <div class="card-face card-front"><div id="cardFront"></div></div>
+        <div class="card-face card-back"><div class="back-copy"><p class="eyebrow">AI 眼中的你</p><h2 id="backTitle"></h2><p id="backReflection"></p><small id="backAuthor"></small></div></div>
+      </div></div>
+    </div>
+    <p id="cardSideHint" class="card-interaction"></p>
+    <button id="cardFlip">翻到背面</button>
+  </section>
+  <p id="renderStatus" class="notice" role="status">正在载入图层…</p>
+</main>
+<script>__BOOTSTRAP__
+__RENDERER__
+refreshIdentity();
+v8.cardOpen=true;
+holoReset();
+holo.auto=!state.reduced;
+holoSync();
+holoCard.setAttribute('aria-label', 'SSR ' + PERSONA.title + '；按住拖动旋转，方向键调整角度，回车翻面');
+initHolo().then(() => {
+  $('renderStatus').textContent = holo.failed ? '当前使用分层降级预览，镭射未验证。' : (PERSONA.art_status === 'placeholder' ? '这是占位素材，闪卡尚未完成。' : '原生分层卡 · 拖动或用方向键观察景深与闪光。');
+});
+</script>
+</body>
+</html>

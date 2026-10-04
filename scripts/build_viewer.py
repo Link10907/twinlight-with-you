@@ -27,6 +27,7 @@ def bundle() -> dict:
             "clear": uri(VIEWER / 'clear.png'),
             "depths": {k: v for k, v in LITE_DEPTHS.items()},
             "prompt": (ROOT / "PROMPT.md").read_text(encoding="utf-8"),
+            "cardPrompt": (ROOT / "CARD.md").read_text(encoding="utf-8"),
             "example": (ROOT / "examples" / "lite" / "example.json").read_text(encoding="utf-8")}
 
 
@@ -39,7 +40,7 @@ def script_json(value) -> str:
 
 
 def build(out: Path, base: str) -> dict:
-    if out.exists() and any(p.name not in {'index.html', 'prompt.md', 'agent.md', 'example.json', '.nojekyll'} for p in out.iterdir()):
+    if out.exists() and any(p.name not in {'index.html', 'prompt.md', 'card.md', 'agent.md', 'example.json', '.nojekyll'} for p in out.iterdir()):
         raise ValueError('查看器输出目录含其他文件，请选择空目录，避免把旧的私人展示一起发布。')
     base = base if base.endswith("/") else base + "/"
     scripts = {"LITE_JS": (ROOT / "assets" / "lite" / "lite.js").read_text(encoding="utf-8"),
@@ -51,12 +52,14 @@ def build(out: Path, base: str) -> dict:
     values = {**scripts, "VIEWER_CSS": (VIEWER / "viewer.css").read_text(encoding="utf-8"),
               "BUNDLE": script_json(bundle()), "PROMPT_URL": base + ('PROMPT.md' if raw_source else 'prompt.md'),
               "AGENT_URL": base + ('AGENT.md' if raw_source else 'agent.md'),
+              "CARD_URL": base + ('CARD.md' if raw_source else 'card.md'),
               }
     shell = (VIEWER / "index.html").read_text(encoding="utf-8")
     html = re.sub(r"__(" + "|".join(values) + r")__", lambda m: values[m.group(1)], shell)
     out.mkdir(parents=True, exist_ok=True)
     (out / "index.html").write_text(html, encoding="utf-8")
     shutil.copyfile(ROOT / "PROMPT.md", out / "prompt.md")
+    shutil.copyfile(ROOT / "CARD.md", out / "card.md")
     shutil.copyfile(ROOT / "AGENT.md", out / "agent.md")
     shutil.copyfile(ROOT / "examples" / "lite" / "example.json", out / "example.json")
     (out / ".nojekyll").write_text("", encoding="utf-8")

@@ -66,6 +66,7 @@ def parser():
     q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
     q.add_argument('--prototype',type=Path,help='Use the selected prototype\'s native canvas without resizing')
     q.add_argument('--composition',type=Path,help='Optional current-person composition lock JSON')
+    q.add_argument('--art-prompt-file',type=Path,help='Independent card art brief; does not change HTML content or binding')
     q=sub.add_parser('lite-build',help='Build one HTML from a lite JSON without the state machine')
     q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
     q.add_argument('--portrait',type=Path);q.add_argument('--prototype',type=Path)
@@ -122,10 +123,8 @@ def main(argv=None):
             if not report['ok']:report['repair_prompt']=lite.repair_prompt(report['errors'])
             print(json.dumps(report,ensure_ascii=False,indent=2));return 0 if report['ok'] else 1
         elif args.cmd=='card-spec':
-            from twinlight_core import lite
-            from twinlight_core.cardgen import card_spec
-            report=lite.check_text(args.input.read_text(encoding='utf-8'))
-            check(report['ok'],'JSON 未通过校验，先运行 lite-check')
+            from twinlight_core.cardgen import card_spec, read_card_data
+            data=read_card_data(args.input)
             canvas=None
             composition=load(args.composition) if args.composition else None
             if args.prototype:
@@ -135,7 +134,8 @@ def main(argv=None):
                     import hashlib
                     check(hashlib.sha256(args.prototype.read_bytes()).hexdigest()==composition['source_prototype_sha256'],
                           '构图锁对应另一张原型；请使用当前选定的原型')
-            spec=card_spec(report['data'],generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),canvas=canvas,composition=composition)
+            spec=card_spec(data,generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),canvas=canvas,composition=composition,
+                           art_prompt=args.art_prompt_file.read_text(encoding='utf-8') if args.art_prompt_file else None)
             save(args.out,spec);result={'ok':True,'out':str(args.out),'persona_digest':spec['persona_digest']}
         elif args.cmd=='lite-build':
             from twinlight_core import lite

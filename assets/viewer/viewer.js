@@ -12,6 +12,7 @@ function toast(msg){$('toast').textContent=msg;$('toast').classList.add('show');
 async function copyText(text){try{await navigator.clipboard.writeText(text);}catch(_){const a=document.createElement('textarea');a.value=text;a.style.position='fixed';a.style.opacity='0';document.body.append(a);a.select();document.execCommand('copy');a.remove();}toast('已复制');}
 document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText($(b.dataset.copy).textContent));
 $('copyPrompt').onclick=()=>copyText(B.prompt);
+$('copyCardPrompt').onclick=()=>copyText(B.cardPrompt);
 function invalidate(){state.revision++;state.html=null;$('confirmCheck').checked=false;$('buildPanel').hidden=true;sync();}
 function currentDigest(){return state.check?.ok?L.toProfile(state.check.data,{generatedAt:'2000-01-01T00:00:00Z'}).persona.persona_digest:null;}
 function artChoice(){return state.art&&!state.artError?state.art.mode:'placeholder';}
@@ -36,8 +37,10 @@ function runCheck(){
 function renderPreview(d){
  $('contentDetails').hidden=!d;$('artPromptBox').hidden=!d;if(!d)return;
  $('contentPreview').innerHTML='<div class="panel"><p class="hint">'+esc(d.name)+' · 总结者 '+esc(d.summarizer)+'</p>'+d.themes.map(t=>'<div class="preview-theme"><h3>'+esc(t.label)+'<small>'+esc(t.english)+'</small></h3><p><b>'+esc(t.headline)+'</b></p>'+t.story.map(s=>'<p>'+esc(s)+'</p>').join('')+'<p class="hint">'+esc(t.reflection)+'</p><ul>'+t.topics.map(p=>'<li>'+esc(p.label)+' <span class="basis">'+esc(L.BASIS[p.basis][0])+'</span> '+esc(p.summary)+'</li>').join('')+'</ul></div>').join('')+'<div class="preview-card"><div><div class="title">'+esc(d.card.title)+'</div><p>'+esc(d.card.english_title)+'</p><p>'+d.card.keywords.map(esc).join(' · ')+'</p><p>'+esc(d.card.tagline)+'</p><p class="hint">'+esc(d.card.reflection)+'</p></div></div></div>';
- const p=L.artPrompts(d.card);$('promptRows').replaceChildren();
- for(const [key,label] of [['prototype','原型'],['subject','主体'],['background','背景'],['effects','前景'],['text','文字']]){const row=document.createElement('div');row.className='copy-row';const code=document.createElement('code');code.id=key+'Prompt';code.textContent=p[key];const btn=document.createElement('button');btn.textContent='复制'+label;btn.onclick=()=>copyText(p[key]);row.append(code,btn);$('promptRows').append(row);}
+ $('promptRows').replaceChildren();
+ const cardInput={twinlight:'card-1',name:d.name,summarizer:d.summarizer,card:d.card};
+ const instruction=B.cardPrompt+'\n\n当前内容作为只读输入，请按实际确认情况核对，不改变人物绑定：\n'+JSON.stringify(cardInput,null,2);
+ const row=document.createElement('div');row.className='copy-row';const code=document.createElement('code');code.textContent=instruction;const btn=document.createElement('button');btn.textContent='复制闪卡说明与当前内容';btn.onclick=()=>copyText(instruction);row.append(code,btn);$('promptRows').append(row);
 }
 $('jsonInput').oninput=()=>{invalidate();clearTimeout(timer);timer=setTimeout(runCheck,200);};
 $('jsonFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(f.size>1024*1024){toast('数据文件不能超过 1 MB');return;}invalidate();$('jsonInput').value=await f.text();runCheck();};

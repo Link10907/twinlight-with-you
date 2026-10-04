@@ -154,7 +154,7 @@
           "maxLength": 1500
         }
       },
-      "required": ["title", "english_title", "keywords", "tagline", "reflection", "art_prompt"],
+      "required": ["title", "english_title", "keywords", "tagline", "reflection"],
       "additionalProperties": false
     }
   },

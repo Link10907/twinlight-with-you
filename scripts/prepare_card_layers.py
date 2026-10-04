@@ -11,9 +11,8 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from twinlight_core.art import validate_layers
-from twinlight_core.cardgen import card_spec
+from twinlight_core.cardgen import card_spec, read_card_data
 from twinlight_core.common import check, load, save
-from twinlight_core.lite import check_text
 from twinlight_core.site import native_subject, open_card_image, ImageChops_safe
 
 
@@ -96,12 +95,12 @@ def typography(data: dict, size: tuple[int, int], font: Path,
 
 def prepare(data: dict, background: Path, subject: Path, effects: Path,
             out: Path, font: Path, *, composition: dict | None = None,
-            prototype: Path | None = None) -> dict:
+            prototype: Path | None = None, art_prompt: str | None = None) -> dict:
     sub = native_subject(subject)
     bg, fx = open_card_image(background), open_card_image(effects)
     check(bg.size == sub.size == fx.size, '直接生成的各层必须使用完全相同的画布；不会裁剪、缩放或重摆')
     check(bg.getchannel('A').getextrema() == (255, 255), '背景必须完整且完全不透明')
-    spec = card_spec(data, generated_at='2000-01-01T00:00:00Z', canvas=sub.size, composition=composition)
+    spec = card_spec(data, generated_at='2000-01-01T00:00:00Z', canvas=sub.size, composition=composition, art_prompt=art_prompt)
     if prototype:
         check(open_card_image(prototype).size == sub.size, '原型与独立图层必须保持同一实际画布；请重生成尺寸不符的图层')
     if composition and composition.get('source_prototype_sha256'):
@@ -139,11 +138,12 @@ def main():
     p.add_argument('--font', type=Path)
     p.add_argument('--prototype', type=Path)
     p.add_argument('--composition', type=Path)
+    p.add_argument('--art-prompt-file', type=Path)
     a = p.parse_args()
-    checked = check_text(a.data.read_text(encoding='utf-8'))
-    check(checked['ok'], '先修正人物数据：'+json.dumps(checked['errors'], ensure_ascii=False))
-    result = prepare(checked['data'], a.background, a.subject, a.effects, a.out, font_path(a.font),
-                     composition=load(a.composition) if a.composition else None, prototype=a.prototype)
+    data = read_card_data(a.data)
+    result = prepare(data, a.background, a.subject, a.effects, a.out, font_path(a.font),
+                     composition=load(a.composition) if a.composition else None, prototype=a.prototype,
+                     art_prompt=a.art_prompt_file.read_text(encoding='utf-8') if a.art_prompt_file else None)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

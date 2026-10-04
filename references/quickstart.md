@@ -1,17 +1,13 @@
 # 使用、效果实验与分发
 
-Agent 与网页聊天共用这一句，无需用户先选入口：
-
-> 请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md，根据你实际了解的我，生成我的专属闪卡和个人星图，自主选择契合我的特色画风，保留分层立体感与闪光，完成后直接给我看。
-
-`PROMPT.md` 自行检查工具并接手任务：有文件/代码工具就读 `AGENT.md`、取得完整项目、构建和预览；只有聊天工具就整理可导入内容与实际取得的素材，给出 [离线查看器](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)。AI 读不到链接时，用户一次粘贴或上传 `PROMPT.md` 全文即可启动；不得声称仅凭一句话能让无读链接、代码或生图能力的宿主获得这些工具。已加载项目/skill 时短句“做我的 Twinlight，完成后直接给我看”即可。默认无需安装 skill，画风和技术选择由 AI 处理，文案核对与必要资料补充仍保留。
+两个一句话入口见 `README.md`：HTML 读取 `PROMPT.md` / `AGENT.md`，单独交付实际 HTML；闪卡读取 `CARD.md`，单独交付原生卡包。默认不使用旧的串行状态机将两个流程绑在一起。显式导入仅消费完成的卡包及人物绑定。
 
 ## 根据目标选择深度
 
 | 目标 | 输入 | 宿主完成 | 如何判断 |
 |---|---|---|---|
-| 个人有限印象，默认 lite | 当前授权材料与可见对话，有限记忆 | 文案确认、JSON、原型/原生层、HTML预览 | 专属于本人，模式与检查如实报告 |
-| 每句能追溯，strict | 明确提供的聊天导出 | 规范化、分块、源引用、消歧、审查、同一生图流程 | 结论由引文支持，纠错与归属正确 |
+| 个人有限印象，默认 lite | 当前授权材料与可见对话，有限记忆 | 文案确认、JSON、HTML 文件与预览 | 个人 HTML 实际存在，卡图是否导入如实报告 |
+| 每句能追溯，strict | 明确提供的聊天导出 | 规范化、分块、源引用、消歧、审查与 HTML 构建 | 结论由引文支持，纠错与归属正确 |
 | 测理解与提取 | 小样本聊天或 `prompts/06-smoke-test.txt` | 逐条归属、状态、引用与排除判断 | 与事后人工标准答案比较 |
 | 看固定界面/分层效果 | 明确的虚构 demo 请求 | 渲染冻结资料与图层 | 只能说明界面与素材，不说明提取准确率 |
 
@@ -26,9 +22,9 @@ Agent 与网页聊天共用这一句，无需用户先选入口：
 - **Codex**：可直接读取项目 `SKILL.md`；自动发现可将完整目录放入 `.agents/skills/twinlight-with-you/`。[Build skills](https://learn.chatgpt.com/docs/build-skills)。
 - **Claude Code**：可直接读取；标准项目安装路径 `.claude/skills/twinlight-with-you/SKILL.md`，不只复制入口漏掉资源。[Extend Claude with skills](https://code.claude.com/docs/en/skills)。
 - **Cursor Agent**：可直接读取项目；支持 `.agents/skills/` 与 `.cursor/skills/`。[Agent Skills](https://cursor.com/docs/skills)。
-- **其他聊天网站**：用 `PROMPT.md` 输出内容；有图像能力按原型与原生层契约生成，无代码工具则不声称执行程序验证，导入查看器完成本地展示。
+- **其他聊天网站**：按实际工具选择执行对应流程；只有聊天/生图工具时不能声称完成 HTML 构建。手动查看器导入由用户明确选择，最终仍下载个人 HTML。
 
-统一入口先取得实际说明，再按工具能力执行；链接帮助定位，不等于脚本、附件或执行能力已齐全。纯聊天路径保留为一次粘贴说明和本地导入结果的替代入口。
+先取得对应说明与完整资源，再执行选定流程；链接不等于工具或资源已齐全，不自动改变交付目标。
 
 仓库根 `viewer.html` 是单独下载的离线查看器，不进入默认 skill ZIP；其中示例完全虚构，只用于显式展示，不成为当前用户的输入。网页 AI 需要可读链接时可用 `https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md`；能执行代码的 Agent 对应 `AGENT.md`。GitHub Pages 只有维护者明确手动发布后才是可选线上入口，不宣称已经上线，不自动部署。
 
@@ -38,7 +34,7 @@ Agent 与网页聊天共用这一句，无需用户先选入口：
 
 每人独立 workspace 与 owner。真实原文、分析和确认收据保存在 `private/<run>/` 或树外；lite 的 `runs/` 也应忽略提交。已明确的本人偏好与授权持续有效，但不能代确认新公开文字。
 
-两种资料模式共用：无字原型 → 同画布直接生成原生 alpha 层 → 程序 text/SSR + registered lineart。禁止绿幕、棋盘抠图、裁剪重摆。假透明或画布错误要求图像工具重生成，能力不足交付静态原型/占位。静态不计入分层成功。
+闪卡流程的原型、原生层、排字、线稿与有限修复统一见 `CARD.md` 和美术契约。HTML 不接管这些操作，只消费已完成的匹配卡包。
 
 按 `references/preview.md` 返回真实生成的 HTML，优先打开当前聊天预览。命令与完整运行报告作为内部/可选工件；完成消息只说页面在哪里、卡图模式与实际验证情况。生成与本人文案确认不等于公开发布。
 

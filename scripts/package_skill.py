@@ -8,7 +8,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
-ROOT_FILES = ('SKILL.md', 'AGENT.md', 'PROMPT.md', 'README.md', 'START_HERE.txt', 'LICENSE',
+ROOT_FILES = ('SKILL.md', 'AGENT.md', 'PROMPT.md', 'CARD.md', 'README.md', 'START_HERE.txt', 'LICENSE',
               'THIRD-PARTY-NOTICES.md', 'requirements.txt', 'requirements-dev.txt', '.gitignore')
 RESOURCE_DIRS = ('scripts', 'references', 'prompts', 'schemas', 'assets', 'agents')
 # The Pages viewer is built and tested from the repository (needs examples and test fixtures).

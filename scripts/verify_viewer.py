@@ -9,13 +9,14 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from threading import Thread
 from urllib.parse import quote, urlsplit
-from PIL import Image, ImageDraw
+from PIL import Image, ImageChops, ImageDraw
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,6 +25,7 @@ sys.path.insert(0, str(ROOT / 'tests'))
 from twinlight_core import lite  # noqa: E402
 from twinlight_core.common import load, save  # noqa: E402
 from test_card_art import native_fixture  # noqa: E402
+from preview_card import preview as build_card_preview  # noqa: E402
 
 FIX = ROOT / 'tests/fixtures/lite'
 AT = '2026-10-03T00:00:00Z'
@@ -179,7 +181,12 @@ with tempfile.TemporaryDirectory() as t:
     save(tmp / 'card.json', portable_card(tmp / 'native'))
     locked_cases = composition_fixtures(tmp, persona_digest)
     try:
-        server = ThreadingHTTPServer(('127.0.0.1', 0), partial(QuietHandler, directory=str(a.viewer.resolve().parent)))
+        public = tmp / 'public'; public.mkdir()
+        shutil.copyfile(a.viewer, public / a.viewer.name)
+        card_input = tmp / 'card-input.json'
+        save(card_input, {'twinlight': 'card-1', 'name': data['name'], 'summarizer': data['summarizer'], 'card': data['card']})
+        build_card_preview(tmp / 'native/layers.json', public / 'card-preview.html', card_input)
+        server = ThreadingHTTPServer(('127.0.0.1', 0), partial(QuietHandler, directory=str(public)))
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()
         origin = f'http://127.0.0.1:{server.server_port}'
@@ -190,6 +197,21 @@ with tempfile.TemporaryDirectory() as t:
             q.on('pageerror', lambda e: errors.append(str(e)))
             q.on('request', lambda r: network.append(r.url) if r.url.startswith(('http:', 'https:')) and
                  (urlsplit(r.url).hostname != '127.0.0.1' or urlsplit(r.url).port != server.server_port) else None)
+            q.goto(origin + '/card-preview.html', wait_until='load')
+            q.wait_for_function('()=>window.__holo&&(__holo.ready||document.querySelector(".holo-fallback-on"))', timeout=20000)
+            record('Standalone card boots without galaxy content or scripts', q.locator('#cardTitle').inner_text() == data['card']['title'] and q.locator('canvas').count() == 1 and not errors, errors)
+            record('Standalone card uses the shared WebGL renderer', q.evaluate('()=>__holo.ready&&!__holo.getState().fallback'))
+            q.evaluate('()=>{holo.foil=0;holo.depth=1;__holo.setView(0,-.45)}')
+            left = decoded(q.evaluate('()=>document.getElementById("holoCanvas").toDataURL()')).convert('RGB')
+            q.evaluate('()=>__holo.setView(0,.45)')
+            right = decoded(q.evaluate('()=>document.getElementById("holoCanvas").toDataURL()')).convert('RGB')
+            change = sum(ImageChops.difference(left, right).convert('L').getdata()) / (left.width * left.height)
+            record('Standalone card has real internal parallax with foil off', change > .5, round(change, 3))
+            q.click('#holoSettings'); q.click('[data-finish="3"]'); q.click('#cardFlip')
+            record('Standalone card material and flip controls work', q.evaluate('()=>__holo.getState().finish===3&&__holo.getState().flipped'))
+            q.click('#holoReset')
+            record('Standalone card resets to the front', q.evaluate('()=>!__holo.getState().flipped'))
+            q.screenshot(path=str(a.out / 'standalone-card.png'))
             q.goto(report['local_url'], wait_until='load')
             record('Viewer boots over localhost without script errors', q.evaluate('()=>!!window.twinlightViewer&&!!window.TwinlightLite') and not errors, errors)
             # If an obsolete helper survives, any accidental invocation becomes a visible test failure.
@@ -199,6 +221,8 @@ with tempfile.TemporaryDirectory() as t:
             record('Default entry uses real GitHub source URLs',
                    'https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md' in one and
                    'link10907.github.io' not in one, one)
+            card_one = q.locator('#cardLiner').text_content()
+            record('HTML and card entries specify separate deliverables', 'HTML' in one and 'CARD.md' in card_one and '卡片包' in card_one)
             record('No green-screen upload flow remains', q.locator('#characterFile').count() == 0 and q.locator('#portraitFile').count() == 0)
             q.screenshot(path=str(a.out / 'viewer-home.png'), full_page=True)
 

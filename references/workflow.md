@@ -1,6 +1,6 @@
 # 工作流与工件边界
 
-Lite 的执行见 `AGENT.md`；这里保存严格模式的内部步骤。两种模式都从当前人的授权资料开始，且采用 `references/art-direction.md` 的原型与原生独立图层流程。命令由宿主执行，不要求用户操作 JSON 或证据偏移。
+Lite 的 HTML 执行见 `AGENT.md`；这里保存严格模式的内部内容步骤。HTML 同样可以不带图片独立构建。闪卡只在明确要求时走 `CARD.md`，不作为内容提取或 HTML 的前置任务。命令由宿主执行，不要求用户操作 JSON 或证据偏移。
 
 ## 严格模式：准备与来源
 
@@ -50,22 +50,32 @@ python scripts/twinlight.py compile private/<run>/history.json private/<run>/ana
 
 给用户看资料范围、归属或状态争议及全部公开文字，取得本人对当前内容的确认。analysis 中 `accepted` 是分析者核对，不是本人发布许可。修订后重新校验，保持语义 IDs 稳定。
 
-## 同一生图流程与构建
+## HTML 独立构建
 
 ```bash
-python scripts/twinlight.py art-brief private/<run>/history.json private/<run>/analysis.json --out private/<run>/art-brief.json
+python scripts/twinlight.py build private/<run>/history.json private/<run>/analysis.json --out outputs/<run>
+```
+
+不调用图像工具、不等待卡图，页内艺术卡标为占位。按 `references/preview.md` 交付实际 HTML 与可用预览，检查浏览器载入与基本交互，未运行的检查标明。
+
+## 单独制作卡包与显式导入
+
+用户另外要求制作闪卡时，在独立 card 目录执行 `CARD.md` 的美术流程；已有 strict 分析仅作为只读内容来源，可取得绑定本次 persona 的 brief：
+
+```bash
+python scripts/twinlight.py art-brief private/<run>/history.json private/<run>/analysis.json --out private/<run>/card/art-brief.json
 ```
 
 只把最少视觉 brief 交给实际授权的图像工具，先直接生成无字原型，再参考它直接生成同画布完整 background、原生透明 subject/effects/可选 spirit。禁止抠图、绿幕去底、棋盘转 alpha、裁剪重摆或重复整图。text/SSR 程序独立排版，lineart 同像素派生。详细尺寸、depth 和验收见 `references/art-direction.md`。
 
 ```bash
 python scripts/twinlight.py validate-art private/<run>/card/layers.json
-python scripts/twinlight.py build private/<run>/history.json private/<run>/analysis.json --layers private/<run>/card/layers.json --out outputs/<run>
+python scripts/twinlight.py build private/<run>/history.json private/<run>/analysis.json --layers private/<run>/card/layers.json --out outputs/<run>-with-card
 ```
 
 图层须绑定本次 persona。实际看正面、左右、透明边和被遮挡背景，视觉核对后才设 `art_status=approved`。像素校验器不会替人判断美感或身份准确。
 
-只有原型如实标为静态插画；构建路径不支持静态时，单独交付原型，页面保留明确占位。没有生图工具就交付 brief 与占位，不假称完成分层或 Blender。读取 `references/preview.md`，在宿主可用预览中打开生成文件；检查浏览器载入与基本交互，未运行的检查标明。
+只有原型如实标为静态插画，不算完成卡包。没有生图工具就报告闪卡未完成，独立保留已交付 HTML。导入只消费已完成且绑定匹配的图层包；换画风或图层失败不重写个人内容与原页面。
 
 ## 本人决定发布
 

@@ -1,7 +1,23 @@
 """Per-person native-layer briefs. This module never cuts out or uploads an image."""
 from __future__ import annotations
 from copy import deepcopy
-from .common import check, digest
+from .common import check, digest, schema_check
+
+
+def read_card_data(path) -> dict:
+    """Accept standalone card content or existing Lite content without inventing themes."""
+    from . import lite
+    data, _, errors = lite.parse(path.read_text(encoding='utf-8'))
+    check(not errors, '闪卡输入不是有效 JSON')
+    data = lite.normalize(data)
+    if isinstance(data, dict) and data.get('twinlight') == 'lite-1':
+        errors = lite.validate(data)
+    else:
+        schema_check(data, 'card-input.schema.json')
+        errors = []
+        lite._semantic(data, errors)
+    check(not errors, '闪卡内容未通过校验：' + '；'.join(e['path'] + ' ' + e['message'] for e in errors))
+    return data
 
 
 LAYER_ORDER = ("background", "spirit", "subject", "effects", "text")
@@ -78,11 +94,17 @@ def art_prompts(card: dict, *, canvas=None, composition: dict | None = None) -> 
     }
 
 
-def card_spec(data: dict, *, generated_at: str, canvas=None, composition: dict | None = None) -> dict:
+def card_spec(data: dict, *, generated_at: str, canvas=None, composition: dict | None = None,
+              art_prompt: str | None = None) -> dict:
     """A brief and safe manifest template bound to this person's current card content."""
-    from .lite import to_profile
-    profile = to_profile(data, generated_at=generated_at)
-    persona_digest = profile["persona"]["persona_digest"]
+    from .lite import persona_digest as content_digest
+    persona_digest = content_digest(data)
+    visual_card = dict(data['card'])
+    if art_prompt is not None:
+        check(isinstance(art_prompt, str) and 20 <= len(art_prompt.strip()) <= 1500,
+              '独立美术提示需为 20–1500 字')
+        visual_card['art_prompt'] = art_prompt.strip()
+    check(bool(visual_card.get('art_prompt')), '闪卡流程需要美术提示；使用 --art-prompt-file，不必修改 HTML 内容')
     check(composition is None or isinstance(composition, dict), "Composition lock must be an object")
     if canvas is None and composition is not None:
         canvas = composition.get("canvas")
@@ -94,10 +116,10 @@ def card_spec(data: dict, *, generated_at: str, canvas=None, composition: dict |
     spec = {
         "version": "1.0", "generation_status": "brief_only", "persona_digest": persona_digest,
         "card_spec_digest": digest({"name": data["name"], "summarizer": data["summarizer"], "card": data["card"],
-                                    "canvas": actual_canvas, "composition": composition}),
+                                    "art_prompt": visual_card['art_prompt'], "canvas": actual_canvas, "composition": composition}),
         "canvas": actual_canvas, "prototype": {"file": "prototype.png", "role": "reference_only", "included_in_final_layers": False},
         "layer_order": list(LAYER_ORDER), "depths": dict(DEPTHS),
-        "prompts": art_prompts(data["card"], canvas=actual_canvas, composition=composition),
+        "prompts": art_prompts(visual_card, canvas=actual_canvas, composition=composition),
         "typography": {"title": data["card"]["title"], "english_title": data["card"]["english_title"],
                        "keywords": list(data["card"]["keywords"]), "tagline": data["card"]["tagline"],
                        "summarizer": data["summarizer"], "rarity": "SSR"},
