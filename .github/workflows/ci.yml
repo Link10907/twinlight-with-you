@@ -26,14 +26,14 @@ jobs:
       - run: python scripts/check_capacity.py
       - run: python scripts/verify_browser.py --html outputs/demo/index.html --out verification/browser --require-webgl
       - run: python scripts/verify_browser.py --html outputs/demo-pipeline/index.html --out verification/browser-pipeline --require-webgl
-      - name: Lite workflow, end to end through the state machine
+      - name: One request local preview, end to end through the state machine
         run: |
           TL="python scripts/twinlight.py"
           W=runs/ci
-          $TL start --workspace $W
+          $TL start --workspace $W --preview
           cp examples/lite/example.json $W/twinlight.json
           $TL check --workspace $W
-          $TL confirm --workspace $W --user-reply "CI 示例，可以"
+          $TL check --workspace $W
           python - <<'EOF'
           import sys
           from pathlib import Path
@@ -54,13 +54,20 @@ jobs:
           $TL check --workspace $W
           python - <<'EOF'
           import json
+          from pathlib import Path
           s = json.load(open('runs/ci/state.json', encoding='utf-8'))['stages']
-          bad = {k: v['status'] for k, v in s.items() if v['status'] != 'passed'}
+          bad = {k: v['status'] for k, v in s.items() if v['status'] != ('skipped' if k == 'review' else 'passed')}
           assert not bad, bad
+          assert 'user_reply' not in s['review']['detail'], s['review']['detail']
+          profile = json.load(open('runs/ci/site/profile.json', encoding='utf-8'))
+          assert profile['release']['draft'] is True, profile['release']
+          assert profile['release']['share_allowed'] is False, profile['release']
+          assert Path('runs/ci/card/front.png').is_file()
+          assert Path('runs/ci/site/index.html').is_file()
           assert s['visual']['detail']['verified'] is True, s['visual']['detail']
           assert s['art']['detail']['art_mode'] == 'layered', s['art']['detail']
           assert s['art']['detail']['binding'] == 'persona_digest', s['art']['detail']
-          print('all stages passed; browser check verified')
+          print('card and HTML ready in one workflow; review remains unconfirmed; browser check verified')
           EOF
       - name: Viewer, driven like a user
         run: |

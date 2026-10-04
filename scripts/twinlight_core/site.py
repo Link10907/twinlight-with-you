@@ -191,6 +191,54 @@ def lite_layers(portrait: Path|None=None, character: Path|None=None, background:
             'binding':'none','native_full_canvas':False}
 
 
+def render_card_preview(data: dict, out: Path, *, layers: Path|None=None,
+                        prototype: Path|None=None, portrait: Path|None=None,
+                        character: Path|None=None, background: Path|None=None) -> dict:
+    """Render a registered front independently of HTML; source layers stay untouched."""
+    from .lite import to_profile
+    persona = to_profile(data, generated_at='2000-01-01T00:00:00Z')['persona']['persona_digest']
+    art = lite_layers(portrait, character, background, layers=layers, prototype=prototype,
+                      expected_persona=persona)
+    check(out.suffix.lower() == '.png', '卡片预览输出必须是 PNG')
+    sources = [p for p in (layers, prototype, portrait, character, background) if p is not None]
+    if layers:
+        sources += [local_asset(layers.parent, p) for p in load(layers)['assets'].values()]
+    check(all(out.resolve() != p.resolve() and not (out.exists() and out.samefile(p)) for p in sources),
+          '卡片预览不能覆盖原型、清单或原生图层')
+    if layers:
+        manifest = load(layers)
+        images = {}
+        # validate_layers already checked size/format/alpha. Preserve the native
+        # registered coordinates, including valid 256px layers and raw EXIF.
+        for role, path in manifest['assets'].items():
+            with Image.open(local_asset(layers.parent, path)) as original:
+                images[role] = original.convert('RGBA')
+        image = images['background']
+        for role in ('spirit', 'subject', 'effects', 'text'):
+            image = Image.alpha_composite(image, images[role])
+        kind = 'registered_layers'
+    elif prototype or portrait:
+        image = open_card_image(prototype or portrait)
+        kind = 'static_prototype'
+    elif character:
+        image = Image.alpha_composite(open_card_image(background), native_subject(character))
+        kind = 'native_pair'
+    else:
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest_path = placeholder_layers(Path(tmp), persona)
+            manifest = load(manifest_path)
+            image = open_card_image(local_asset(Path(tmp), manifest['assets']['background']))
+            for role in ('spirit', 'subject', 'effects', 'text'):
+                image = Image.alpha_composite(image, open_card_image(local_asset(Path(tmp), manifest['assets'][role])))
+        kind = 'placeholder'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    image.save(out, format='PNG')
+    return {'ok': True, 'out': str(out), 'sha256': __import__('hashlib').sha256(out.read_bytes()).hexdigest(),
+            'canvas': list(image.size), 'persona_digest': persona,
+            'art_status': art['art_status'], 'art_mode': art['art_mode'], 'preview_kind': kind}
+
+
 def build_lite(data: dict, out: Path, *, generated_at: str, confirmed: bool=False,
                portrait: Path|None=None, character: Path|None=None, background: Path|None=None,
                layers: Path|None=None, prototype: Path|None=None) -> dict:

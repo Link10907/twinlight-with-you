@@ -177,6 +177,8 @@ def write_report(ws: Path, state: dict | None = None) -> Path:
     out.append("<h2>流程门禁</h2><div class='timeline'>")
     for s in STAGES:
         info = st[s]; label, cls = STATUS.get(info["status"], (info["status"], "idle"))
+        if s == "review" and info["status"] == "skipped" and info["detail"].get("reason") == "local_preview":
+            label, cls = "本地未确认草稿", "warn"
         if s == "report" and info["status"] == "pending": label, cls = "本报告", "ok"
         tries = len(info.get("log", []))
         out.append(f"<div class='step {cls}'><span class='badge {cls}'>{label}</span><b>{e(STAGE_CN[s])}</b>"
@@ -207,6 +209,8 @@ def write_report(ws: Path, state: dict | None = None) -> Path:
             review = st["review"]
             if review["status"] == "passed":
                 out.append(f"<div class='panel'>用户确认：<b>“{e(review['detail'].get('user_reply'))}”</b> <span class='dim'>{e(review['updated_at'])}</span></div>")
+            elif review["status"] == "skipped" and review["detail"].get("reason") == "local_preview":
+                out.append("<div class='panel warn'>这是本地未确认草稿；未记录本人确认，应用导出保持关闭。</div>")
             else:
                 out.append("<div class='panel err'>用户尚未确认这些文案。</div>")
             out.append("<div class='panel'><table><tr><th style='width:22%'>主题</th><th>标题与话题</th></tr>")

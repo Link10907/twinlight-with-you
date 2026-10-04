@@ -110,13 +110,15 @@ class ArtRecovery(unittest.TestCase):
         ImageDraw.Draw(lineart).rectangle((100, 100, 300, 600), outline='black', width=3)
         lineart.save(card / 'lineart.png')
         save(card / 'layers.json', card_spec(DATA, generated_at='2000-01-01T00:00:00Z')['manifest_template'])
-        original = {path.name: path.read_bytes() for path in card.glob('*.png')}
+        # front.png is a derived preview; a mode change must redraw it while
+        # preserving every original image-generator output.
+        original = {path.name: path.read_bytes() for path in card.glob('*.png') if path.name != 'front.png'}
         result = state.choose_art(self.ws, 'layered')
         self.assertEqual((result['status'], result['next']['stage']), ('passed', 'build'))
         self.assertEqual(load(self.ws / 'state.json')['stages']['art']['detail']['art_mode'], 'layered')
         self.assertFalse((card / 'choice.json').exists())
         self.assertTrue(prototype.is_file())
-        self.assertEqual({path.name: path.read_bytes() for path in card.glob('*.png')}, original)
+        self.assertEqual({path.name: path.read_bytes() for path in card.glob('*.png') if path.name != 'front.png'}, original)
 
     def test_switch_after_build_reopens_build_and_visual(self):
         self.image('prototype')

@@ -56,6 +56,7 @@ def parser():
     for name,text in [('start','Create a lite workspace'),('next','Print the single next action'),('check','Validate the current stage and advance'),
                       ('status','Show stage gates'),('report','Write report.html for the workspace')]:
         q=sub.add_parser(name,help=text);q.add_argument('--workspace',type=Path,required=True)
+        if name=='start':q.add_argument('--preview',action='store_true',help='Complete a local draft without inventing text confirmation')
     q=sub.add_parser('confirm',help='Record the person\'s explicit approval of the text');q.add_argument('--workspace',type=Path,required=True);q.add_argument('--user-reply',required=True)
     q=sub.add_parser('art',help='Explicitly choose native layers, a static prototype or a placeholder');q.add_argument('--workspace',type=Path,required=True)
     mode=q.add_mutually_exclusive_group(required=True)
@@ -66,6 +67,10 @@ def parser():
     q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
     q.add_argument('--prototype',type=Path,help='Use the selected prototype\'s native canvas without resizing')
     q.add_argument('--composition',type=Path,help='Optional current-person composition lock JSON')
+    q=sub.add_parser('render-card',help='Validate and render an independent registered card preview; no image generation or HTML build')
+    q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
+    q.add_argument('--layers',type=Path);q.add_argument('--prototype',type=Path);q.add_argument('--portrait',type=Path)
+    q.add_argument('--subject','--character',dest='character',type=Path);q.add_argument('--background',type=Path)
     q=sub.add_parser('lite-build',help='Build one HTML from a lite JSON without the state machine')
     q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
     q.add_argument('--portrait',type=Path);q.add_argument('--prototype',type=Path)
@@ -103,7 +108,7 @@ def main(argv=None):
         elif args.cmd=='validate-art':result=validate_layers(args.manifest,args.persona_digest)
         elif args.cmd in ('start','next','check','status','report','confirm','art','unblock'):
             from twinlight_core import state as fsm
-            if args.cmd=='start':result=fsm.start(args.workspace)
+            if args.cmd=='start':result=fsm.start(args.workspace,preview_only=args.preview)
             elif args.cmd=='next':result=fsm.next_action(args.workspace)
             elif args.cmd=='status':result=fsm.status(args.workspace)
             elif args.cmd=='confirm':result=fsm.confirm(args.workspace,args.user_reply)
@@ -137,6 +142,15 @@ def main(argv=None):
                           '构图锁对应另一张原型；请使用当前选定的原型')
             spec=card_spec(report['data'],generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),canvas=canvas,composition=composition)
             save(args.out,spec);result={'ok':True,'out':str(args.out),'persona_digest':spec['persona_digest']}
+        elif args.cmd=='render-card':
+            from twinlight_core import lite
+            from twinlight_core.site import render_card_preview
+            check(args.out.resolve()!=args.input.resolve() and not (args.out.exists() and args.out.samefile(args.input)),
+                  '卡片预览不能覆盖当前人物 JSON')
+            report=lite.check_text(args.input.read_text(encoding='utf-8'))
+            check(report['ok'],'JSON 未通过校验，先运行 lite-check')
+            result=render_card_preview(report['data'],args.out,layers=args.layers,prototype=args.prototype,
+                                       portrait=args.portrait,character=args.character,background=args.background)
         elif args.cmd=='lite-build':
             from twinlight_core import lite
             from twinlight_core.site import build_lite

@@ -6,17 +6,20 @@ Twinlight · 与你同光
 
 “生成我的专属卡片”或“做我的 Twinlight”也可以。
 
-AI 会用本次授权的材料写你的星系与 SSR 卡，先让你确认文字，再生成专属卡图和页面。
-资料不足时只问两三个短问题；命令、JSON、分层和检查都由有工具的 AI 处理。
+有执行工具的 AI 会用本次授权材料，一次完成本地草稿：独立卡片预览和 HTML 页面。
+资料充分时直接做完，不默认先等文案确认；资料不足时只问两三个短问题。
+命令、JSON、分层和检查由 AI 处理，卡片完成后自动构建页面。
+未确认草稿如实保留未确认状态，不替你确认；文字确认也不等于允许公开发布。
 
-纯聊天网站：把 PROMPT.md 发给或上传给 AI：
+明确没有执行工具的聊天 AI：把 PROMPT.md 发给或上传给 AI：
 https://github.com/Link10907/twinlight-with-you/blob/main/PROMPT.md
-下载查看器，保存 viewer.html 后用浏览器直接打开，再导入 AI 交付的内容和图层包：
+这类宿主不能保证一次请求完成卡片与 HTML。可下载查看器，保存 viewer.html 后用浏览器打开，再导入实际交付的内容和素材：
 https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html
 
 Claude Code、Codex、Cursor 等 Agent：让它读取项目里的 SKILL.md 或 AGENT.md。
 提供聊天导出并要求原话出处时，AI 会走严格模式。
 
+默认结果是 card/front.png 和 site/index.html；PNG 是独立正面预览，动态闪卡效果在 HTML 中查看。
 完成的 HTML 可直接用浏览器打开，不需要 Node.js、Python 或服务器。
 GitHub Pages 是维护者手动发布后的可选入口，当前使用不依赖线上部署。
 有分层图就显示分层卡；只有原型图则显示静态插画；不能生图则明确占位。

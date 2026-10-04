@@ -1,18 +1,20 @@
 # Twinlight · 与你同光
 
-让 AI 根据你的材料，生成一张专属 SSR 定义卡和一片个人星系。
+一次请求，让 AI 根据你的材料生成专属 SSR 定义卡与可直接打开的 Twinlight HTML。
 
 把这个项目交给你的 AI，然后说：
 
 > 根据你实际了解的我，生成我的定义卡，完成后直接给我看。
 
-AI 会使用本次授权的材料，先让你确认文字，再生成专属卡图与页面。资料不足时只问两三个短问题；命令、JSON、图层与检查由有工具的 Agent 处理。
+资料充分时，有执行工具的 Agent 会直接完成本地草稿，给你独立卡片预览和 HTML 页面，不默认先停下来等文案确认。资料不足时只问两三个短问题；命令、JSON、图层和检查由 Agent 处理，卡片完成后自动构建页面。
 
 - **Codex / Claude Code / Cursor 等 Agent**：读取项目里的 [SKILL.md](SKILL.md) 或 [AGENT.md](AGENT.md)，生成后优先在当前聊天预览。
-- **普通聊天 AI**：发送或上传 [PROMPT.md](https://github.com/Link10907/twinlight-with-you/blob/main/PROMPT.md)，将它交付的内容和图层包导入 [下载的查看器](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)。保存 `viewer.html` 后直接用浏览器打开。
+- **明确没有执行工具的聊天 AI**：发送或上传 [PROMPT.md](https://github.com/Link10907/twinlight-with-you/blob/main/PROMPT.md)，使用它说明的 [离线查看器兼容路线](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)。这类宿主不能保证一步完成卡片与 HTML，需将实际交付的内容和素材导入保存的 `viewer.html`。
 - **想要原话出处**：提供聊天导出，要求严格模式。资料范围、事实引用和未完成部分会如实说明。
 
-已生成的 HTML 用现代浏览器直接打开，**不需要 Node.js、Python 或本地服务器**。网页内预览取决于宿主实际能力；页面不会自动公开。
+你会一起得到独立卡片图片与 HTML 页面，可以直接查看。尚未审阅的内容会标为草稿；需要调整时告诉 AI，它会更新对应结果。公开发布仍由你决定。
+
+已生成的 HTML 用现代浏览器直接打开，**不需要 Node.js、Python 或本地服务器**。网页内预览取决于宿主实际能力；页面不会自动公开。PNG 是卡片正面预览，动态 foil 与层内视差在 HTML 中查看。
 
 查看器是可下载的离线单文件，不依赖已经部署的网站。GitHub Pages 仅在维护者明确手动发布后作为可选线上入口；skill 包不含这份较大的查看器，按上面的链接单独取得即可。
 
@@ -44,7 +46,9 @@ AI 会使用本次授权的材料，先让你确认文字，再生成专属卡�
 
 | 工作 | 说明 |
 |---|---|
-| Lite 内容与执行 | [PROMPT.md](PROMPT.md)、[AGENT.md](AGENT.md) |
+| Lite 内容与一次请求编排 | [PROMPT.md](PROMPT.md)、[AGENT.md](AGENT.md) |
+| 闪卡模块：当前数据、原型、原生层、排字与独立预览 | [card-generation.md](prompts/card-generation.md) |
+| HTML 模块：同一数据与验收素材的固定模板构建 | [html-build.md](prompts/html-build.md) |
 | 严格提取、原话核对与增量更新 | [工作流](references/workflow.md)、[提取规则](references/extraction.md) |
 | 原型、独立图层与视觉检查 | [美术契约](references/art-direction.md) |
 | 直接预览与平台边界 | [预览说明](references/preview.md) |
@@ -58,7 +62,7 @@ python -m unittest discover -s tests -v
 
 默认 ZIP 只含 skill 与通用资源；演示 ZIP 另加白名单中的虚构数据，始终排除真人 showcase、标准答案、隐藏文件和私人目录。`package-manifest.json` 记录范围和文件哈希。生成新页面需要 Python 3.10+ 与 `requirements.txt`，由 Agent 处理；Node.js 与 Playwright 属于开发检查。
 
-精简模式是经过本人确认的有限印象；严格模式核对源引用与状态。机械校验不证明语义蕴含，也不保证跨模型抽取完全一致。冻结数据与素材后构建才是确定性的。生图不是逐次相同的像素复刻；稳定性来自设定、同一原型、画布锁和验收流程。页面支持 1–8 个主主题，每个 0–8 个话题，不强行凑满。
+精简模式默认是尚未确认的有限印象草稿；本人对当前文字的真实确认另行记录。严格模式保留源引用、状态和本人审阅规则。机械校验不证明语义蕴含，也不保证跨模型抽取完全一致。闪卡与 HTML 使用独立内部提示词、输入输出契约和验收，失败只修对应模块；分层无法完成时如实降级，仍继续生成 HTML。冻结数据与素材后构建才是确定性的。生图不是逐次相同的像素复刻；稳定性来自设定、同一原型、画布锁和验收流程。页面支持 1–8 个主主题，每个 0–8 个话题，不强行凑满。
 
 保留 V10 光点流动、靠近才显行星、选中主体发光；先介绍当前 AI 星系，再以连续的双星系拉扯交融过渡至揭卡；有暂停、跳过与减少动态。卡片是分层视差与观察方向驱动的 foil，不是完整三维人体；本项目没有交付上游 Blender/GLB 流水线。
 
