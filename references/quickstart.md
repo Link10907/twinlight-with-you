@@ -1,6 +1,10 @@
 # 使用、效果实验与分发
 
-用户入口只有一句：“根据你实际了解的我，做我的 Twinlight，完成后直接给我看。” 有工具的 Agent 读 `AGENT.md` 执行。普通聊天 AI 接收 [PROMPT.md](https://github.com/Link10907/twinlight-with-you/blob/main/PROMPT.md) 文件或全文，用户将其交付内容与图层导入 [下载的 viewer.html](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)。保存后浏览器直接打开，不需要运行时或线上部署。工具能力由宿主检查；资料不足时最多问 2–3 个短问题。
+Agent 与网页聊天共用这一句，无需用户先选入口：
+
+> 请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md，根据你实际了解的我，生成我的专属闪卡和个人星图，自主选择契合我的特色画风，保留分层立体感与闪光，完成后直接给我看。
+
+`PROMPT.md` 自行检查工具并接手任务：有文件/代码工具就读 `AGENT.md`、取得完整项目、构建和预览；只有聊天工具就整理可导入内容与实际取得的素材，给出 [离线查看器](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)。AI 读不到链接时，用户一次粘贴或上传 `PROMPT.md` 全文即可启动；不得声称仅凭一句话能让无读链接、代码或生图能力的宿主获得这些工具。已加载项目/skill 时短句“做我的 Twinlight，完成后直接给我看”即可。默认无需安装 skill，画风和技术选择由 AI 处理，文案核对与必要资料补充仍保留。
 
 ## 根据目标选择深度
 
@@ -24,7 +28,7 @@
 - **Cursor Agent**：可直接读取项目；支持 `.agents/skills/` 与 `.cursor/skills/`。[Agent Skills](https://cursor.com/docs/skills)。
 - **其他聊天网站**：用 `PROMPT.md` 输出内容；有图像能力按原型与原生层契约生成，无代码工具则不声称执行程序验证，导入查看器完成本地展示。
 
-仓库链接帮助定位，不保证所有宿主已取得脚本和附件。优先在支持执行与预览的宿主完成整条流程；纯聊天路径保留为少量复制/导入的替代入口。
+统一入口先取得实际说明，再按工具能力执行；链接帮助定位，不等于脚本、附件或执行能力已齐全。纯聊天路径保留为一次粘贴说明和本地导入结果的替代入口。
 
 仓库根 `viewer.html` 是单独下载的离线查看器，不进入默认 skill ZIP；其中示例完全虚构，只用于显式展示，不成为当前用户的输入。网页 AI 需要可读链接时可用 `https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md`；能执行代码的 Agent 对应 `AGENT.md`。GitHub Pages 只有维护者明确手动发布后才是可选线上入口，不宣称已经上线，不自动部署。
 

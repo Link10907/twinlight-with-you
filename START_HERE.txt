@@ -1,21 +1,20 @@
 Twinlight · 与你同光
 
-把项目交给你的 AI，然后说：
+复制这一句，发给 Agent 或网页聊天 AI：
 
-“根据你实际了解的我，生成我的定义卡，完成后直接给我看。”
+请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md，根据你实际了解的我，生成我的专属闪卡和个人星图，自主选择契合我的特色画风，保留分层立体感与闪光，完成后直接给我看。
 
-“生成我的专属卡片”或“做我的 Twinlight”也可以。
+两种入口用同一句，AI 自己判断工具能力、选择画风并接手制作。
+有工具的 Agent 会取得完整项目、构建并打开成品，无需先安装 skill。
+已有项目或已加载 skill 时，只需说“做我的 Twinlight，完成后直接给我看。”
 
-AI 会用本次授权的材料写你的星系与 SSR 卡，先让你确认文字，再生成专属卡图和页面。
-资料不足时只问两三个短问题；命令、JSON、分层和检查都由有工具的 AI 处理。
+AI 先给你核对文案，再完成卡图；命令、JSON、图层与检查由 AI 处理。
+只有必要资料缺失时才补问。提供聊天导出并要求原话出处时走严格模式。
 
-纯聊天网站：把 PROMPT.md 发给或上传给 AI：
-https://github.com/Link10907/twinlight-with-you/blob/main/PROMPT.md
-下载查看器，保存 viewer.html 后用浏览器直接打开，再导入 AI 交付的内容和图层包：
+AI 读不到链接：把包里的 PROMPT.md 全文一次粘贴或作为附件交给它即可启动。
+只有聊天能力时，AI 交付可导入内容和实际取得的素材；下载离线查看器并直接打开：
 https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html
-
-Claude Code、Codex、Cursor 等 Agent：让它读取项目里的 SKILL.md 或 AGENT.md。
-提供聊天导出并要求原话出处时，AI 会走严格模式。
+查看器提供“复制启动语”和“复制完整说明”，也可导入结果观看。
 
 完成的 HTML 可直接用浏览器打开，不需要 Node.js、Python 或服务器。
 GitHub Pages 是维护者手动发布后的可选入口，当前使用不依赖线上部署。

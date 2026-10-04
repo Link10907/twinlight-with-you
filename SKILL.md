@@ -8,7 +8,11 @@ metadata:
 
 # Twinlight · 与你同光
 
-The user can simply ask: “根据你实际了解的我，生成我的定义卡，完成后直接给我看。” Treat personal definition-card and exclusive-card requests as this skill. Produce their own SSR card, galaxy and personal narrative with the existing Twinlight renderer. Keep commands, JSON and layer management inside the agent's workflow; show the requested card first when it is the user’s focus.
+The user can simply ask: “做我的 Twinlight，完成后直接给我看。” Treat personal definition-card, exclusive flashcard and personal star-map requests as this skill. Produce their own SSR card, galaxy and personal narrative with the existing Twinlight renderer. Keep commands, JSON and layer management inside the agent's workflow; show the requested card first when it is the user’s focus.
+
+## Start from one request
+
+`PROMPT.md` is the shared entry for agents and web chats. A request pointing to it, or the complete instructions supplied as the user's task, starts the workflow immediately; do not wait for a second “start” or ask them to choose an execution mode. Inspect actual tools and route internally. With file/code tools, read `AGENT.md` and obtain the complete repository in an authorized workspace if needed; the user need not install the skill or clone files first. With chat-only tools, follow `PROMPT.md` and deliver importable content and any artwork actually obtained. If a link cannot be read, use supplied instructions or ask once for the full entry text; do not pretend it was loaded. Preserve text confirmation and source boundaries below.
 
 ## Choose the source depth
 

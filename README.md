@@ -2,15 +2,21 @@
 
 让 AI 根据你的材料，生成一张专属 SSR 定义卡和一片个人星系。
 
-把这个项目交给你的 AI，然后说：
+## 一句话启动
 
-> 根据你实际了解的我，生成我的定义卡，完成后直接给我看。
+复制下面这一句，发给你的 Agent 或网页聊天 AI：
 
-AI 会使用本次授权的材料，先让你确认文字，再生成专属卡图与页面。资料不足时只问两三个短问题；命令、JSON、图层与检查由有工具的 Agent 处理。
+```text
+请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md，根据你实际了解的我，生成我的专属闪卡和个人星图，自主选择契合我的特色画风，保留分层立体感与闪光，完成后直接给我看。
+```
 
-- **Codex / Claude Code / Cursor 等 Agent**：读取项目里的 [SKILL.md](SKILL.md) 或 [AGENT.md](AGENT.md)，生成后优先在当前聊天预览。
-- **普通聊天 AI**：发送或上传 [PROMPT.md](https://github.com/Link10907/twinlight-with-you/blob/main/PROMPT.md)，将它交付的内容和图层包导入 [下载的查看器](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)。保存 `viewer.html` 后直接用浏览器打开。
-- **想要原话出处**：提供聊天导出，要求严格模式。资料范围、事实引用和未完成部分会如实说明。
+同一句话适用于两种入口，无需先分辨该用 skill 还是提示词。有工具的 Agent 会自行取得项目、整理资料、生成卡图并打开成品；网页聊天 AI 会按实际工具能力制作，能预览时直接展示，只有聊天能力时交付可导入查看器的内容与素材。
+
+AI 使用本次授权材料，先给你核对文案，再完成制作。画风、形象、命令、JSON 和图层由 AI 处理，只有必要资料缺失时才补问。启动不需要安装 skill 或配置模型 API Key；资料范围和实际完成程度会如实说明。
+
+**AI 读不到链接时**：将 [PROMPT.md](PROMPT.md) 全文一次粘贴或作为附件交给它，说明本身就是启动请求。它只交付内容与素材时，下载 [离线查看器](https://github.com/Link10907/twinlight-with-you/raw/refs/heads/main/viewer.html)，保存后直接打开并导入。查看器也提供“复制启动语”和“复制完整说明”。
+
+已经加载这个项目或安装 skill 时，只需说：**“做我的 Twinlight，完成后直接给我看。”** 想要逐句原话出处，可以在同一句请求里附上聊天导出并说明“使用严格模式”。
 
 已生成的 HTML 用现代浏览器直接打开，**不需要 Node.js、Python 或本地服务器**。网页内预览取决于宿主实际能力；页面不会自动公开。
 

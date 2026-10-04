@@ -1,0 +1,4 @@
+interface:
+  display_name: "Twinlight · 与你同光"
+  short_description: "依据当前授权材料，自主选画风，生成带分层景深与闪光的专属定义卡和个人星图"
+  default_prompt: "请用 $twinlight-with-you 根据你实际了解的我，生成我的专属闪卡和个人星图，自主选择契合我的特色画风，保留分层立体感与闪光，完成后直接给我看。"
