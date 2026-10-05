@@ -54,14 +54,27 @@ jobs:
           from twinlight_core.common import load
           from twinlight_core.template_origin import verify_site
           result = load(Path('verification/controlled/final.json'))
-          assert result['status'] == 'files_ready', result['status']
-          assert result['dynamic_verified'] is True
+          # Synthetic sources have NO real image calls or visual review: public delivery must stop.
+          assert result['status'] == 'needs_art_evidence', result['status']
+          assert result['complete'] is False
+          assert result['dynamic_verified'] is False
           assert result['quality_verified'] is False
           assert result['generation_provenance_verified'] is False
           assert result['stages']['html']['reused'] is True
-          for key in ('html', 'card_front', 'card_preview', 'card_pack', 'html_with_card'):
-              assert Path(result['outputs'][key]).is_file(), key
-          assert verify_site(Path(result['outputs']['html_with_card']))['ok']
+          assert 'html_with_card' not in result['outputs']
+          assert Path(result['outputs']['html']).is_file()
+          for key in ('card_front', 'card_preview', 'card_pack'):
+              assert key not in result['outputs'], key
+              assert Path(result['candidate_outputs'][key]).is_file(), key
+          # Separate mechanical-only integration regression. This is not a production completion.
+          from twinlight_core.run import _run_mechanical
+          mechanical = _run_mechanical(Path('tests/fixtures/lite/valid.json'), Path('runs/controlled'),
+                                       mode='both', layers=Path('runs/controlled/native/layers.json'))
+          assert mechanical['status'] == 'files_ready', mechanical['status']
+          assert mechanical['complete'] is False
+          assert mechanical['mechanical_only'] is True
+          assert mechanical['dynamic_verified'] is True
+          assert verify_site(Path(mechanical['outputs']['html_with_card']))['ok']
           assert load(Path('runs/controlled/site-with-card/profile.json'))['release'] == {'draft': True, 'share_allowed': False}
           EOF
       - name: Compatibility local preview, end to end through the state machine

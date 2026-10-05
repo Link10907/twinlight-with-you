@@ -1,55 +1,36 @@
-# Twinlight · 独立闪卡流程
+# Twinlight · 独立闪卡接口
 
-交付当前用户的原生分层闪卡：图层与 `layers.json`、便携 `card.json`、独立互动 `preview.html` 和正面 `front.png`。原型图片不能代替完整闪卡。默认由 [AGENT.md](AGENT.md) 在同一次请求中调用本模块并自动接入最终 HTML；用户明确只要闪卡时，也可独立运行，无需星系页面。
+先读 [references/quality-workflow.md](references/quality-workflow.md)。本模块只做当前人的绘画、原生分层、独立排字与卡片预览，不构建星系叙事。默认被 [AGENT.md](AGENT.md) 在一次请求内调用并自动接入 HTML；模块提示见 [prompts/card-generation.md](prompts/card-generation.md)。
 
-本模块不编写星系叙事或构建星图 HTML。内部范围、输入输出和有限重试见 [prompts/card-generation.md](prompts/card-generation.md)。
+## 输入
 
-## 输入与美术
+完整资源按 `scripts/bootstrap.py --root <目录>` 检查。只读 Lite / card-1 取得 name、summarizer 和 card 的 title、english_title、keywords、tagline、reflection；不为换画风修改人物绑定。实际美术用独立 `art-direction-1` JSON，记录当前偏好、具体场景与适配排字主题，传给 `--art-prompt-file`。旧 20–1500 字 plain brief 仍能做局部诊断，但不满足新版完整卡交付关口。
 
-使用完整项目中的相对资源与脚本，由 AI 处理 Python 3.10+、requirements 与已授权图像工具。已有项目先用 `scripts/bootstrap.py --root <项目目录>` 检查资源和运行时；链接模式按 `PROMPT.md` 取得同一实际 revision 的完整资源。生成前按 [references/platform-adapters.md](references/platform-adapters.md) 检查真实图像工具、参考图、原生透明能力及中文字体；`prepare_card_layers.py` 可自动找字体或接受 `--font <实际字体文件>`。缺字体先修排字环境，不能让生图模型画字。自己检查，不让用户运行内部命令。缺工具保留已有预览与 HTML，明确分层卡未完成。
+Strict 继续使用原本只读 analysis/compiled persona 与 [references/workflow.md](references/workflow.md) 审阅接口；不转换成虚构 Lite 身份。视觉规范相同，卡包绑定实际 Strict persona；不能把低层打包结果称作 public run 已验证。
 
-读取 [references/art-direction.md](references/art-direction.md)。每人使用独立卡片目录，保留用户明确提示、可见参考与最新修改。未指定的画风、形象和配色由 AI 自主选择，保证作品辨识度与完成度，不发审美问卷。Lite/card-1 默认由入口 `run --mode both|card` 记录待办；生成装层后交回同一 `run --layers <manifest>` 自动续跑。控制器不代替实际生图或视觉判断，也不替 Strict 绕过审核。
+## 原生素材到独立预览
 
-默认读取入口已校验的 `twinlight.json`，作为只读输入取得昵称、实际总结者和 card 文字；不能修改 HTML 内容来换画风。明确只做卡片、没有星系数据时，可单独写 `card-input.json`，遵循 `schemas/card-input.schema.json`：`twinlight="card-1"`、name、summarizer 与 card 的 title、english_title、keywords、tagline、reflection，无需 themes。两种输入的相同身份文字得到相同人物绑定。
-
-Lite 可以先完成尚未确认的私人草稿，如实记录未确认状态，不默认等本人回复。已明确确认确切文字时沿用真实授权；`generated` 不等于本人 `approved`。Strict 保留原有来源核对和本人审阅，不借 Lite 草稿绕过。
-
-美术只保存为独立 `card/art-brief.txt`（20–1500 字），不写入 HTML 输入或改动人物绑定。每层调用保留本次 brief、画布与职责。`PY`、`TL` 是实际 Python 与 `scripts/twinlight.py` 的绝对路径。
-
-Strict 只读 history / analysis 与已编译 persona；将设计保存为独立 `art-direction.json`，按 `schemas/art-direction.schema.json` 写 visual_style、可选 symbols、portrait_mode 与真实 reference_consent。不写回 analysis：
+`PY` / `TL` 是实际 Python 和 `scripts/twinlight.py` 路径。以下全是 AI 的内部动作。先完成原型评审，再生成层；具体证据字段见 [references/art-evidence-format.md](references/art-evidence-format.md)。
 
 ```bash
-PY TL art-brief <只读history.json> <只读analysis.json> --art-direction-file <卡片目录>/art-direction.json --out <卡片目录>/art-brief.json
+PY TL card-spec <只读输入.json> --art-prompt-file <卡片目录>/art-direction.json --out <卡片目录>/card-spec.json
+PY <项目>/scripts/art_quality.py check --layers <卡片目录>/layers.json --persona-digest <当前digest> --stage prototype
+PY <项目>/scripts/prepare_card_layers.py --data <只读输入.json> --art-prompt-file <卡片目录>/art-direction.json --prototype <卡片目录>/prototype.png --background <卡片目录>/background.png --subject <卡片目录>/subject.png --effects <卡片目录>/effects.png --out <卡片目录>
+PY TL validate-art <卡片目录>/layers.json
+PY <项目>/scripts/art_quality.py composite --layers <卡片目录>/layers.json --persona-digest <当前digest> --out <卡片目录>/composite.png
+PY TL render-card <只读输入.json> --layers <卡片目录>/layers.json --out <卡片目录>/front.png
+PY <项目>/scripts/preview_card.py --layers <卡片目录>/layers.json --data <只读输入.json> --out <卡片目录>/preview.html
+PY <项目>/scripts/package_card.py --layers <卡片目录>/layers.json --data <只读输入.json> --out <卡片目录>/card.json
 ```
 
-Strict 卡包沿用当前 persona_digest。下方打包和独立交互预览命令省略 Lite 的 `--data`，不从 Strict 另造 card-1 来改绑定。两种来源只影响内容绑定，不降低美术标准。
+已生成有内容的 spirit 时，装层传 `--spirit <真实路径>`。没有同伴才用空透明层；脚本拒绝静默覆盖已有非空 spirit。`--font` 可选实际中文字体。文字保持原句，主题控制颜色、边框与底部遮罩；放不下时修构图，不删字。
 
-## 生图、装层与交付
+各层采用工具返回的同一合法 3:4 全画布；背景完全不透明，主体/前景原生透明。不得抠图、裁切、缩放、重摆或重复海报。lineart 从最终 subject alpha 同像素派生，不能自己画一张灰色蒙版代替。SSR 固定不代表能力排名。
 
-Lite 或 card-1 先取得规格；Strict 使用其独立 brief：
+## 评审与续跑
 
-```bash
-PY TL card-spec <只读输入.json> --art-prompt-file <卡片目录>/art-brief.txt --out <卡片目录>/card-spec.json
-```
+依次真实审查无字原型、无字分层合成和最终卡面；`review-template` 只计算当前 targets，默认 pending，不自动批准。左右视角、关 foil 的景深、depth=0 的对照、移动闪光、固定文字与手机可读性均需实际看图/操作，参见 [references/art-direction.md](references/art-direction.md)。
 
-素材缺失时必须实际调用图像工具，按美术契约生成无字 3:4 原型，锁定实际画布和构图，再直接生成同画布完整 background、原生透明 subject / effects 与可选 spirit。代码画出的简单几何形、模板占位或静态 SVG 不能冒充专属绘画或完整 SSR；程序只负责准确排字、边框、同像素线稿、装层和已有素材预览。明确提示优先，未指定部分自主完善；线条、材质、比例、光线与动作应形成清楚且精致的整体，不套通用 AI 模板脸。保持同一原型参考和真实透明开关，不抠图、裁切、缩放或重摆。原型后以 `--prototype` 更新规格，可用 `--composition` 绑定本次实际读图得到的构图锁。
+把真实调用与评审登记进邻接的 `art-evidence.json`，回到同一 public `run --layers`。控制器会生成自己的 front/preview；最终 review 的 targets 必须与实际控制器输出一致。不一致就对当前输出重新看图，不能只改哈希继承旧意见。
 
-保留简短生成记录：本次实际图像工具调用与返回文件路径/工件标识、选定原型和各层、修改原因，以及真实看图结果。已有同主人素材可复用，但说明复用范围，不把复用称为本次新生图。`card-spec` 只写 brief，`validate-art` 只检查像素和结构；两者都不能证明完成了绘画、原型配准或审美验收。
-
-Lite/card-1 且没有有内容的 spirit 时，由项目脚本装层；SSR、中英文称号、关键词、标语、边框与实际总结者准确程序排字，lineart 从最终 subject 同像素派生。有内容的 spirit 须保留并绑定，不能被空层覆盖。
-
-```bash
-PY <项目>/scripts/prepare_card_layers.py --data <只读输入.json> --art-prompt-file <卡片目录>/art-brief.txt --prototype <卡片目录>/prototype.png --background <卡片目录>/background.png --subject <卡片目录>/subject.png --effects <卡片目录>/effects.png --out <卡片目录>/assembled
-PY TL validate-art <卡片目录>/assembled/layers.json
-PY TL render-card <只读输入.json> --layers <卡片目录>/assembled/layers.json --out <卡片目录>/front.png
-PY <项目>/scripts/package_card.py --layers <卡片目录>/assembled/layers.json --data <只读输入.json> --out <卡片目录>/card.json
-PY <项目>/scripts/preview_card.py --layers <卡片目录>/assembled/layers.json --data <只读输入.json> --out <卡片目录>/preview.html
-```
-
-Strict 按同一契约独立排字与登记图层，再用省略 `--data` 的 package_card / preview_card 命令。正面 PNG 可在实际独立预览中截图保存；无截图能力则交付原生卡包和独立互动预览，明确 PNG 未生成，不伪造 Lite 绑定调用 render-card。
-
-`preview.html` 只展示当前卡片，复用同一真实景深和 foil 渲染器，不读取星系数据。打开它验收正面、左右、闪光、边缘和文字，保留实际检查记录或截图；构建预览文件不等于互动已验证。缺浏览器能力时明确“文件已生成，动态未验证”，不能宣称完整动态验收已完成。`front.png` 只合成已有素材，不调用生图，不烘焙动态 foil，也不能代替完整交互预览。
-
-只修失败层，每层最多重生成两次；必要时按美术契约做一次明确构图修订，保留旧素材和记录，不重开无限重试。仍失败就保留原型或占位预览，明确卡片未完成，保留已成功的 HTML。卡片技术问题不改只读文字、人物绑定或页面。
-
-按实际范围交付卡包文件、独立互动预览和正面图，分别说明文件完成、视觉验收和动态检查；静态/占位仍明确分层闪卡未完成。手动模块命令使用上面的 `card.json`；默认控制器输出为 `run/card/card-pack.json`，内容契约相同，以实际报告路径为准。入口自动将完成且匹配卡包交给 HTML 模块，无需用户再次要求，也不要求额外本人批准才能交付私人草稿。接入失败只修导入，不重做卡片；HTML 失败也保留此卡片。仅在明确只做闪卡时止于本模块。公开发布仍需本人明确授权，见 [references/privacy.md](references/privacy.md)。
+每层首次后最多再生成两次，保留失败记录与合格层；必要时一次明确构图修订。达到上限保留原型/候选预览并如实说明未完成，不交几何占位、不复用被否决旧图凑成功。无浏览器时仍可完成文件，但不能声称完整动态验收。作品审查不等于本人授权公开。

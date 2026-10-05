@@ -292,10 +292,10 @@ def _browser(state: dict, workspace: Path, key: str, html: Path, *, browser: str
     return result
 
 
-def run(input_path: Path, workspace: Path, *, mode: str = "both", layers: Path | None = None,
+def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", layers: Path | None = None,
         art_prompt_file: Path | None = None, browser: str | None = None, no_browser: bool = False,
-        font: Path | None = None) -> dict:
-    """Build/verify independent modules, then integrate only current-person native art."""
+        font: Path | None = None, _review_gate=None) -> dict:
+    """Internal mechanical checks only; use run() for production delivery. Build/verify independent modules, then integrate only current-person native art."""
     from . import lite, site
     from .art import validate_layers
     from .cardgen import card_spec, read_card_data
@@ -408,6 +408,12 @@ def run(input_path: Path, workspace: Path, *, mode: str = "both", layers: Path |
                                card_pack=str(workspace / "card/card-pack.json"))
                 dynamic.append(_browser(state, workspace, "card_browser", workspace / "card/preview.html", browser=browser,
                                         disabled=no_browser, card_only=True))
+                if _review_gate is not None:
+                    art_review = _review_gate(content, layers, workspace, state["persona_digest"])
+                    state["stages"]["art_quality"] = art_review
+                    if art_review.get("ok") is not True:
+                        # Keep inspectable candidates, but never integrate unreviewed artwork.
+                        native = None
         else:
             (workspace / "card").mkdir(exist_ok=True)
             typography = _font_preflight(font)
@@ -504,6 +510,17 @@ def run(input_path: Path, workspace: Path, *, mode: str = "both", layers: Path |
                          "Mechanical checks do not establish factual accuracy, art quality or image-generation provenance.",
                          "Browser evidence covers this local run only; other AI websites and physical devices are unverified.",
                          "Files remain private, unconfirmed drafts; no publishing or share approval is inferred."]}
+    result["complete"] = False  # Only the public delivery gate may mark a request complete.
+    result["mechanical_only"] = _review_gate is None
     save(state_file, state)
     save(workspace / "run-report.json", result)
     return result
+
+
+def run(input_path: Path, workspace: Path, *, mode: str = "both", layers: Path | None = None,
+        art_prompt_file: Path | None = None, browser: str | None = None, no_browser: bool = False,
+        font: Path | None = None) -> dict:
+    """Default production route: mechanical files, source evidence and visual review gates."""
+    from .delivery import deliver
+    return deliver(_run_mechanical, input_path, workspace, mode=mode, layers=layers,
+                   art_prompt_file=art_prompt_file, browser=browser, no_browser=no_browser, font=font)

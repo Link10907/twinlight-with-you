@@ -1,3 +1,5 @@
+> **美术质量关口更新（art-evidence-1）**：默认交付以 public `run` 的 `complete` 为准。未具备真实工具记录与三阶段具名视觉评审的素材，仅是 `candidate_outputs`，不自动进入最终 HTML。详见 [质量工作流](references/quality-workflow.md)。本地记录不认证外部模型或自动证明审美；合成测试不算真实生图成功。
+
 # Twinlight · 与你同光
 
 一次请求，得到你的个人星图 HTML 和专属分层闪卡。

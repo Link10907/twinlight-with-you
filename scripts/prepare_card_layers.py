@@ -95,7 +95,7 @@ def typography(data: dict, size: tuple[int, int], font: Path,
 
 def prepare(data: dict, background: Path, subject: Path, effects: Path,
             out: Path, font: Path, *, composition: dict | None = None,
-            prototype: Path | None = None, art_prompt: str | None = None) -> dict:
+            prototype: Path | None = None, art_prompt: str | None = None, spirit: Path | None = None) -> dict:
     sub = native_subject(subject)
     bg, fx = open_card_image(background), open_card_image(effects)
     check(bg.size == sub.size == fx.size, '直接生成的各层必须使用完全相同的画布；不会裁剪、缩放或重摆')
@@ -107,6 +107,21 @@ def prepare(data: dict, background: Path, subject: Path, effects: Path,
         check(prototype is not None, '构图锁绑定了原型，请使用 --prototype 提供同一张参考图')
         check(hashlib.sha256(prototype.read_bytes()).hexdigest() == composition['source_prototype_sha256'],
               '构图锁对应另一张原型；请使用当前选定的原型')
+    spirit_image = open_card_image(spirit) if spirit else None
+    if spirit_image is not None:
+        check(spirit_image.size == sub.size, 'spirit 必须保留同一原生画布；不会裁切或缩放')
+    elif (out/'spirit.png').exists():
+        check(open_card_image(out/'spirit.png').getchannel('A').getbbox() is None,
+              '已有非空 spirit；请显式提供 --spirit，不能用空层覆盖')
+    # Prepare text before modifying output files; an invalid layout must fail early.
+    layout_report = None
+    if art_prompt and art_prompt.lstrip().startswith('{'):
+        from twinlight_core.art_quality import parse_json, validate_design
+        from twinlight_core.art_typography import typeset
+        design = validate_design(parse_json(art_prompt), spec['persona_digest'])
+        text_image, layout_report = typeset(data, sub.size, font, design['typography'], composition)
+    else:
+        text_image = typography(data, sub.size, font, composition)
     out.mkdir(parents=True, exist_ok=True)
     # Copy files byte for byte. These are newly generated assets, not poster cutouts.
     paths = {}
@@ -115,8 +130,17 @@ def prepare(data: dict, background: Path, subject: Path, effects: Path,
         if source.resolve() != target.resolve():
             shutil.copyfile(source, target)
         paths[role] = target.name
-    Image.new('RGBA', sub.size).save(out/'spirit.png')
-    typography(data, sub.size, font, composition).save(out/'text.png')
+    if spirit:
+        target = out/('spirit' + spirit.suffix.lower())
+        if spirit.resolve() != target.resolve():
+            shutil.copyfile(spirit, target)
+        paths['spirit'] = target.name
+    else:
+        Image.new('RGBA', sub.size).save(out/'spirit.png')
+    text_image.save(out/'text.png')
+    if layout_report is not None:
+        save(out/'typography-report.json', layout_report)
+        (out/'art-direction.json').write_text(art_prompt, encoding='utf-8')
     alpha = sub.getchannel('A')
     edge = ImageChops_safe(alpha.filter(ImageFilter.MaxFilter(5)), alpha.filter(ImageFilter.MinFilter(5)))
     ImageOps.invert(edge).convert('RGB').save(out/'lineart.png')
@@ -134,6 +158,7 @@ def main():
     p.add_argument('--background', required=True, type=Path)
     p.add_argument('--subject', required=True, type=Path)
     p.add_argument('--effects', required=True, type=Path)
+    p.add_argument('--spirit', type=Path, help='Preserve an explicitly generated nonempty companion layer')
     p.add_argument('--out', required=True, type=Path)
     p.add_argument('--font', type=Path)
     p.add_argument('--prototype', type=Path)
@@ -143,7 +168,7 @@ def main():
     data = read_card_data(a.data)
     result = prepare(data, a.background, a.subject, a.effects, a.out, font_path(a.font),
                      composition=load(a.composition) if a.composition else None, prototype=a.prototype,
-                     art_prompt=a.art_prompt_file.read_text(encoding='utf-8') if a.art_prompt_file else None)
+                     art_prompt=a.art_prompt_file.read_text(encoding='utf-8') if a.art_prompt_file else None, spirit=a.spirit)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

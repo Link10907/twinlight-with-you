@@ -127,7 +127,7 @@ def main(argv=None):
             result=run(args.input,args.workspace,mode=args.mode,layers=args.layers,
                        art_prompt_file=args.art_prompt_file,browser=args.browser,no_browser=args.no_browser,font=args.font)
             print(json.dumps(result,ensure_ascii=False,indent=2))
-            return 1 if result['status'] in ('failed','partial_success') else 0
+            return 1 if result['status'] in ('failed','partial_success','art_rejected') else 0
         elif args.cmd in ('start','next','check','status','report','confirm','art','unblock'):
             from twinlight_core import state as fsm
             if args.cmd=='start':result=fsm.start(args.workspace,preview_only=args.preview)

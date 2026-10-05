@@ -1,4 +1,7 @@
-"""Behavioral checks for independent modules, real gates and resumable execution."""
+"""Mechanical regression tests; synthetic fixtures do not certify production art.
+
+Public production admission/rejection is tested in test_delivery_quality_gate.py.
+"""
 from __future__ import annotations
 import copy
 import json
@@ -29,7 +32,7 @@ class ControlledRun(unittest.TestCase):
         self.original = self.input.read_bytes()
 
     def execute(self, **kwargs):
-        return controlled.run(self.input, self.ws, no_browser=True, **kwargs)
+        return controlled._run_mechanical(self.input, self.ws, no_browser=True, **kwargs)
 
     def art(self):
         return native_fixture(self.folder / "art", lite.persona_digest(self.data))
@@ -254,7 +257,7 @@ class ControlledRun(unittest.TestCase):
     def test_missing_tools_and_waiting_art_do_not_consume_retry_budget(self):
         for _ in range(4):
             with mock.patch.object(controlled.importlib.util, "find_spec", return_value=None):
-                result = controlled.run(self.input, self.ws)
+                result = controlled._run_mechanical(self.input, self.ws)
             self.assertEqual(result["status"], "needs_card")
             self.assertEqual(result["stages"]["html_browser"]["status"], "unavailable")
             self.assertEqual(result["stages"]["html_browser"]["attempts"], 0)
@@ -282,7 +285,7 @@ class ControlledRun(unittest.TestCase):
 
         with mock.patch.object(controlled.importlib.util, "find_spec", return_value=object()), \
                 mock.patch.object(controlled, "_execute_browser", side_effect=actual_failure):
-            result = controlled.run(self.input, self.ws, mode="html", browser=sys.executable)
+            result = controlled._run_mechanical(self.input, self.ws, mode="html", browser=sys.executable)
         self.assertEqual(result["status"], "partial_success")
         self.assertEqual(result["stages"]["html_browser"]["status"], "failed")
         self.assertFalse(result["dynamic_verified"])
@@ -299,7 +302,7 @@ class ControlledRun(unittest.TestCase):
 
         with mock.patch.object(controlled.importlib.util, "find_spec", return_value=object()), \
                 mock.patch.object(controlled, "_execute_browser", side_effect=changed_input):
-            result = controlled.run(self.input, self.ws, mode="html", browser=sys.executable)
+            result = controlled._run_mechanical(self.input, self.ws, mode="html", browser=sys.executable)
         self.assertEqual(result["stages"]["html_browser"]["status"], "failed")
         self.assertFalse(result["stages"]["html_browser"]["input_unchanged"])
         self.assertFalse(result["dynamic_verified"])
@@ -322,7 +325,7 @@ class ControlledRun(unittest.TestCase):
 
                 with mock.patch.object(controlled.importlib.util, "find_spec", return_value=object()), \
                         mock.patch.object(controlled, "_execute_browser", side_effect=wrong_receipt):
-                    result = controlled.run(self.input, self.ws, mode="html", browser=sys.executable)
+                    result = controlled._run_mechanical(self.input, self.ws, mode="html", browser=sys.executable)
                 self.assertEqual(result["stages"]["html_browser"]["status"], "failed")
                 self.assertFalse(result["stages"]["html_browser"]["report_input_bound"])
                 self.assertFalse(result["dynamic_verified"])
@@ -339,8 +342,8 @@ class ControlledRun(unittest.TestCase):
 
         with mock.patch.object(controlled.importlib.util, "find_spec", return_value=object()), \
                 mock.patch.object(controlled, "_execute_browser", side_effect=matching_receipt) as executed:
-            first = controlled.run(self.input, self.ws, mode="html", browser=sys.executable)
-            second = controlled.run(self.input, self.ws, mode="html", browser=sys.executable)
+            first = controlled._run_mechanical(self.input, self.ws, mode="html", browser=sys.executable)
+            second = controlled._run_mechanical(self.input, self.ws, mode="html", browser=sys.executable)
         self.assertEqual(first["status"], "files_ready")
         self.assertTrue(first["stages"]["html_browser"]["report_input_bound"])
         self.assertTrue(second["stages"]["html_browser"]["reused"])

@@ -22,6 +22,7 @@ MAX_EXPANDED = 128 * 1024 * 1024
 REQUIRED = (
     'SKILL.md', 'AGENT.md', 'PROMPT.md', 'CARD.md', 'requirements.txt', 'scripts/bootstrap.py',
     'prompts/html-build.md', 'prompts/card-generation.md',
+    'scripts/art_quality.py', 'references/quality-workflow.md', 'references/art-evidence-format.md',
     'references/lite-content.md', 'references/art-direction.md', 'references/preview.md',
     'references/privacy.md', 'references/workflow.md', 'references/extraction.md',
     'references/layout.md', 'references/sources.md', 'references/quickstart.md',
@@ -35,7 +36,7 @@ REQUIRED = (
     'assets/card-preview/bootstrap.js',
 )
 CORE = ('__init__', 'art', 'cardgen', 'common', 'compiler', 'evidence', 'extraction',
-        'history', 'layout', 'lite', 'report', 'showcase', 'site', 'state', 'template_origin', 'template_lock', 'run')
+        'history', 'layout', 'lite', 'report', 'showcase', 'site', 'state', 'template_origin', 'template_lock', 'run', 'art_quality', 'art_typography', 'delivery')
 SCHEMAS = ('analysis', 'approval', 'art-direction', 'card-composition', 'card-input',
            'chunk-result', 'evidence-reference', 'history', 'layer-manifest', 'layout', 'lite')
 TEMPLATE = ('adapter.css', 'adapter.js', 'app.js', 'card-art.svg', 'controls.js',

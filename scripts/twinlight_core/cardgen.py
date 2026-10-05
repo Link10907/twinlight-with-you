@@ -44,8 +44,15 @@ def canvas_spec(canvas=None) -> dict:
 def art_prompts(card: dict, *, canvas=None, composition: dict | None = None) -> dict:
     """Keep the concept personal; keep registration, transparency and typography explicit."""
     desc = str((card or {}).get("art_prompt") or "").strip()
+    structured = desc.startswith("{")
+    if structured:
+        from .art_quality import compile_visual_brief
+        desc = compile_visual_brief(desc)
     concept = "本次卡面设定：" + desc
     style = "遵循本次明确偏好、最新审美反馈与 AI 从当前资料自主选择的美术设定，不询问创意选择。画风与主体由行为、气质和卡面表现力共同决定；人物、动物、拟人角色和寓意物件均可，不固定二次元人像、小鹿或某种画法。统一笔触、材质、色彩和光线，保持主体清楚、比例合理、细节精致、象征克制；轮廓、动作或材质需要有本次设计的记忆点，整幅画面的美术语言应有辨识度，仅换物种、换脸、换衣服或加光球不足以形成特色。虚构形象不代表本人真实身份。不要套用示例人物、月夜、服装、性别、肤色或经历。"
+    if structured:
+        # The visual compiler already made concrete choices; do not repeat the agent policy to the image model.
+        style = ""
     dimensions = canvas_spec(canvas)
     size = f"{dimensions['width']}×{dimensions['height']}"
     registered_canvas = f"统一 {size}、竖版 3:4 全画布；各层使用同一坐标，保持本次选定原型的构图、比例、姿态与光照。不得裁剪到主体后重新摆位。"
@@ -101,8 +108,12 @@ def card_spec(data: dict, *, generated_at: str, canvas=None, composition: dict |
     persona_digest = content_digest(data)
     visual_card = dict(data['card'])
     if art_prompt is not None:
-        check(isinstance(art_prompt, str) and 20 <= len(art_prompt.strip()) <= 1500,
-              '独立美术提示需为 20–1500 字')
+        limit = 6000 if isinstance(art_prompt, str) and art_prompt.lstrip().startswith("{") else 1500
+        check(isinstance(art_prompt, str) and 20 <= len(art_prompt.strip()) <= limit,
+              '独立美术提示需为 20–1500 字；结构化 art-direction-1 可至 6000 字')
+        if art_prompt.lstrip().startswith("{"):
+            from .art_quality import parse_json, validate_design
+            validate_design(parse_json(art_prompt), persona_digest)
         visual_card['art_prompt'] = art_prompt.strip()
     check(bool(visual_card.get('art_prompt')), '闪卡流程需要美术提示；使用 --art-prompt-file，不必修改 HTML 内容')
     check(composition is None or isinstance(composition, dict), "Composition lock must be an object")
