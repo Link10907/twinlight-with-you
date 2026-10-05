@@ -1,30 +1,21 @@
 # Twinlight · 一次生成
 
-根据当前用户授权资料，一次生成专属定义闪卡和可直接打开的 Twinlight HTML，完成后一起展示。默认 both；明确只要 HTML 或卡片时仅做相应模块。不让用户重复请求、不要求用户选择美术参数。
+基于当前用户授权资料，一次生成个人 Twinlight 单文件 HTML 与其内嵌的原生分层定义闪卡，完成后一起展示。默认 both；仅当明确只要某模块时选择 html 或 card。不要用网页效果图、静态贴图或 JSON 替代成品。
 
-## 取得完整且固定版本的项目
+## 取得固定版本资源
 
-优先使用用户提供的完整 skill ZIP。只有链接时，资源根为 `https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/`。由 AI 在允许目录下载并先读取 `scripts/bootstrap.py`，再用实际 Python 3.10+ 执行 `--out <本次目录>/project`；已有完整项目执行 `--root <项目目录>`。bootstrap 解析 commit、下载固定 revision、检查依赖与模板锁，不生图、不自动安装依赖。后续只使用取得的同一 revision，不从 main 混入另一版文件。
+使用本次完整项目包或完整仓库。只有链接时，先读取 `scripts/bootstrap.py`，再由宿主在允许目录运行 `--out <新项目目录>` 获取同一 commit；已有资源执行 `--root <项目目录>`。不得混入另一个 main 版本、他人的示例资料或旧卡图。离线升级包需先应用到它指定的仓库版本；升级文件集合本身不是完整项目根。
 
-内部取得入口示例（替换为实际允许目录，不让用户执行）：
-
-```python
-from pathlib import Path
-from urllib.request import urlretrieve
-p = Path("<本次目录>/bootstrap.py")
-p.parent.mkdir(parents=True, exist_ok=True)
-urlretrieve("https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/scripts/bootstrap.py", p)
-# Read the downloaded script before executing it.
-```
-
-资源与执行能力缺失时说明具体缺口；读取 URL 不等于完成构建。不得以自写 React/Canvas/SVG 页面替代项目 HTML。
+资源必须包含四套 `assets/art-styles/*.json`、v2 形象 schema、提示词编译/原图登记、成品导出脚本与原 V10 模板。缺依赖由宿主修复，不让用户手动搭建生成环境。无授权图像能力不自动调用付费服务。
 
 ## 执行
 
-读本地 `AGENT.md`，以同一输入和 workspace 调用 public `run`，执行实际 `next_action` 后续跑。美术使用 `references/quality-workflow.md`，HTML 使用 `prompts/html-build.md`；只在需要的阶段读取其细节。
+读取 `AGENT.md`，写只包含当前授权内容的 Lite 输入并调用 public `scripts/twinlight.py run`。按实际 `next_action` 完成本次任务，不要求用户再发“继续”。
 
-绘画顺序为：当前偏好与否决项 → 具体画面方案 → 真实无字原型与评审 → 原生层与无字合成评审 → 独立排字与最终视差/闪光评审。选定原型不合格就不进入分层。旧素材复用必须明确标注，不能算本次新生图。没有工具时保留成功模块，不用几何占位冒充绘画。
+美术流程使用 `CARD.md`：先在四套版本化风格中选定一套，再写具体可画的主体形象。程序生成每层独立提示词；原型通过实际审查后才能生成背景、主体、前景。三张原生图片同一合法 3:4 全画布，主体与前景原生透明；不允许裁剪、补边、缩放或 UI 截图切片冒充原生配准。
 
-以 `run-report.json` / `delivery-report.json` 的实际 `complete` 和 `outputs` 为交付依据。待验卡在 `candidate_outputs` 中，不能称完整闪卡，也不自动接入最终 HTML。固定模板必须通过 `verify-site`，浏览器未运行则动态未验证；禁止修改模板锁或伪写检查状态来凑完成。
+完成卡片后回到同一 public `run --layers`，看实际候选文件、填写本次观察、续跑。原生层和评审不改变已经冻结的人物文案。固定模板必须独立验证；生产任务禁止修改模板锁或旁路重写页面。
 
-只用本次授权资料；署名为实际总结者。私人草稿不要求二次确认，仍保持未确认、不可自动公开。先展示真实卡片预览与个人 HTML 文件链接，再给必要的简短限制；不能用口头“完成”、JSON、截图或文件存在代替实际验收。
+最终以 `complete=true` 和 `primary_output` 为依据，使用 `scripts/deliver_artifacts.py` 导出实际 HTML、正面卡图、独立预览与卡包。both 模式只选择已内嵌卡的 HTML。给出真实文件，并在宿主确有预览能力时打开同一个文件；下载链接不等于聊天内脚本预览已经通过。
+
+署名为实际总结者，不猜测模型版本。所有输出仍是未确认私人草稿，不自动公开。完整过程说明见 `AGENT.md`；美术与交付关口不能靠口头“完成”替代。

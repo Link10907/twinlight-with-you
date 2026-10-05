@@ -48,6 +48,17 @@ REQUIRED += tuple('prompts/' + name + '.md' for name in ('00-intake', '01-extrac
 REQUIRED += tuple('assets/template/src/' + name for name in TEMPLATE)
 REQUIRED += tuple('assets/template/assets/' + name for name in ('another-light.mp3', 'dust-disc.jpg', 'stellar-atlas.jpg'))
 
+# V2 visual-subject contract is part of the complete release, not optional prompts.
+REQUIRED += (
+    'schemas/art-direction-v2.schema.json', 'references/visual-contract.md', 'references/delivery-v2.md',
+    'scripts/visual_plan.py', 'scripts/deliver_artifacts.py', 'scripts/verify_card_browser.py',
+    'assets/art-styles/catalog.json',
+)
+REQUIRED += tuple('assets/art-styles/' + name + '.json' for name in
+                  ('real-life-cinematic', 'eastern-fantasy-scroll', 'futuristic-clean', 'paper-craft-story'))
+REQUIRED += tuple('scripts/twinlight_core/' + name + '.py' for name in
+                  ('visual_contract', 'generation_plan', 'embedded_card', 'export_delivery'))
+
 
 def fetch(url: str, limit: int) -> bytes:
     request = urllib.request.Request(url, headers={'User-Agent': 'Twinlight-resource-bootstrap',

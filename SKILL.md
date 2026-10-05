@@ -1,32 +1,31 @@
 ---
 name: twinlight-with-you
-description: "Create a personal native-layer definition card and fixed-template Twinlight HTML from authorized material. Use for either artifact or one-request delivery of both."
-metadata:
-  version: "1.5.0"
-  template: "Twinlight V10-derived"
-  quality_gate: "art-evidence-1"
+description: Create a private personal Twinlight HTML with an actually embedded native layered definition card. Use a versioned art style and concrete human, animal or object description; validate real image layers, fixed typography, parallax, foil and current delivery files.
 ---
+# Twinlight · 具体形象与完整交付
 
-# Twinlight · 与你同光
+一次请求的默认目标是 **原生分层闪卡 + 已内嵌同一卡片的固定 V10 单文件 HTML**，不是两张图片或一个网页效果图。仅明确只要 HTML / 卡片时改用对应模式。用户不承担工具问卷、选参数或内部续跑。
 
-用户只请求一次，内部自行完成资料、绘画、组装、验收与接入。默认交付独立闪卡与个人单文件 HTML；明确只要其中一个时按该模式执行。不把 JSON、命令或通用查看器交给用户代替成品。
+## 只沿这一条链执行
 
-**先是一幅值得看的画，再把它做成闪卡。文件齐全不是作品完成。**
+完整同版本资源 → 私人内容 → 一套固定风格 + 一个具体形象 → 无字原型与实际审查 → 三张原生图片层 → 实际合成与独立排字 → 真实视差/闪光检查 → public `run --layers` → 内嵌字节复核 → 成品导出。
 
-## 路由
+先读 `PROMPT.md` 与 `AGENT.md`。绘画只读 `CARD.md` 和 `references/visual-contract.md`；HTML 只读 `prompts/html-build.md`。`art-direction-2` 是当前 public 闪卡入口；旧自由描述只保留诊断用途，不能完成本次原生卡请求。
 
-- 未取得完整资源：读 [PROMPT.md](PROMPT.md)，在允许目录下载同一实际 commit 的资源，执行 `scripts/bootstrap.py --root <项目目录>` 检查。链接可读不等于项目可执行。
-- 开始与续跑：读 [AGENT.md](AGENT.md)。默认 public `run` 管理独立模块与最终 `complete` 状态。
-- 美术：只先读 [references/quality-workflow.md](references/quality-workflow.md)。它按需连接美术原则、证据格式及 [CARD.md](CARD.md) 的命令；不要把整套执行手册塞给图像模型。
-- HTML：只读 [prompts/html-build.md](prompts/html-build.md)，固定 V10 模板实际构建并通过 `verify-site`，不自写简化页面、不改模板锁过检。
-- 严格逐句来源/本人审阅：沿用 [references/workflow.md](references/workflow.md)，不得转 Lite 绕过审阅。
+## 不可替代的分工
 
-## 不变的边界
+**风格**由 `assets/art-styles/catalog.json` 中恰好四套版本化模板选择一套。必须落实到实际提示词和来源记录，不凭文件标题认定用了某种风格。不规定所有人的性别、物种、衣服、月夜或蓝金配色。
 
-只用当前授权材料，区分本人事实、提问、计划、第三方与助手推测。记忆只支持有限印象，不冒充原始聊天证据。署名采用本次实际总结者；不借示例或作者的人物资料。资料充分先完成私人未确认草稿，`draft=true`、`share_allowed=false`；视觉评审不等于本人批准或公开授权。
+**形象**明确种类、具体物种、适用的性别呈现、年龄感、2–5 个可见特征、服装、神情、一个动作，最多一个主要道具。选择依据可来自本次授权资料，但绘画输入只包含具体可见描述。未知长相用原创概念，不冒充本人肖像；本人肖像需当前可用照片和授权。
 
-没有真实生图/原生透明能力时，卡片未完成。保留已成功 HTML，不拿代码几何图、旧坏图、重复海报或静态 SVG 凑完整 SSR。原生主体、背景与前景保持实际全画布，不抠图、裁切、缩放或重摆；文字独立排版。
+**词语**分开：`card.keywords` 是卡面文案；`visual_keywords` 由形象字段生成。不得把“拆解、验证、共创”等抽象词直接塞进绘画提示词，也不需要把所有经历变成徽标。
 
-只在 public `run-report.json` 的 `complete=true` 时称所请求工件完成。`candidate_outputs` 仅是待验预览；`needs_art_evidence`、`needs_art_review`、`art_rejected` 不能改写为完成。局部命令、旧兼容状态机和 `_run_mechanical` 用于诊断，不是绕过交付关口的第二条生产路线。
+**效果**由真实背景、主体、少量前景及固定文字层与原 renderer 实现。程序可以排字、合成、派生主体轮廓线，但不能用几何占位或剪裁海报代替生图。
 
-本地记录能检查文件绑定，不能认证外部模型来源或自动证明好看。真实看图、工具调用与浏览器检查分别记录；未测项照实说明。用户无需再次请求继续或导入。发布另需明确授权。
+## 完成边界
+
+只以当前 `run-report.json` / `delivery-report.json` 的 `complete` 和 `primary_output` 交付。both 模式主文件必须是 `site-with-card/index.html`；基础 `site/index.html` 不算已内嵌结果。用 `scripts/deliver_artifacts.py` 导出，禁止手工替换旧 HTML 的 data URI 后宣称完成。
+
+文件完成、本地浏览器通过、聊天宿主直接预览是三个状态。不能承诺任何账号都能在聊天内运行 HTML。能力不足或返工到达上限时如实交付成功模块，不将 static、空层、截图、候选或未测状态改成成功。
+
+所有个人输出默认私人未确认草稿，不自动 push、部署或公开用户数据。不得携带字体文件。真实生图与具名看图记录不是外部来源认证或本人批准。

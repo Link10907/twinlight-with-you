@@ -1,0 +1,170 @@
+"""Contract tests only. Synthetic fixtures are not image-model performance claims."""
+import copy,json,sys,tempfile,unittest
+from pathlib import Path
+from unittest.mock import patch
+from PIL import Image
+from visual_v2_fixtures import design,images,dossier,save,ref,ROOT,PERSONA
+from twinlight_core.visual_contract import *
+from twinlight_core.generation_plan import write_plan,register_image,check_capabilities,bind_review,bind_composite
+from twinlight_core.art_quality import check_evidence
+
+CAPS={'version':'image-capabilities-1','image_generation':True,'reference_images':True,'native_transparency':True,
+      'source':'SYNTHETIC capability fixture for unit tests only.','native_canvases':[[600,800],[300,400]]}
+
+class VisualContractTests(unittest.TestCase):
+    def test_four_distinct_versioned_styles(self):
+        styles=catalog();self.assertEqual(len(styles),4);self.assertEqual(len({s['visual_language'] for s in styles}),4)
+    def test_every_style_resolves(self):
+        for s in catalog():self.assertEqual(style_for(s['id'],'1.0.0')['sha256'],s['sha256'])
+    def test_no_default_gender_or_subject_in_catalog(self):
+        self.assertIsNone(json.loads((STYLE_DIR/'catalog.json').read_text())['default_style'])
+    def test_reject_unknown_style(self):
+        with self.assertRaises(VisualContractError):style_for('arbitrary-space-gold')
+    def test_reject_style_version_drift(self):
+        with self.assertRaises(VisualContractError):style_for('paper-craft-story','2.0.0')
+    def test_human_female_concrete(self):
+        d=design();self.assertIn('女性呈现',subject_prompt(d));self.assertIn('黑色齐耳短发',subject_prompt(d))
+    def test_human_male_concrete(self):
+        d=design();d['subject']['gender_presentation']='male';self.assertIn('男性呈现',subject_prompt(d))
+    def test_neutral_does_not_infer_gender(self):
+        d=design();d['subject']['gender_presentation']='unspecified';self.assertIn('不强调性别',subject_prompt(d))
+    def test_animal_species_and_sex_are_explicit(self):
+        p=subject_prompt(design('animal'));self.assertIn('赤狐',p);self.assertIn('雄性',p)
+    def test_object_has_no_assumed_person(self):
+        d=design('object');self.assertIn('陶瓷小碗',subject_prompt(d));self.assertIsNone(d['subject']['main_prop'])
+    def test_animal_cannot_be_generic_animal(self):
+        d=design('animal');d['subject']['species']='动物'
+        with self.assertRaises(VisualContractError):validate_design(d)
+    def test_human_cannot_be_animal(self):
+        d=design();d['subject']['species']='赤狐'
+        with self.assertRaises(VisualContractError):validate_design(d)
+    def test_object_cannot_have_gender(self):
+        d=design('object');d['subject']['gender_presentation']='male'
+        with self.assertRaises(VisualContractError):validate_design(d)
+    def test_object_cannot_have_extra_prop(self):
+        d=design('object');d['subject']['main_prop']='一个电脑'
+        with self.assertRaises(VisualContractError):validate_design(d)
+    def test_abstract_label_not_appearance(self):
+        for word in ('构建','共创','拆解 / 验证 / 迭代'):
+            d=design();d['subject']['appearance'][0]['description']=word
+            with self.assertRaises(VisualContractError):validate_design(d)
+    def test_unresolved_choice_is_rejected(self):
+        for text in ('黑发或白发二选一','{{发型}}','TODO hair'):
+            d=design();d['subject']['appearance'][0]['description']=text
+            with self.assertRaises(VisualContractError):validate_design(d)
+    def test_one_prop_not_list(self):
+        for prop in ('电脑/吉他','电脑、足球','电脑或者吉他'):
+            d=design();d['subject']['main_prop']=prop
+            with self.assertRaises(VisualContractError):validate_design(d)
+    def test_trait_budget(self):
+        d=design();d['subject']['appearance']*=3
+        with self.assertRaises(VisualContractError):validate_design(d)
+    def test_duplicate_part_rejected(self):
+        d=design();d['subject']['appearance'][1]['part']='hair'
+        with self.assertRaises(VisualContractError):validate_design(d)
+    def test_freeform_keywords_not_allowed(self):
+        d=design();d['visual_keywords']=['共创']
+        with self.assertRaises(VisualContractError):validate_design(d)
+    def test_keywords_derive_only_visible_subject(self):
+        d=design();d['selection_reason']='INTERNAL_PRIVATE_PROSE that must not reach the drawing model.'
+        d['subject']['selection_basis']='INTERNAL_PRIVATE_BASIS for a synthetic fixture only.'
+        self.assertNotIn('INTERNAL_PRIVATE',str(visual_keywords(d)));self.assertNotIn('INTERNAL_PRIVATE',subject_prompt(d))
+    def test_background_excludes_subject_and_prop(self):
+        d=design();p=visual_brief(d,'background');self.assertNotIn('齐耳',p);self.assertNotIn('纸鹤',p);self.assertNotIn('女性',p)
+    def test_effects_exclude_subject_setting(self):
+        d=design();p=visual_brief(d,'effects');self.assertNotIn('纸鹤',p);self.assertNotIn('石台',p);self.assertIn('两片',p)
+    def test_subject_excludes_whole_scene(self):
+        p=visual_brief(design(),'subject');self.assertNotIn('浅灰墙',p);self.assertIn('齐耳',p)
+    def test_title_identity_prose_never_compiled(self):
+        d=design();p=layer_prompt(d,'prototype',(600,800));self.assertNotIn('系统织星者',p);self.assertNotIn(d['subject']['selection_basis'],p)
+    def test_plain_wordless_prototype(self):
+        p=layer_prompt(design(),'prototype',(600,800));self.assertIn('600',p);self.assertIn('不要',p);self.assertIn('文字',p)
+    def test_no_crop_to_fake_canvas(self):
+        with self.assertRaises(VisualContractError):layer_prompt(design(),'prototype',(1024,1536))
+    def test_missing_photo_not_a_likeness(self):
+        d=design();d['subject']['representation']='user_reference'
+        with self.assertRaises(VisualContractError):validate_design(d)
+    def test_wrong_persona_rejected(self):
+        with self.assertRaises(VisualContractError):validate_design(design(),'b'*64)
+    def test_no_mutation_of_subject(self):
+        d=design();before=copy.deepcopy(d);layer_prompt(d,'subject',(600,800));self.assertEqual(d,before)
+
+class PlanTests(unittest.TestCase):
+    def setUp(self):
+        t=tempfile.TemporaryDirectory();self.addCleanup(t.cleanup);self.root=Path(t.name);self.src=self.root/'sources';images(self.src)
+        self.d=self.root/'design.json';save(self.d,design());self.out=self.root/'art'
+    def make(self):
+        return write_plan(self.d,self.out,canvas=(600,800),capabilities=CAPS)
+    def record(self,role='prototype',file=None,ident='one'):
+        raw=self.root/(ident+'.txt');raw.write_text('SYNTHETIC response artifact '+ident)
+        return register_image(self.out/'generation-plan.json',role,file or self.src/(role+'.png'),raw,tool='SYNTHETIC-TEST-ADAPTER',call_id='TEST-'+ident,artifact_id=ident)
+    def test_plan_without_capabilities_is_not_ready(self):
+        p=write_plan(self.d,self.out);self.assertFalse(p['ready_for_image_call']);self.assertFalse(p['image_generation_performed'])
+    def test_only_prototype_job_initially(self):
+        p=self.make();self.assertEqual([j['role'] for j in p['jobs']],['prototype'])
+    def test_layers_require_actual_prototype_review(self):
+        self.make();self.record()
+        with self.assertRaises(VisualContractError):write_plan(self.d,self.out,phase='layers',capabilities=CAPS)
+    def test_false_capability_blocks(self):
+        c={**CAPS,'native_transparency':False}
+        with self.assertRaises(VisualContractError):write_plan(self.d,self.out,canvas=(600,800),capabilities=c)
+    def test_unsupported_native_canvas_blocks(self):
+        with self.assertRaises(VisualContractError):write_plan(self.d,self.out,canvas=(900,1200),capabilities=CAPS)
+    def test_real_bytes_preserved_not_resampled(self):
+        self.make();r=self.record();self.assertTrue(r['ok']);self.assertEqual((self.out/'prototype.png').read_bytes(),(self.src/'prototype.png').read_bytes())
+        self.assertFalse(r['art_approved']);self.assertFalse(r['generation_provenance_verified'])
+    def test_wrong_phase_rejected(self):
+        self.make()
+        with self.assertRaises(VisualContractError):self.record('subject')
+    def test_actual_different_native_prototype_canvas_is_recorded(self):
+        self.make();image=self.src/'smaller.png';Image.new('RGB',(300,400)).save(image);r=self.record(file=image)
+        self.assertEqual(r['returned_canvas'],[300,400]);self.assertEqual(r['requested_canvas'],[600,800])
+    def test_wrong_ratio_preserved_as_failure(self):
+        self.make();image=self.src/'bad.png';Image.new('RGB',(1024,1536)).save(image);r=self.record(file=image)
+        self.assertFalse(r['ok']);self.assertTrue(r['originals_preserved']);self.assertFalse((self.out/'prototype.png').exists())
+    def test_three_attempt_limit(self):
+        self.make();image=self.src/'bad.png';Image.new('RGB',(10,10)).save(image)
+        for i in range(3):self.assertFalse(self.record(file=image,ident=str(i))['ok'])
+        with self.assertRaises(VisualContractError):self.record(file=image,ident='four')
+    def test_duplicate_call_not_new_attempt(self):
+        self.make();self.record()
+        with self.assertRaises(VisualContractError):self.record()
+    def test_prompt_mutation_rejected(self):
+        self.make();(self.out/'prompts/prototype.txt').write_text('Changed')
+        with self.assertRaises(VisualContractError):self.record()
+    def test_design_mutation_rejected(self):
+        self.make();d=design();d['subject']['expression']='皱眉闭眼';save(self.out/'art-direction.json',d)
+        with self.assertRaises(VisualContractError):self.record()
+    def test_no_python_drawings_as_image_tool(self):
+        self.make();raw=self.root/'raw';raw.write_text('artifact')
+        with self.assertRaises(VisualContractError):register_image(self.out/'generation-plan.json','prototype',self.src/'prototype.png',raw,tool='Pillow',call_id='x',artifact_id='artifact')
+    def test_record_missing_response_id_rejected(self):
+        self.make();raw=self.root/'raw';raw.write_text('different')
+        with self.assertRaises(VisualContractError):register_image(self.out/'generation-plan.json','prototype',self.src/'prototype.png',raw,tool='TEST',call_id='x',artifact_id='absent')
+
+class EvidenceV2Tests(unittest.TestCase):
+    def setUp(self):
+        t=tempfile.TemporaryDirectory();self.addCleanup(t.cleanup);self.root=Path(t.name)/'art';self.manifest=dossier(self.root)
+    def check(self):return check_evidence(self.manifest,PERSONA,front=self.root/'front.png',preview=self.root/'preview.html')
+    def test_v2_synthetic_dossier_passes_contract_not_certification(self):
+        r=self.check();self.assertTrue(r['ok'],r);self.assertFalse(r['quality_verified']);self.assertFalse(r['generation_provenance_verified'])
+    def test_style_change_invalidates_review(self):
+        d=json.loads((self.root/'art-direction.json').read_text());d['style']['id']='paper-craft-story';save(self.root/'art-direction.json',d);self.assertFalse(self.check()['ok'])
+    def test_missing_specific_subject_review_blocks(self):
+        p=self.root/'prototype-review.json';r=json.loads(p.read_text());del r['checks']['concrete_subject'];save(p,r)
+        e=json.loads((self.root/'art-evidence.json').read_text());e['reviews']['prototype']=ref(p);save(self.root/'art-evidence.json',e)
+        self.assertFalse(self.check()['ok'])
+    def test_compile_layers_after_bound_prototype_review(self):
+        p=write_plan(self.root/'art-direction.json',self.root,phase='layers',capabilities=CAPS)
+        self.assertEqual([j['role'] for j in p['jobs']],['background','subject','effects']);self.assertTrue(p['prototype'])
+    def test_composite_binding_rejects_lettered_front(self):
+        with self.assertRaises(VisualContractError):bind_composite(self.manifest,self.root/'front.png')
+    def test_composite_binding_matches_actual_pixels(self):
+        r=bind_composite(self.manifest,self.root/'composite.png');self.assertTrue(r['ok']);self.assertFalse(r['reviewed'])
+    def test_pending_review_cannot_be_bound(self):
+        p=self.root/'prototype-review.json';r=json.loads(p.read_text());r['decision']='pending';save(p,r)
+        with self.assertRaises(ValueError):bind_review(self.manifest,p)
+    def test_final_review_requires_specific_actual_front(self):
+        r=bind_review(self.manifest,self.root/'final-review.json',front=self.root/'front.png',preview=self.root/'preview.html');self.assertTrue(r['ok'],r)
+
+if __name__=='__main__':unittest.main()

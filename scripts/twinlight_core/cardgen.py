@@ -46,6 +46,18 @@ def art_prompts(card: dict, *, canvas=None, composition: dict | None = None) -> 
     desc = str((card or {}).get("art_prompt") or "").strip()
     structured = desc.startswith("{")
     if structured:
+        from .art_quality import parse_json
+        design = parse_json(desc)
+        if isinstance(design, dict) and design.get("version") == "art-direction-2":
+            from .visual_contract import layer_prompt
+            dimensions = canvas_spec(canvas)
+            native = (dimensions["width"], dimensions["height"])
+            prompts = {role: layer_prompt(design, role, native, composition)
+                       for role in ("prototype", "background", "subject", "effects", "spirit")}
+            prompts["character"] = prompts["subject"]
+            prompts["text"] = "程序独立排版当前 SSR、称号、关键词、标语与实际总结者；同画布透明文字层，depth=0；不调用图像模型画字。"
+            return prompts
+    if structured:
         from .art_quality import compile_visual_brief
         desc = compile_visual_brief(desc)
     concept = "本次卡面设定：" + desc
@@ -109,8 +121,12 @@ def card_spec(data: dict, *, generated_at: str, canvas=None, composition: dict |
     visual_card = dict(data['card'])
     if art_prompt is not None:
         limit = 6000 if isinstance(art_prompt, str) and art_prompt.lstrip().startswith("{") else 1500
+        if isinstance(art_prompt, str) and art_prompt.lstrip().startswith("{"):
+            from .art_quality import parse_json
+            if parse_json(art_prompt).get("version") == "art-direction-2":
+                limit = 12000
         check(isinstance(art_prompt, str) and 20 <= len(art_prompt.strip()) <= limit,
-              '独立美术提示需为 20–1500 字；结构化 art-direction-1 可至 6000 字')
+              '独立美术提示超出大小限制；v2 使用有界形象字段，不拼入个人历史')
         if art_prompt.lstrip().startswith("{"):
             from .art_quality import parse_json, validate_design
             validate_design(parse_json(art_prompt), persona_digest)
@@ -154,6 +170,16 @@ def card_spec(data: dict, *, generated_at: str, canvas=None, composition: dict |
             "depths": dict(DEPTHS), "notes": "Template only: fill with this card's actually generated native independent layers; prototype is reference only.",
         },
     }
+    if visual_card['art_prompt'].lstrip().startswith("{"):
+        from .art_quality import parse_json
+        design = parse_json(visual_card['art_prompt'])
+        if design.get("version") == "art-direction-2":
+            from .visual_contract import style_binding, subject_prompt, visual_keywords
+            spec["visual_contract"] = {"version": "art-direction-2", "style": style_binding(design),
+                                       "subject_prompt": subject_prompt(design),
+                                       "visual_keywords": visual_keywords(design),
+                                       "identity_keywords_used_for_drawing": False,
+                                       "subject_count": 1, "main_prop_limit": 1}
     if composition is not None:
         spec["composition"] = composition
         spec["manifest_template"]["composition"] = deepcopy(composition)

@@ -37,14 +37,19 @@ jobs:
           from pathlib import Path
           sys.path.insert(0, 'scripts')
           sys.path.insert(0, 'tests')
-          from twinlight_core.common import load
+          from twinlight_core.common import load, save
           from twinlight_core.lite import persona_digest
-          from test_card_art import native_fixture
+          from visual_v2_fixtures import images
           first = load(Path('verification/controlled/first.json'))
           assert first['status'] == 'needs_card', first['status']
           assert Path(first['outputs']['html']).is_file()
           # Synthetic fixtures exercise orchestration, not fresh image generation or art quality.
-          native_fixture(Path('runs/controlled/native'), persona_digest(load(Path('tests/fixtures/lite/valid.json'))))
+          native = Path('runs/controlled/native')
+          images(native)
+          manifest = load(native / 'layers.json')
+          manifest['persona_digest'] = persona_digest(load(Path('tests/fixtures/lite/valid.json')))
+          manifest['notes'] = 'Synthetic V2 renderer fixture; no real image calls or aesthetic approval.'
+          save(native / 'layers.json', manifest)
           EOF
           python scripts/twinlight.py run tests/fixtures/lite/valid.json --workspace runs/controlled --mode both --layers runs/controlled/native/layers.json > verification/controlled/final.json
           python - <<'EOF'
@@ -75,6 +80,10 @@ jobs:
           assert mechanical['mechanical_only'] is True
           assert mechanical['dynamic_verified'] is True
           assert verify_site(Path(mechanical['outputs']['html_with_card']))['ok']
+          from twinlight_core.embedded_card import audit_embedding
+          assert audit_embedding(Path(mechanical['outputs']['html_with_card']),
+                                 Path('runs/controlled/native/layers.json'),
+                                 load(Path('runs/controlled/native/layers.json'))['persona_digest'])['ok']
           assert load(Path('runs/controlled/site-with-card/profile.json'))['release'] == {'draft': True, 'share_allowed': False}
           EOF
       - name: Compatibility local preview, end to end through the state machine

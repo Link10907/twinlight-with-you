@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "id": "real-life-cinematic",
+  "name": "现实纪实收藏卡",
+  "visual_language": "摄影气质的精细写实插画；自然比例，弱轮廓线，真实皮肤或动物表面纹理，不使用塑料般磨皮、动漫大眼或通用明星脸。",
+  "materials_and_light": "柔和侧光和自然反射，保留材质的细小不规则性；焦点清楚，背景细节适度虚化，避免舞台式光圈。",
+  "palette": "石灰白、暖灰、低饱和橄榄色，局部陶土色；不默认蓝金夜景。",
+  "keep": [
+    "真实布料与表面纹理",
+    "自然比例",
+    "明确而柔和的主体光线"
+  ],
+  "avoid": [
+    "华丽黄铜观星工坊",
+    "蓝金星空套版",
+    "动漫大眼和塑料皮肤"
+  ],
+  "typography_default": {
+    "text_color": "#F5F2EA",
+    "accent_color": "#D7C3A2",
+    "scrim_color": "#17211C",
+    "scrim_opacity": 170,
+    "frame": "single",
+    "footer_top": 0.76
+  }
+}

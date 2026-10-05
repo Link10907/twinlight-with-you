@@ -112,6 +112,12 @@ def pixel_digest(im: Image.Image) -> str:
 
 
 def validate_design(design: dict, persona: str | None = None) -> dict:
+    if isinstance(design, dict) and design.get("version") == "art-direction-2":
+        from .visual_contract import validate_design as validate_v2, VisualContractError
+        try:
+            return validate_v2(design, persona)
+        except VisualContractError as exc:
+            raise ArtEvidenceError(exc.code, str(exc), status="needs_art_direction") from exc
     require(isinstance(design, dict) and design.get("version") == "art-direction-1",
             "design_version", "A structured art-direction-1 brief is required", status="needs_art_direction")
     _digest(design.get("persona_digest"))
@@ -154,9 +160,12 @@ def validate_design(design: dict, persona: str | None = None) -> dict:
     return design
 
 
-def compile_visual_brief(text: str) -> str:
+def compile_visual_brief(text: str, role: str = "prototype") -> str:
     """Only concrete visual decisions go to the image model, not the execution manual."""
     design = validate_design(parse_json(text))
+    if design.get("version") == "art-direction-2":
+        from .visual_contract import visual_brief
+        return visual_brief(design, role)
     labels = ("画风", "主体", "动作或结构记忆点", "场景", "材质与笔触", "配色", "光线", "构图与留白")
     lines = [f"{label}：{design['scene'][field]}" for field, label in zip(SCENE_FIELDS, labels)]
     if design["preferences"]["keep"]:
@@ -196,14 +205,28 @@ def _source(root: Path, entry: dict, role: str, prototype_hash: str, canvas: tup
     require(isinstance(caps, dict) and caps.get("image_generation") is True,
             "image_tool_unavailable", "No image-generation capability was recorded")
     request = call.get("request", {})
-    require(isinstance(request, dict) and request.get("canvas") == list(canvas),
-            "canvas_mismatch", "Tool request and returned native canvas differ")
+    v2 = design.get("version") == "art-direction-2"
+    require(isinstance(request, dict), "invalid_request", "Capture the actual image request")
+    if v2 and role == "prototype":
+        requested = request.get("canvas")
+        require(isinstance(requested, list) and len(requested) == 2
+                and all(type(n) is int and n >= 256 for n in requested)
+                and requested[0] * requested[1] <= MAX_PIXELS and abs(requested[0] / requested[1] - .75) < .01,
+                "canvas_mismatch", "Record requested native prototype dimensions separately from actual returned dimensions")
+    else:
+        require(request.get("canvas") == list(canvas),
+                "canvas_mismatch", "Independent layer request must use the selected prototype canvas")
+    if v2:
+        from .visual_contract import style_binding
+        require(request.get("style_binding") == style_binding(design),
+                "style_drift", "The image request did not use the current versioned style")
+        require(request.get("role") == role, "wrong_layer_request", "The recorded request belongs to another layer")
     prompt = checked_ref(root, request.get("prompt"), limit=MAX_JSON)
     require(prompt.stat().st_size > 0, "empty_prompt", "An actual per-layer image prompt is required")
     inputs[str(prompt)] = sha256(prompt)
     if entry["mode"] == "generated":
         require(request.get("design_sha256") == design_hash, "wrong_prompt_design", "The invocation must bind the current art direction")
-        visual = compile_visual_brief(json.dumps(design, ensure_ascii=False))
+        visual = compile_visual_brief(json.dumps(design, ensure_ascii=False), role=role)
         require(visual in prompt.read_text(encoding="utf-8"), "visual_brief_missing", "Actual prompt must include the current concrete visual brief")
     if role in ("subject", "effects", "spirit"):
         require(caps.get("native_transparency") is True and request.get("transparent") is True,
@@ -218,6 +241,8 @@ def _source(root: Path, entry: dict, role: str, prototype_hash: str, canvas: tup
     response = call.get("response", {})
     require(isinstance(response, dict) and response.get("sha256") == digest,
             "tool_output_mismatch", "Returned image bytes do not match the registered layer")
+    if v2:
+        require(response.get("canvas") == list(canvas), "returned_canvas", "Record actual returned image dimensions")
     artifact = _string(response.get("artifact_id"), "artifact_id", maximum=500)
     raw = checked_ref(root, call.get("raw_response"), limit=MAX_JSON)
     raw_text = raw.read_text(encoding="utf-8")
@@ -246,7 +271,7 @@ def _manifest_assets(root: Path, manifest: dict) -> tuple[dict, dict]:
     return paths, images
 
 
-def _review(root: Path, evidence: dict, stage: str, targets: dict, inputs: dict) -> dict:
+def _review(root: Path, evidence: dict, stage: str, targets: dict, inputs: dict, required_checks=None) -> dict:
     entry = evidence.get("reviews", {}).get(stage)
     require(entry is not None, "missing_review", "Actual " + stage + " review is required", status="needs_art_review")
     path = checked_ref(root, entry, limit=MAX_JSON)
@@ -261,7 +286,7 @@ def _review(root: Path, evidence: dict, stage: str, targets: dict, inputs: dict)
     observed = dt.datetime.fromisoformat(_string(data.get("observed_at"), "observed_at", maximum=80).replace("Z", "+00:00"))
     require(observed.tzinfo is not None, "review_time", "Review timestamp must include a timezone")
     checks = data.get("checks", {})
-    require(isinstance(checks, dict) and set(REVIEW_CHECKS[stage]).issubset(checks),
+    require(isinstance(checks, dict) and set(required_checks or REVIEW_CHECKS[stage]).issubset(checks),
             "incomplete_review", "Every required visual criterion needs a concrete observation", status="needs_art_review")
     for name, item in checks.items():
         require(isinstance(item, dict) and item.get("passed") is True, "failed_visual_check", "Visual criterion failed: " + name)
@@ -296,6 +321,11 @@ def snapshot(manifest_path: Path, persona: str, *, stage: str = "final", front: 
     brief_path = checked_ref(root, evidence.get("design"), limit=MAX_JSON)
     design = validate_design(read_json(brief_path), persona)
     reference_inputs = {}
+    if design.get("version") == "art-direction-2":
+        from .visual_contract import style_for, STYLE_DIR
+        style = style_for(design["style"]["id"], design["style"]["version"])
+        reference_inputs[style["path"]] = style["sha256"]
+        reference_inputs[str(STYLE_DIR / "catalog.json")] = sha256(STYLE_DIR / "catalog.json")
     for ref in design.get("references", []):
         reference_path = checked_ref(root, ref)
         image(reference_path)
@@ -308,6 +338,9 @@ def snapshot(manifest_path: Path, persona: str, *, stage: str = "final", front: 
     require(im.width >= 256 and im.height >= 256 and abs(im.width / im.height - .75) < .01,
             "prototype_canvas", "Prototype must be a native 3:4 image, at least 256px")
     base = {"persona_digest": persona, "design_sha256": sha256(brief_path), "prototype_sha256": sha256(prototype)}
+    if design.get("version") == "art-direction-2":
+        from .visual_contract import style_binding
+        base["style_binding"] = style_binding(design)
     targets = {"prototype": base}
     inputs = {str(manifest_path.resolve()): sha256(manifest_path), str(root / "art-evidence.json"): sha256(root / "art-evidence.json"),
               str(brief_path): sha256(brief_path), str(prototype): sha256(prototype)}
@@ -384,7 +417,9 @@ def check_evidence(manifest_path: Path, persona: str, *, stage: str = "final", f
         report["evidence_checked"] = True
         observers = {}
         for current in REVIEW_CHECKS:
-            review = _review(root, evidence, current, targets[current], inputs)
+            from .visual_contract import review_checks
+            review = _review(root, evidence, current, targets[current], inputs,
+                             review_checks(design, current, REVIEW_CHECKS[current]))
             observers[current] = review["observer"]
             if current == stage:
                 break

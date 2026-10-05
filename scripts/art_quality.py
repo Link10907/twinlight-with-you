@@ -45,9 +45,11 @@ def main(argv=None):
             result.save(args.out)
             print(json.dumps({"out": str(args.out), "sha256": sha256(args.out), "reviewed": False}))
         else:
-            targets, _, _, _ = snapshot(args.layers, args.persona_digest, stage=args.stage, front=args.front, preview=args.preview)
+            targets, _, design, _ = snapshot(args.layers, args.persona_digest, stage=args.stage, front=args.front, preview=args.preview)
+            from twinlight_core.visual_contract import review_checks
+            criteria = review_checks(design, args.stage, REVIEW_CHECKS[args.stage])
             draft = {"stage": args.stage, "targets": targets[args.stage], "observer": None, "observed_at": None,
-                     "decision": "pending", "checks": {key: {"passed": False, "observation": ""} for key in REVIEW_CHECKS[args.stage]},
+                     "decision": "pending", "checks": {key: {"passed": False, "observation": ""} for key in criteria},
                      "capture": None}
             if args.stage == "final":
                 draft["views"] = {"left": None, "right": None, "mobile": None}

@@ -1,4 +1,4 @@
-> **美术质量关口更新（art-evidence-1）**：默认交付以 public `run` 的 `complete` 为准。未具备真实工具记录与三阶段具名视觉评审的素材，仅是 `candidate_outputs`，不自动进入最终 HTML。详见 [质量工作流](references/quality-workflow.md)。本地记录不认证外部模型或自动证明审美；合成测试不算真实生图成功。
+> **V2 视觉契约升级（art-direction-2）**：从四套版本化画风选择一套并描述一个具体形象；默认成品是已内嵌同一张原生分层闪卡的 HTML。交付以 public `run` 的 `complete` 和 `primary_output` 为准，待验卡片不接入最终页面。详见 [视觉契约](references/visual-contract.md)、[质量工作流](references/quality-workflow.md) 和 [成品交付](references/delivery-v2.md)。合成测试不证明真实生图质量，聊天内预览需另行实测。
 
 # Twinlight · 与你同光
 
@@ -21,7 +21,7 @@ AI 读不到项目时，完整包比单独说明更可靠；说明文字不含�
 
 ## 内容、卡图与观看
 
-内容只依据本次授权材料，问题不写成能力，计划不写成成果；SSR 对所有人固定，不表示排名。保留你的美术提示，AI 自主补足未指定的设计，不让你填写审美问卷。整幅作品须有辨识度，不能给所有人同一张模板脸或同一只鹿。具体要求见 [美术说明](references/art-direction.md)。
+内容只依据本次授权材料，问题不写成能力，计划不写成成果；SSR 对所有人固定，不表示排名。保留你的美术偏好，AI 从四套版本化画风选一套并描述一个具体形象，不让你填写审美问卷。绘画描述与卡面文案分开，不能给所有人同一张模板脸或同一只鹿。具体要求见 [视觉契约](references/visual-contract.md)。
 
 HTML 和闪卡使用独立内部提示词，各自验收、各自修复。页面先独立构建，不依赖生图；卡片可独立预览，完成后自动接入同一人物的 HTML。卡片失败时保留成功的页面和明确标为未完成的卡片预览；页面失败时保留已完成的卡片，继续修页面。图片或数据不能代替实际 HTML，静态原型不能冒充分层闪卡。
 
@@ -48,13 +48,14 @@ HTML 和闪卡使用独立内部提示词，各自验收、各自修复。页面
 | 独立闪卡、卡包与互动预览 | [CARD.md](CARD.md)、[card-generation.md](prompts/card-generation.md) |
 | HTML 内部内容格式 | [Lite 字段](references/lite-content.md) |
 | 严格提取、原话核对与增量更新 | [工作流](references/workflow.md)、[提取规则](references/extraction.md) |
-| 原型、独立图层与视觉检查 | [美术契约](references/art-direction.md) |
+| 版本化画风、具体形象与分层交接 | [视觉契约](references/visual-contract.md)、[质量工作流](references/quality-workflow.md) |
+| 内嵌卡片验收与成品导出 | [成品交付](references/delivery-v2.md) |
 | 直接预览与平台边界 | [预览说明](references/preview.md) |
 | 不同网页和 Agent 的能力接入 | [平台适配](references/platform-adapters.md) |
 | 效果实验与分发 | [测试与使用](references/quickstart.md) |
 | 从新原始材料到两份成品的验证 | [新生成实验](references/fresh-generation-eval.md) |
 
-HTML 输入不要求 `art_prompt`，美术只保存在独立 `card/art-brief.txt` 或 Strict 的 `art-direction.json`，不修改页面数据或人物绑定。闪卡支持只含卡片文字的 `card-1` 输入，无需 themes。完整卡片交付原生层及清单、`card.json`、`preview.html` 和 `front.png`；入口自动将匹配卡包用于最终 HTML。两模块失败只修对应部分，保留另一份已成功结果。
+HTML 输入不要求 `art_prompt`；public 闪卡流程使用独立的 `art-direction-2` JSON，不修改页面数据或人物绑定。旧自由美术描述保留作诊断。闪卡支持只含卡片文字的 `card-1` 输入，无需 themes。默认最终 HTML 必须通过六层内嵌字节复核；用 `scripts/deliver_artifacts.py` 导出 HTML、正面、独立预览与卡包。两模块失败只修对应部分，保留另一份已成功结果。
 
 ```bash
 python scripts/package_skill.py --out outputs/twinlight-with-you.zip

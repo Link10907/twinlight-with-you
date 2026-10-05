@@ -30,11 +30,12 @@ def _sha(path: Path) -> str:
 def _resources() -> str:
     """Invalidate outputs when a renderer, contract, gate or its approval changes."""
     paths = []
-    for directory in (ROOT / "assets/template", ROOT / "assets/card-preview",
+    for directory in (ROOT / "assets/template", ROOT / "assets/card-preview", ROOT / "assets/art-styles",
                       ROOT / "schemas", ROOT / "scripts/twinlight_core"):
         paths.extend(p for p in directory.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
     paths.extend(ROOT / "scripts" / name for name in
-                 ("verify_browser.py", "package_card.py", "preview_card.py", "prepare_card_layers.py", "lock_template.py"))
+                 ("verify_browser.py", "verify_card_browser.py", "package_card.py", "preview_card.py", "prepare_card_layers.py", "lock_template.py"))
+    paths.append(ROOT / "assets/ai-history.json")
     return digest({str(p.relative_to(ROOT)): _sha(p) for p in sorted(set(paths)) if p.is_file()})
 
 
@@ -102,70 +103,6 @@ def _stage(state: dict, workspace: Path, key: str, dependency: str, action,
     save(workspace / "run-state.json", state)
     return result
 
-
-_CARD_BROWSER = r'''
-import base64, hashlib, io, json, sys
-from pathlib import Path
-from PIL import Image, ImageChops, ImageStat
-from playwright.sync_api import sync_playwright
-html, out, binary = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3] or None
-out.mkdir(parents=True, exist_ok=True)
-html_bytes=html.read_bytes();html_text=html_bytes.decode('utf-8')
-report={"ok":False,"html_sha256":hashlib.sha256(html_bytes).hexdigest(),"checks":[],"webgl":False,"interaction_verified":False,"scope":"Independent card preview; real drag/flip, layer motion, desktop and emulated mobile. Art quality unverified."}
-def check(name, condition):
- report["checks"].append({"name":name,"passed":bool(condition)})
- if not condition: raise AssertionError(name)
-def frame(page):
- encoded=page.evaluate('()=>holoCanvas.toDataURL("image/png").split(",")[1]')
- return Image.open(io.BytesIO(base64.b64decode(encoded))).convert('RGB')
-def diff(a,b):
- if a.size!=b.size: raise AssertionError('Card frame dimensions changed')
- return sum(ImageStat.Stat(ImageChops.difference(a,b)).mean)/3
-try:
- with sync_playwright() as pw:
-  flags=['--no-sandbox','--disable-gpu-sandbox','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']
-  b=pw.chromium.launch(executable_path=binary,headless=True,args=flags)
-  errors=[]
-  for width,height in ((1440,900),(390,844)):
-   page=b.new_page(viewport={"width":width,"height":height},is_mobile=width==390,has_touch=width==390)
-   page.on('pageerror',lambda error:errors.append(str(error)))
-   page.set_content(html_text,wait_until='load')
-   page.wait_for_function('()=>holo.ready||holo.failed',timeout=20000)
-   check('Renderer initialized '+str(width),page.evaluate('()=>holo.ready||holo.failed'))
-   report['webgl']=report['webgl'] or page.evaluate('()=>holo.ready')
-   check('No horizontal overflow '+str(width),page.evaluate('()=>document.documentElement.scrollWidth<=innerWidth'))
-   check('Real native layers '+str(width),page.evaluate('()=>__holo.getState().layers>=5'))
-   page.evaluate('()=>{holo.foil=0;holo.depth=1;__holo.setView(0,-.45)}')
-   if page.evaluate('()=>holo.ready'):
-    left=frame(page);page.evaluate('()=>__holo.setView(0,.45)');right=frame(page)
-    check('Real internal pixels move with foil off '+str(width),diff(left,right)>.5)
-    page.evaluate('()=>{holo.depth=0;__holo.setView(0,-.45)}');left=frame(page)
-    page.evaluate('()=>__holo.setView(0,.45)');right=frame(page)
-    check('Depth zero removes parallax '+str(width),diff(left,right)<.15)
-    check('No WebGL errors '+str(width),page.evaluate('()=>holo.gl.getError()===0'))
-   else:
-    left=page.locator('.holo-fallback img').evaluate_all('(images)=>images.map(e=>e.style.transform)')
-    page.evaluate('()=>__holo.setView(0,.45)')
-    right=page.locator('.holo-fallback img').evaluate_all('(images)=>images.map(e=>e.style.transform)')
-    check('CSS fallback independent layers respond '+str(width),len(right)==5 and left!=right)
-   page.evaluate('()=>{holo.depth=1;holo.foil=.5;__holo.setView(-.05,-.15)}')
-   box=page.locator('#identityCard').bounding_box()
-   check('Card is within viewport '+str(width),box['x']>=0 and box['x']+box['width']<=width and box['y']>=0 and box['y']+box['height']<=height)
-   x,y=box['x']+box['width']/2,box['y']+box['height']/2
-   page.mouse.move(x,y);page.mouse.down();page.mouse.move(x+40,y-8,steps=4);page.mouse.up()
-   check('Actual drag rotates without flip '+str(width),page.evaluate('()=>holo.ty>0&&!v8.flipped'))
-   if width==390: page.locator('#cardFlip').tap()
-   else: page.locator('#cardFlip').click()
-   check('Actual flip control '+str(width),page.evaluate('()=>v8.flipped'))
-   page.screenshot(path=str(out/(str(width)+'.png')))
-   page.close()
-  check('No page exceptions',not errors)
-  b.close()
- report['ok']=True;report['interaction_verified']=True
-except Exception as exc: report['failure']=str(exc)
-finally: (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
-raise SystemExit(0 if report['ok'] else 1)
-'''
 
 
 def _browser_binary(explicit: str | None) -> str | None:
@@ -251,7 +188,7 @@ def _browser(state: dict, workspace: Path, key: str, html: Path, *, browser: str
             report_path = out / "report.json"
             # Discard any earlier or externally placed report before executing.
             report_path.unlink(missing_ok=True)
-            command = ([sys.executable, "-c", _CARD_BROWSER, str(html), str(out), binary or ""] if card_only else
+            command = ([sys.executable, str(ROOT / "scripts/verify_card_browser.py"), "--html", str(html), "--out", str(out)] + (["--browser", binary] if binary else []) if card_only else
                        [sys.executable, str(ROOT / "scripts/verify_browser.py"), "--html", str(html), "--out", str(out)] +
                        (["--browser", binary] if binary else []))
             try:
@@ -262,15 +199,17 @@ def _browser(state: dict, workspace: Path, key: str, html: Path, *, browser: str
                 report_input_bound = report.get("html_sha256") == html_before
                 passed = input_unchanged and report_input_bound and process.returncode == 0 and report.get("ok") is True and bool(checks) and all(
                     isinstance(item, dict) and item.get("passed") is True for item in checks)
+                if card_only:
+                    passed = passed and all(report.get(k) is True for k in ("foil_verified", "fixed_text_verified", "touch_verified", "reduced_motion_verified"))
                 failure = str(report.get("failure", "") or process.stderr[-1800:] or process.stdout[-1800:])
                 if not input_unchanged:
                     failure = "HTML changed during browser execution; this report cannot verify the current output."
                 elif process.returncode == 0 and report.get("ok") is True and not report_input_bound:
                     failure = "Browser report is missing or mismatches the actual input HTML hash."
-                unavailable = not checks and any(message in failure.lower() for message in (
+                unavailable = report.get("capability_unavailable") is True or (not checks and any(message in failure.lower() for message in (
                     "executable doesn't exist", "executable does not exist", "browser executable not found",
                     "missing dependencies", "error while loading shared libraries", "operation not permitted",
-                    "permission denied", "no module named 'playwright'", "browsertype.launch", "kill eperm"))
+                    "permission denied", "no module named 'playwright'", "browsertype.launch", "kill eperm")))
                 result = {"status": "passed" if passed else "unavailable" if unavailable else "failed",
                           "attempts": attempts if passed or unavailable else attempts + 1, "reused": False,
                           "input_html_sha256": html_before, "input_unchanged": input_unchanged, "invoked_by_runner": True,
@@ -278,6 +217,10 @@ def _browser(state: dict, workspace: Path, key: str, html: Path, *, browser: str
                           "exit_code": process.returncode, "report": str(report_path), "checks": checks,
                           "webgl_verified": passed and report.get("webgl") is True,
                           "interaction_verified": passed and (report.get("interaction_verified") is True if card_only else True),
+                          "foil_verified": passed and report.get("foil_verified") is True,
+                          "fixed_text_verified": passed and report.get("fixed_text_verified") is True,
+                          "touch_verified": passed and report.get("touch_verified") is True,
+                          "reduced_motion_verified": passed and report.get("reduced_motion_verified") is True,
                           "scope": report.get("scope", "Fixed HTML browser script; desktop and emulated mobile only."),
                           "limits": report.get("not_tested", ["Visual art quality", "generation provenance", "real-device performance"])}
                 if not passed:
@@ -427,12 +370,19 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
                     spec = card_spec(data, generated_at=state["created_at"], art_prompt=prompt)
                     save(workspace / "card/card-spec.json", spec)
                     save(workspace / "card/manifest-template.json", spec["manifest_template"])
+                    if spec.get("visual_contract", {}).get("version") == "art-direction-2":
+                        from .generation_plan import write_plan
+                        design_path = workspace / "card/art-direction.json"
+                        if not design_path.is_file() or design_path.read_text(encoding="utf-8") != prompt:
+                            design_path.write_text(prompt, encoding="utf-8")
+                        write_plan(design_path, workspace / "card", phase="prototype")
                     return {"persona_digest": spec["persona_digest"], "generation_status": "brief_only"}
 
                 brief = _stage(state, workspace, "card_brief", brief_dep, make_brief,
                                ["card/card-spec.json", "card/manifest-template.json"])
                 if brief["status"] == "files_ready":
                     next_action = {"type": "generate_native_layers", "card_spec": str(workspace / "card/card-spec.json"),
+                                   "generation_plan": str(workspace / "card/generation-plan.json"),
                                    "typography_font": typography, "image_capability": "unknown_required",
                                    "manifest_template": str(workspace / "card/manifest-template.json"),
                                    "read": [str(ROOT / "CARD.md"), str(ROOT / "prompts/card-generation.md")],
@@ -443,11 +393,13 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
                 else:
                     selected.append(brief)
             else:
-                next_action = {"type": "prepare_art_direction", "out": str(workspace / "card/art-direction.txt"),
+                next_action = {"type": "prepare_art_direction", "out": str(workspace / "card/art-direction.json"),
                                "typography_font": typography, "image_capability": "unknown_required",
                                "read": [str(ROOT / "references/art-direction.md")],
-                               "resume": resume + ["--art-prompt-file", str(workspace / "card/art-direction.txt")],
-                               "constraints": ["Author an independent 20–1500 character brief from current authorized content and preferences."]}
+                               "resume": resume + ["--art-prompt-file", str(workspace / "card/art-direction.json")],
+                               "constraints": ["Author art-direction-2: one versioned style, one explicit visual subject, one action and at most one main prop; keep identity keywords out of drawing prompts."],
+                               "schema": str(ROOT / "schemas/art-direction-v2.schema.json"),
+                               "style_catalog": str(ROOT / "assets/art-styles/catalog.json")}
             state["stages"]["card"] = {"status": "needs_card", "attempts": 0,
                                        "reason": "Native current-person image layers have not been supplied."}
             selected.append(state["stages"]["card"])

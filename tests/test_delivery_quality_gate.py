@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 from twinlight_core import run as controller
 import twinlight_core
 from twinlight_core.common import load, save
-from test_art_quality_gate import PERSONA, ref, synthetic_dossier
+from visual_v2_fixtures import PERSONA, ref, dossier as synthetic_dossier, minimal_embedded
 
 
 class DeliveryQualityGateTests(unittest.TestCase):
@@ -36,6 +36,9 @@ class DeliveryQualityGateTests(unittest.TestCase):
             out.mkdir(parents=True, exist_ok=True); self.built.append(out.name)
             for name in ('index.html', 'compiled-check.js'):
                 (out / name).write_text('TEST DOUBLE: ' + name, encoding='utf-8')
+            if kwargs.get('layers'):
+                # Real native bytes under a controlled HTML builder; still not a V10 browser test.
+                shutil.copyfile(minimal_embedded(self.manifest.parent), out / 'index.html')
             for name in ('profile.json', 'render-inputs.json', 'template-receipt.json', 'build-report.json'):
                 save(out / name, {'release': {'draft': True, 'share_allowed': False}})
             return {'ok': True}

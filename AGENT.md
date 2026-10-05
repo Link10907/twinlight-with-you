@@ -1,53 +1,51 @@
-# Twinlight · 一次请求编排
+# 一次请求编排 · V2
 
-默认通过 **public `run`** 交付同一人的独立闪卡与固定模板 HTML。程序负责文件与关口；宿主 AI 负责理解材料、实际图像工具调用和看图。用户不用重复发“继续”或“导入”。
+宿主负责内容理解、真实图像工具、实际看图与展示。程序负责输入冻结、版本化提示词、原图登记、构建、字节比对、浏览器与导出。程序不生图、不看懂人物、不授予公开许可。
 
-## 1. 输入与能力
+以下 `PY` 是可用 Python 3.10+；`ROOT` 是本次完整项目，所有命令由宿主执行。默认是一个人的一个私人 workspace；不要复制示例人格。
 
-按 [PROMPT.md](PROMPT.md) 取得同一 commit 的完整资源，运行 `scripts/bootstrap.py --root <项目目录>`。按 [references/platform-adapters.md](references/platform-adapters.md) 检查文件、执行、图像参考/透明、中文字体、浏览器；没有生图能力不能拿有 Python 代替。不要自动调用付费 API 或要求用户运行内部脚本。
+## 1. 开始
 
-每人独立空目录。按 [references/lite-content.md](references/lite-content.md) 写当前授权资料的 `twinlight.json`。只做卡片可用 `card-1` 输入。资料充分时生成未确认私人草稿；本人已有确切文字授权仍有效，但 public run 不据此虚构公开授权。Strict 沿用 [references/workflow.md](references/workflow.md) 的来源与本人审阅，不转 Lite 绕审核。
+按 `PROMPT.md` 检查完整资源与模板锁。读取 `references/lite-content.md`，从当前授权资料写 `person.json`；美术不写入此文件。资料充分时直接生成私人未确认草稿，不编造经历或肖像。明确只要卡片可用 card-1。
 
-`PY`、`TL` 分别为实际 Python 3.10+ 与项目 `scripts/twinlight.py` 的绝对路径。
-
-```bash
-PY TL run <本次输入.json> --workspace <本次目录>/run --mode both
+```sh
+PY ROOT/scripts/twinlight.py run person.json --workspace RUN --mode both
 ```
 
-明确仅 HTML / 卡片时用 `--mode html` / `--mode card`。真实浏览器可传 `--browser <路径>`；不可用时用 `--no-browser`，不能据此声称动态完成。中文排字可传 `--font <真实字体路径>`。
+未生成卡片时基础 HTML 可以先完成，但不是 both 的最终交付。保存 public 返回的真实路径、persona_digest、字体状态和 `next_action.resume`。输入冻结后不在相同 workspace 改人物、文案或模式。
 
-## 2. 按实际状态执行内部待办
+## 2. 独立完成美术
 
-输入冻结为 `content.json`；同 workspace 不改内容、owner 或模式。确需变更内容就开新 workspace。独立美术设计保存在卡片目录，不注入 HTML 输入，不改变 persona_digest。
+`needs_card` / `needs_art_direction`：按 `CARD.md` 写 `art-direction-2`，选择明确的 style.id/version，并把一个具体形象说明编译成真正的 per-layer prompt。保留当前人的偏好与否决项，不固化作者形象。
 
-| 状态 | 内部动作与交付范围 |
-|---|---|
-| `needs_card` | 读 [美术工作流](references/quality-workflow.md)，准备并审查无字原型，再做独立图层；先保留已成功基础 HTML |
-| `needs_art_direction` / `needs_art_evidence` | 补当前结构化设计或真实工具输出记录；不能补写虚假调用 |
-| `needs_art_review` | 实际打开指定原型/合成/卡面进行评审；生成待填模板不算评审 |
-| `art_rejected` | 按具体缺陷修失败层或原型，不能换 `passed` 或放宽约束 |
-| `dynamic_unverified` | 当前文件可交付但动态未验，`complete=false` |
-| `partial_success` / `failed` | 只修失败模块，继续 `pending_actions` 中独立模块的工作 |
-| `files_ready` 且 `complete=true` | 所请求工件通过实际交付关口；仍不是外部模型来源认证或本人批准 |
+`needs_art_evidence`：执行缺失的真实图片工具任务或登记已有真实返回，不能手写不存在的调用。`needs_art_review`：打开当前指定原型/合成/最终图，做具名观察；pending 模板不能自动批准。`art_rejected`：只重生失败层，保留合格原图。每层最多三次返回尝试，不能换目录假装重新获得次数。
 
-缺素材动作先到 `prepare_and_review_prototype`，不是跳过原型直接凑图层。绘画分工见 [prompts/card-generation.md](prompts/card-generation.md)，命令见 [CARD.md](CARD.md)。具体美术原则可按需读 [references/art-direction.md](references/art-direction.md)。
+所有当前文件、工具返回、文字和评审属于同一 persona。由 `visual_plan.py` 编译、登记和绑定记录；旧图复用必须明确同主人与范围。完成合成后用原排字脚本输出固定文字和同像素轮廓。
 
-## 3. 自动接入
+## 3. 自动续跑接入
 
-同 persona 的完整图层、工具记录和三阶段评审放在同一卡片目录；`art-evidence.json` 与 `layers.json` 相邻。按当前 `next_action.resume` 续跑，保留输入、workspace、mode、字体、brief 与浏览器参数：
-
-```bash
-PY TL run <同一输入.json> --workspace <同一workspace> --mode both --layers <卡片目录>/layers.json
+```sh
+PY ROOT/scripts/twinlight.py run person.json --workspace RUN --mode both --layers CARD/layers.json
 ```
 
-控制器生成可检查的卡面/独立预览，读取当前证据后才允许 HTML 集成。缺来源、未评审、被拒绝的卡仅位于 `candidate_outputs`。材料或评审变更后重新校验，不继承旧成功；基础 HTML 不被卡片失败丢弃。
+优先使用实际 `next_action.resume`，保留输入、模式、字体、brief 和浏览器参数。第一次会生成最终候选 `RUN/card/front.png` / `preview.html`；最终美术 review 必须绑定这两个真实文件。观察并绑定后续跑；不要把另一份预览的哈希改掉继承旧意见。
 
-HTML 模块只用固定 V10 模板并通过 `verify-site`，保留模板收据；生产任务禁止改锁过检。不能为赶进度改写另一张页面。已经成功的卡片也不因 HTML 故障重画。
+public run 检查版本化形象、原生层、三阶段观察、固定模板、卡片浏览器和 HTML 浏览器，并重新比较最终 HTML 中六层原始字节与所选素材，含两份 persona 与平面预览。任何一处不一致，都不能选择旧基础 HTML 凑成品。
 
-## 4. 对用户的完成说明
+`partial_success` / `failed`：按失败模块修复，继续独立待办；不要重画成功卡或丢失成功 HTML。`dynamic_unverified`：文件可保留，但动态未验不能完整交付；CSS 降级不能证明镭射通过。
 
-交付真实 `outputs`，必要时另给明确标为“未完成”的候选预览。只看目录、manifest、`ok` 或 `art_status=generated` 不够。使用 public `run-report.json` 和 `delivery-report.json`；`complete` 同时要求文件、当前美术记录与真实浏览器检查。低层构建/旧兼容入口只作诊断，不能代替这一关口。
+## 4. 交付同一份实际成品
 
-`art_reviewed_by_host` 是具名观察，不是用户确认；`generation_evidence_checked` 只说明记录与文件一致。`quality_verified` / `generation_provenance_verified` 保留 false，不伪造独立认证。所有私人输出仍 `draft=true`、`share_allowed=false`。
+```sh
+PY ROOT/scripts/deliver_artifacts.py --workspace RUN --out DELIVERY
+```
 
-图片、单文件 HTML、独立预览的宿主展示检查见 [references/preview.md](references/preview.md)。下载链接可用不代表宿主能运行 JavaScript；真实浏览器与宿主未验证的范围分别说明。发布另需明确授权。
+导出器只接收当前 complete=true 的 public 报告，逐个核对输出哈希；both 模式主文件必须来自 `html_with_card`。导出目录必须独立且空。交付 HTML、front、独立 preview、便携卡包，必要限制保持简短；内部来源与字体文件不打包给用户。
+
+未完成时直接保留 public outputs / 标注清楚的 candidate_outputs，明确缺口，不使用 complete 导出器伪装成功。
+
+## 5. 预览与权限
+
+分别报告文件完成、本地浏览器验证、聊天内预览。`host-preview.json` 只记录本次宿主对相同文件的实际观察与 hash；默认 not_tested，不凭浏览器截图、账号品牌、下载成功推定 available。无法内嵌执行时交付本地可开的单文件及真实静态预览，不能再生成一个伪网页图片替代。
+
+私人草稿、本人文本确认、宿主美术观察、来源认证是不同状态。保持 draft=true / share_allowed=false；发布必须另外获得明确授权。不得为解决预览问题把个人内容自动部署到公共仓库。

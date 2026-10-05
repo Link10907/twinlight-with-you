@@ -1,0 +1,26 @@
+{
+  "version": "1.0.0",
+  "id": "futuristic-clean",
+  "name": "未来极简角色卡",
+  "visual_language": "简洁精致的未来感编辑插画；清楚轮廓、大块有控制的明暗、准确体积和少量透明或金属材料，主体醒目，细节选择性刻画。不是工程蓝图或仪表盘。",
+  "materials_and_light": "哑光表面配合局部玻璃或银色材质，窄而柔和的边缘光；保持中间调细节，不堆积漂浮窗口。",
+  "palette": "银灰、炭灰、冰青，少量珊瑚色作为对比；不用默认霓虹紫蓝轰炸。",
+  "keep": [
+    "干净边界",
+    "大面积留白",
+    "局部而非全局的光泽"
+  ],
+  "avoid": [
+    "Blueprint HUD",
+    "工程网格和公式墙",
+    "复杂外骨骼、密集代码窗和满幅霓虹"
+  ],
+  "typography_default": {
+    "text_color": "#EEF3F3",
+    "accent_color": "#9ADBCB",
+    "scrim_color": "#1C2629",
+    "scrim_opacity": 165,
+    "frame": "single",
+    "footer_top": 0.76
+  }
+}

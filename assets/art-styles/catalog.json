@@ -1,0 +1,23 @@
+{
+  "version": "style-catalog-1",
+  "styles": [
+    {
+      "id": "real-life-cinematic",
+      "file": "real-life-cinematic.json"
+    },
+    {
+      "id": "eastern-fantasy-scroll",
+      "file": "eastern-fantasy-scroll.json"
+    },
+    {
+      "id": "futuristic-clean",
+      "file": "futuristic-clean.json"
+    },
+    {
+      "id": "paper-craft-story",
+      "file": "paper-craft-story.json"
+    }
+  ],
+  "default_style": null,
+  "selection_policy": "Explicit current preference first; otherwise select one distinct style and record a visual rationale. Never derive a default subject, sex, animal or occupation from a style."
+}
