@@ -15,12 +15,9 @@
       "type": "object",
       "properties": {
         "id": {
-          "enum": [
-            "real-life-cinematic",
-            "eastern-fantasy-scroll",
-            "futuristic-clean",
-            "paper-craft-story"
-          ]
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,60}$",
+          "description": "Installed versioned style; twinlight-collector is the default. Alternative styles require an explicit current preference."
         },
         "version": {
           "type": "string",
@@ -303,6 +300,12 @@
           "type": "number",
           "minimum": 0.68,
           "maximum": 0.84
+        },
+        "layout": {
+          "enum": [
+            "collector",
+            "measured"
+          ]
         }
       },
       "required": [

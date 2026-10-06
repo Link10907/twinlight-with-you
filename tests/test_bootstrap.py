@@ -95,7 +95,7 @@ class ResourceBootstrap(unittest.TestCase):
             result = bootstrap.check_root(self.out)
         self.assertTrue(result['resource_complete'])
         self.assertFalse(result['ok'])
-        self.assertEqual(result['runtime']['missing_dependencies'], ['jsonschema', 'PIL'])
+        self.assertEqual(result['runtime']['missing_dependencies'], ['jsonschema', 'PIL', 'playwright'])
         (self.out / 'package-manifest.json').write_text(json.dumps({'files_sha256': {'PROMPT.md': '0' * 64}}))
         with patch.object(bootstrap.importlib, 'import_module', return_value=types.SimpleNamespace(__version__='test')):
             result = bootstrap.check_root(self.out)
@@ -111,6 +111,18 @@ class ResourceBootstrap(unittest.TestCase):
         self.assertFalse(result['ok'])
         self.assertIn('locked_template_source_changed',
                       {error['code'] for error in result['template_lock']['errors']})
+
+    def test_missing_visual_anchor_rejected_before_any_writes(self):
+        with self.assertRaisesRegex(ValueError, 'Incomplete'):
+            bootstrap.unpack(archive(omit=('assets/art-references/twinlight-collector/prototype.png',)), self.out, SHA)
+        self.assertFalse(self.out.exists())
+
+    def test_browser_preflight_honors_an_unavailable_explicit_executable(self):
+        with patch.dict(bootstrap.os.environ, {'TWINLIGHT_BROWSER': str(self.out / 'missing-browser')}):
+            result = bootstrap.browser_preflight()
+        self.assertFalse(result['executable_available'])
+        self.assertEqual(result['status'], 'unavailable')
+        self.assertIn('--browser', result['next'])
 
 
 if __name__ == '__main__':

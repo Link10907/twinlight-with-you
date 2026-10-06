@@ -8,7 +8,7 @@ Lite 的默认 `run` 执行见 `AGENT.md`；这里保存严格模式的内部内
 
 当前对话材料可按文档中的 generic JSON adapter 整理，保留真实可见角色与消息 ID，并标 `current_chat`。不声称读取不可见聊天、删除记录、账户全量历史或图片/语音证据。导出分支不明或形状不支持时报告缺口，不猜格式或换用 demo。
 
-每人独立 `private/<run>/` 与输出目录；不读取 `examples/` 的人物内容，不复用别人的 layout、卡图、approval。固定模板与结构 schema 可复用。
+每人独立 `private/<run>/` 与输出目录；不读取 `examples/` 的人物内容，不复用别人的 layout、卡图、approval。固定模板、结构 schema 和 `assets/art-references/` 中的 `style_only` 无字审美参考可复用；品牌参考不提供人物事实或现成卡图。
 
 ## 规范化与分块
 

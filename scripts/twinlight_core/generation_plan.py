@@ -9,7 +9,9 @@ from pathlib import Path
 from PIL import Image
 
 from .visual_contract import (VERSION, VisualContractError, validate_design, style_binding,
-                              subject_prompt, visual_keywords, layer_prompt, _json, sha256)
+                              subject_prompt, visual_keywords, layer_prompt, style_for,
+                              style_references, _json, sha256)
+from .canvas_mapping import native_dimensions_allowed,rounding_diagnostic,compose_layers,POLICY
 
 IMAGE_ROLES = ('prototype', 'background', 'subject', 'effects')
 MAX_BYTES = 24 * 1024 * 1024
@@ -46,12 +48,83 @@ def check_capabilities(value: dict, canvas) -> dict:
     if not isinstance(value.get('source'), str) or len(value['source'].strip())<8:
         raise VisualContractError('capability_source', 'Explain how the currently available tool capability was checked')
     canvases=value.get('native_canvases')
-    if not isinstance(canvases,list) or list(canvas) not in canvases:
+    prompt_only = value.get('canvas_selection') == 'prompt_only'
+    if not isinstance(canvases,list) or (not prompt_only and list(canvas) not in canvases):
         raise VisualContractError('native_canvas_unavailable', 'Selected native canvas is not in the observed supported sizes; do not fix it by image processing')
     for size in canvases:
         if not isinstance(size,list) or len(size)!=2 or any(type(n) is not int or n<1 for n in size):
             raise VisualContractError('capability_canvas', 'Invalid capability canvas list')
     return value
+
+
+def _ownership_instruction(design: dict, role: str) -> str:
+    """Explicit object ownership; append to the stable, evidenced edit contract."""
+    foreground = json.dumps(design['scene']['foreground'], ensure_ascii=False)
+    subject = design['subject']['species']
+    prop = design['subject']['main_prop']
+    kept = subject + ('; attached prop: ' + prop if prop else '; no attached prop')
+    tasks = {
+        'subject': 'KEEP ONLY the existing subject and attached prop: ' + kept + '. DELETE the entire environment AND DELETE EACH foreground item listed here: ' + foreground + '. These foreground objects are NOT part of the subject, even when they overlap its clothes or the lower canvas. Make every deleted region transparent, locally complete covered clothing only. Delete the named foreground even when it is out of focus, but never confuse it with similarly colored clothing or the explicitly retained subject/prop.',
+        'background': 'DELETE the subject and attached prop: ' + kept + '. ALSO DELETE EACH independently layered foreground item listed here: ' + foreground + '. Reconstruct the medium/distant environment behind these removed objects. None of the named foreground objects may remain here; keep distant environmental objects that are not on this foreground list.',
+        'effects': 'KEEP ONLY EACH of these exact original foreground objects at its original coordinates: ' + foreground + '. DELETE the subject and attached prop (' + kept + ') AND DELETE all medium/distant environment. Every other pixel must be transparent. Do not introduce extra foreground or a complete scene.'}
+    return 'EXPLICIT LAYER OWNERSHIP — ' + tasks[role] + ' Preserve the full original canvas, framing and pixel coordinates.'
+
+
+def repair_plan(plan_path: Path, role: str, instruction: str) -> dict:
+    """Append observed host feedback without changing identity or erasing attempts."""
+    plan_path = Path(plan_path).resolve(); root = plan_path.parent
+    plan = _json(plan_path)
+    if plan.get('version') != 'generation-plan-2' or plan.get('phase') != 'layers' or role not in ('background','subject','effects'):
+        raise VisualContractError('repair_phase', 'Repair an existing native layer job in the layers phase')
+    if not isinstance(instruction, str) or not 8 <= len(instruction.strip()) <= 2500 or '\x00' in instruction:
+        raise VisualContractError('repair_instruction', 'Supply 8–2500 characters of actual observed visual feedback and a concrete correction')
+    instruction = instruction.strip()
+    jobs = [job for job in plan.get('jobs', []) if job.get('role') == role]
+    if len(jobs) != 1:
+        raise VisualContractError('repair_role', 'The current plan must contain exactly one matching layer job')
+    job = jobs[0]
+    target = (root / plan['design']['file']).resolve()
+    if not target.is_relative_to(root) or not target.is_file() or sha256(target) != plan['design']['sha256']:
+        raise VisualContractError('design_changed', 'Do not repair a plan after its person or visual design changed')
+    design = validate_design(_json(target), plan['persona_digest'])
+    if style_binding(design) != plan['style_binding'] or job['style_binding'] != plan['style_binding']:
+        raise VisualContractError('style_drift', 'A repair cannot change the selected style or its references')
+    prototype = plan.get('prototype')
+    if not prototype:
+        raise VisualContractError('prototype_missing', 'Repair the layer against its approved prototype')
+    proto_path = (root / prototype['file']).resolve()
+    if not proto_path.is_relative_to(root) or not proto_path.is_file() or sha256(proto_path) != prototype['sha256']:
+        raise VisualContractError('prototype_changed', 'The approved prototype changed before the repair')
+    if (job.get('operation') != 'image_edit' or job.get('reference_images') != [{**prototype, 'purpose':'composition'}]
+            or job.get('edit_base') != prototype or job.get('coordinate_policy') != 'preserve_full_canvas'):
+        raise VisualContractError('edit_reference', 'Compile the sole-prototype native-edit plan before repairing it')
+    prompt = (root / job['prompt']['file']).resolve()
+    if not prompt.is_relative_to(root) or not prompt.is_file() or sha256(prompt) != job['prompt']['sha256']:
+        raise VisualContractError('prompt_changed', 'The previous compiled prompt must remain intact before adding feedback')
+    evidence_path = root / 'art-evidence.json'
+    evidence = _json(evidence_path) if evidence_path.exists() else {}
+    if evidence and (evidence.get('persona_digest') != plan['persona_digest'] or evidence.get('design') != plan['design']):
+        raise VisualContractError('wrong_persona', 'A repair cannot use image attempts from another person or design')
+    attempts = evidence.get('attempts', [])
+    used = sum(attempt.get('role') == role for attempt in attempts)
+    if used >= 3:
+        raise VisualContractError('retry_limit', 'Three returns are already recorded for this role; repair must not reset the attempt limit')
+    previous = job['prompt']
+    text = prompt.read_text(encoding='utf-8')
+    ownership = job.get('ownership_instruction') or _ownership_instruction(design, role)
+    if ownership not in text:
+        text = ownership + '\n\n' + text
+    text = 'LATEST OBSERVED FAILURE AND REQUIRED REPAIR — highest-priority corrections to this same approved Image1, preserving its full canvas:\n' + instruction + '\n\n' + text
+    prompt.write_text(text, encoding='utf-8')
+    job['prompt'] = _ref(prompt, root)
+    job['ownership_instruction'] = ownership
+    job['repair_instruction'] = instruction
+    job.setdefault('repair_history', []).append({'instruction':instruction,'previous_prompt_sha256':previous['sha256'],
+                                               'prompt_sha256':job['prompt']['sha256'],'attempts_already_recorded':used})
+    _save(plan_path, plan)
+    return {'ok':True,'role':role,'prompt':job['prompt'],'repair_instruction':instruction,
+            'attempts_used':used,'attempts_remaining':3-used,'design_unchanged':True,
+            'style_unchanged':True,'prototype_unchanged':True,'image_generation_performed':False}
 
 
 def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(1080,1440),
@@ -87,27 +160,51 @@ def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(
             raise VisualContractError('design_conflict','Do not overwrite another visual direction')
         shutil.copyfile(design_path,target)
     style=style_binding(design)
+    # Brand examples travel as real tool inputs, separately from user likeness consent.
+    style_refs = []
+    for index, ref in enumerate(style_references(style_for(design['style']['id'], design['style']['version']))):
+        source = Path(ref['file'])
+        copied = out / 'references' / (design['style']['id'] + '-' + str(index + 1) + source.suffix.lower())
+        copied.parent.mkdir(exist_ok=True)
+        if copied.exists() and sha256(copied) != ref['sha256']:
+            raise VisualContractError('style_reference_changed', 'Do not overwrite a previously staged style reference')
+        if source != copied:
+            shutil.copyfile(source, copied)
+        style_refs.append({**_ref(copied, out), 'purpose': 'style_only'})
     # A generation plan is an instruction, not proof that a tool call happened.
     jobs=[]
     roles=('prototype',) if phase=='prototype' else ('background','subject','effects')
     prompt_dir=out/'prompts';prompt_dir.mkdir(exist_ok=True)
     for role in roles:
         path=prompt_dir/(role+'.txt')
-        path.write_text(layer_prompt(design,role,canvas)+'\n',encoding='utf-8')
+        ownership = _ownership_instruction(design, role) if prototype_ref else None
+        path.write_text((ownership+'\n\n' if ownership else '')+layer_prompt(design,role,canvas)+'\n',encoding='utf-8')
+        refs = ([{**prototype_ref, 'purpose': 'composition'}] if prototype_ref else style_refs + [
+            {**x, 'purpose': 'user_reference'} for x in design['references']])
         jobs.append({'role':role,'prompt':_ref(path,out),'requested_canvas':list(canvas),
                      'transparent':role in ('subject','effects'),
-                     'reference_sha256':([prototype_ref['sha256']] if prototype_ref else [])+
-                                         [x['sha256'] for x in design['references']],
+                     'operation':'image_edit' if prototype_ref else 'image_generation',
+                     'edit_base':prototype_ref,
+                     'coordinate_policy':'preserve_full_canvas' if prototype_ref else 'establish_composition',
+                     'ownership_instruction':ownership,
+                     'reference_images':refs,
+                     'referenced_image_paths':[str((out / ref['file']).resolve()) for ref in refs],
+                     'reference_sha256':[ref['sha256'] for ref in refs],
                      'style_binding':style,'status':'not_called'})
     plan={'version':'generation-plan-2','phase':phase,'persona_digest':design['persona_digest'],
           'design':_ref(target,out),'style_binding':style,'canvas':list(canvas),
           'prototype':prototype_ref,'jobs':jobs,'capabilities':capabilities,
+          'canvas_policy':'observe_native_prototype_then_freeze' if capabilities and capabilities.get('canvas_selection') == 'prompt_only' else 'declared_native_canvas',
+          'layer_strategy':'prototype_native_edit_v1',
           'ready_for_image_call':capabilities is not None,
           'required_artwork':'native_layered','subject_count':1,'main_prop_limit':1,
           'spirit':'empty_same_canvas_no_image_call','independent_typography':True,
           'image_generation_performed':False,'requires_host_tool_call':True,
           'next_action':'call_prototype_image_tool' if phase=='prototype' else 'call_native_layer_image_tools',
           'limits':['This is a host handoff, not an authenticated provider call.',
+                    'Pass each job.referenced_image_paths to the actual image tool; a prompt mentioning a reference is not an image reference.',
+                    'For image_edit jobs, the only input is this approved prototype. Preserve its full canvas and coordinates; do not append style examples or create a recentered character sheet.',
+                    'If canvas_selection is prompt_only, requested_canvas is a prompt preference, not a provider size parameter. Inspect native dimensions after the call; never resample.',
                     'Do not send personal history, narrative keywords or the whole skill manual to the image tool.']}
     (out/'subject-description.txt').write_text(subject_prompt(design)+'\n',encoding='utf-8')
     _save(out/'visual-keywords.json',{'visual_keywords':visual_keywords(design),'derived_from':'subject_fields_only'})
@@ -116,7 +213,7 @@ def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(
 
 
 def register_image(plan_path: Path, role: str, image_path: Path, raw_response: Path, *,
-                   tool: str, call_id: str, artifact_id: str) -> dict:
+                   tool: str, call_id: str, artifact_id: str, _revalidate_attempt: str|None=None) -> dict:
     """Copy original output bytes and register an observed response. No synthetic calls."""
     plan_path=Path(plan_path).resolve();root=plan_path.parent
     plan=_json(plan_path)
@@ -134,6 +231,26 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
     prompt=(root/job['prompt']['file']).resolve()
     if not prompt.is_relative_to(root) or sha256(prompt)!=job['prompt']['sha256']:
         raise VisualContractError('prompt_changed','Prompt changed after compilation')
+    references = job.get('reference_images', [])
+    if plan.get('layer_strategy') == 'prototype_native_edit_v1':
+        expected_operation = 'image_generation' if role == 'prototype' else 'image_edit'
+        if job.get('operation') != expected_operation:
+            raise VisualContractError('image_operation', 'This plan requires the declared prototype generation or native layer editing operation')
+    if 'reference_images' in job and [ref['sha256'] for ref in references] != job['reference_sha256']:
+        raise VisualContractError('reference_changed', 'Image reference list changed after compilation')
+    for ref in references:
+        path = (root / ref['file']).resolve()
+        if not path.is_relative_to(root) or not path.is_file() or sha256(path) != ref['sha256']:
+            raise VisualContractError('reference_changed', 'A compiled image reference is missing or changed')
+    required_style_hashes = set(plan['style_binding'].get('reference_sha256', [])) if role == 'prototype' else set()
+    if not required_style_hashes.issubset({r['sha256'] for r in references if r.get('purpose') == 'style_only'}):
+        raise VisualContractError('style_reference_missing', 'The collector image call must bind its actual style reference images')
+    if job.get('operation') == 'image_edit':
+        expected = plan.get('prototype')
+        if (not expected or job.get('edit_base') != expected
+                or job.get('coordinate_policy') != 'preserve_full_canvas'
+                or references != [{**expected, 'purpose': 'composition'}]):
+            raise VisualContractError('edit_reference', 'Native layer editing requires only the current prototype and its complete original canvas')
     canvas=_canvas(plan['canvas']);check_capabilities(plan['capabilities'],canvas)
     image_path,raw_response=Path(image_path).resolve(),Path(raw_response).resolve()
     if not image_path.is_file() or image_path.stat().st_size>MAX_BYTES:
@@ -154,24 +271,45 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
     if evidence['persona_digest']!=plan['persona_digest'] or evidence['design']!=plan['design']:
         raise VisualContractError('wrong_persona','Existing image evidence belongs to another person/design')
     attempt_key=hashlib.sha256((tool+'\0'+call_id+'\0'+artifact_id).encode()).hexdigest()[:20]
-    if any(x.get('key')==attempt_key for x in evidence.get('attempts',[])):
+    previous_attempt=next((x for x in evidence.get('attempts',[]) if x.get('key')==attempt_key),None)
+    if previous_attempt and _revalidate_attempt is None:
         raise VisualContractError('duplicate_tool_output','This call/artifact was already registered; do not count it as a new attempt')
-    if sum(x['role']==role for x in evidence.get('attempts',[]))>=3:
+    if _revalidate_attempt is not None:
+        if (not previous_attempt or _revalidate_attempt != attempt_key or previous_attempt.get('role') != role
+                or previous_attempt.get('status') != 'rejected'
+                or not (previous_attempt.get('error_code') == 'canvas_mismatch'
+                        or previous_attempt.get('error') == 'Regenerate mismatched layers; never crop, scale or reposition')):
+            raise VisualContractError('revalidation_source','Only an existing canvas-mismatch rejection may be revalidated without a new call')
+        if previous_attempt.get('revalidations'):
+            raise VisualContractError('revalidation_duplicate','This failed return was already revalidated; do not reset its history')
+        for candidate,stored in ((image_path,previous_attempt['image']),(raw_response,previous_attempt['raw_response'])):
+            if candidate != (root/stored['file']).resolve() or sha256(candidate) != stored['sha256']:
+                raise VisualContractError('revalidation_source','Revalidation must use the exact immutable original return and response')
+    if _revalidate_attempt is None and sum(x['role']==role for x in evidence.get('attempts',[]))>=3:
         raise VisualContractError('retry_limit','Three returned attempts already recorded for this role; preserve the failure and stop')
     # Immutable originals preserve successful and failed attempts. Only selected roles are copied below.
     originals=root/'evidence'/'originals';originals.mkdir(parents=True,exist_ok=True)
-    raw_copy=originals/(attempt_key+'-response.txt');shutil.copyfile(raw_response,raw_copy)
-    native_copy=originals/(attempt_key+'-image'+image_path.suffix.lower());shutil.copyfile(image_path,native_copy)
-    prompt_copy=originals/(attempt_key+'-prompt.txt');shutil.copyfile(prompt,prompt_copy)
+    raw_copy=originals/(attempt_key+'-response.txt')
+    native_copy=originals/(attempt_key+'-image'+image_path.suffix.lower())
+    prompt_copy=originals/(attempt_key+'-prompt.txt')
+    if _revalidate_attempt is None:
+        shutil.copyfile(raw_response,raw_copy);shutil.copyfile(image_path,native_copy);shutil.copyfile(prompt,prompt_copy)
+    elif not prompt_copy.is_file() or sha256(prompt_copy)!=job['prompt']['sha256']:
+        raise VisualContractError('revalidation_prompt','The frozen failed request does not match the current plan; do not invent a replacement request')
     attempt={'key':attempt_key,'role':role,'image':_ref(native_copy,root),'raw_response':_ref(raw_copy,root),
              'registered_at':dt.datetime.now(dt.timezone.utc).isoformat(),'status':'rejected'}
+    attempt['tool_identifiers']={'tool':tool,'call_id':call_id,'artifact_id':artifact_id}
+    attempt['prompt']=_ref(prompt_copy,root)
     error=None;actual_canvas=None;fmt=None
     try:
         with Image.open(native_copy) as image:
             if image.format not in ('PNG','WEBP','JPEG'): raise VisualContractError('image_format','Use a native raster output')
             actual_canvas=_canvas(image.size);fmt=image.format
-            if role!='prototype' and actual_canvas!=canvas:
-                raise VisualContractError('canvas_mismatch','Regenerate mismatched layers; never crop, scale or reposition')
+            native_edit=job.get('operation')=='image_edit' and job.get('coordinate_policy')=='preserve_full_canvas'
+            if role!='prototype' and not native_dimensions_allowed(actual_canvas,canvas,native_edit=native_edit):
+                raise VisualContractError('canvas_mismatch','Native layer differs by more than the explicit one-pixel rounding policy, or was not a native image edit')
+            if _revalidate_attempt and (actual_canvas==canvas or not native_edit):
+                raise VisualContractError('revalidation_source','This policy revalidation applies only to a one-pixel native image-edit return')
             alpha=image.convert('RGBA').getchannel('A');hist=alpha.histogram();total=image.width*image.height
             if role in ('prototype','background') and hist[255]!=total:
                 raise VisualContractError('background_alpha','Prototype/background must be fully opaque')
@@ -185,11 +323,14 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
             if current not in job['reference_sha256']:
                 raise VisualContractError('prototype_changed','This layer job referenced another prototype')
     except (ValueError,OSError,Image.DecompressionBombError) as exc:
-        error=str(exc);attempt['error']=error
-    evidence.setdefault('attempts',[]).append(attempt)
+        error=str(exc);attempt['error']=error;attempt['error_code']=getattr(exc,'code','invalid_native_output')
+    if actual_canvas is not None:attempt['returned_canvas']=list(actual_canvas)
+    if _revalidate_attempt is None:evidence.setdefault('attempts',[]).append(attempt)
     if error:
         _save(evidence_path,evidence)
-        return {'ok':False,'status':'art_rejected','role':role,'error':error,'originals_preserved':True,'attempts_used':sum(x['role']==role for x in evidence['attempts'])}
+        return {'ok':False,'status':'art_rejected','role':role,'error':error,'error_code':attempt.get('error_code'),
+                'attempt_key':attempt_key,'requested_canvas':list(canvas),'returned_canvas':list(actual_canvas) if actual_canvas else None,
+                'originals_preserved':True,'attempts_used':sum(x['role']==role for x in evidence['attempts'])}
     ext={'PNG':'.png','WEBP':'.webp','JPEG':'.jpg'}[fmt]
     target=root/(role+ext);shutil.copyfile(native_copy,target)
     call={'version':'image-call-1','kind':'image_tool','tool':tool,'call_id':call_id,'run_id':evidence['run_id'],
@@ -197,12 +338,24 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
           'request':{'role':role,'canvas':list(canvas),'transparent':job['transparent'],
                      'prompt':_ref(prompt_copy,root),'design_sha256':plan['design']['sha256'],
                      'style_binding':plan['style_binding'],'reference_sha256':job['reference_sha256'],
+                     'reference_images':references,
+                     'operation':job.get('operation','legacy_image_request'),
+                     'edit_base':job.get('edit_base'),
+                     'coordinate_policy':job.get('coordinate_policy'),
+                     'ownership_instruction':job.get('ownership_instruction'),
+                     'repair_instruction':job.get('repair_instruction'),
                      'prompt_transport':'host_instruction_record_not_provider_authentication'},
           'response':{'artifact_id':artifact_id,'sha256':sha256(target),'canvas':list(actual_canvas)},
           'raw_response':_ref(raw_copy,root)}
+    if role!='prototype' and actual_canvas!=canvas:
+        call['response']['canvas_mapping']=rounding_diagnostic(actual_canvas,canvas)
     call_path=originals/(attempt_key+'-call.json');_save(call_path,call)
     evidence['images'][role]={**_ref(target,root),'mode':'generated','call':_ref(call_path,root)}
-    attempt['status']='registered'
+    if _revalidate_attempt:
+        previous_attempt.setdefault('revalidations',[]).append({'policy':POLICY,'status':'registered_not_reviewed',
+            'at':dt.datetime.now(dt.timezone.utc).isoformat(),'call':_ref(call_path,root),
+            'original_rejection_preserved':True,'new_image_call':False})
+    else:attempt['status']='registered'
     manifest_path=root/'layers.json'
     manifest=_json(manifest_path) if manifest_path.exists() else {
         'schema_version':'1.0','persona_digest':plan['persona_digest'],'art_status':'generated',
@@ -211,10 +364,27 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
         'depths':{'background':-.25,'subject':.4,'effects':.5,'text':0},
         'notes':'Incomplete until all native layers, typography, reviews and browser checks pass.'}
     if role!='prototype': manifest['assets'][role]=target.name
+    if role!='prototype' and actual_canvas!=canvas:
+        mapping=manifest.setdefault('canvas_mapping',{'version':POLICY,'canvas':list(canvas),'sampling':'full_uv_bilinear','native_edit_roles':[]})
+        if mapping['canvas']!=list(canvas):raise VisualContractError('canvas_mapping','Manifest already declares another logical canvas')
+        mapping['native_edit_roles']=sorted(set(mapping['native_edit_roles'])|{role})
     _save(manifest_path,manifest);_save(evidence_path,evidence)
     return {'ok':True,'status':'image_registered_not_reviewed','role':role,'image':str(target),
+            'attempt_key':attempt_key,
             'requested_canvas':list(canvas),'returned_canvas':list(actual_canvas),
+            'canvas_mapping':rounding_diagnostic(actual_canvas,canvas) if role!='prototype' and actual_canvas!=canvas else None,
+            'new_image_call':False if _revalidate_attempt else None,
             'generation_provenance_verified':False,'art_approved':False}
+
+
+def revalidate_image(plan_path: Path, attempt_key: str, *, tool: str, call_id: str, artifact_id: str) -> dict:
+    """Reconsider preserved one-pixel returns without another call or another attempt."""
+    plan_path=Path(plan_path).resolve();root=plan_path.parent
+    evidence=_json(root/'art-evidence.json')
+    attempt=next((a for a in evidence.get('attempts',[]) if a.get('key')==attempt_key),None)
+    if not attempt:raise VisualContractError('revalidation_source','No immutable original attempt matches this key')
+    return register_image(plan_path,attempt['role'],root/attempt['image']['file'],root/attempt['raw_response']['file'],
+                          tool=tool,call_id=call_id,artifact_id=artifact_id,_revalidate_attempt=attempt_key)
 
 
 def bind_composite(manifest_path: Path, composite_path: Path) -> dict:
@@ -225,9 +395,7 @@ def bind_composite(manifest_path: Path, composite_path: Path) -> dict:
     if evidence.get('persona_digest')!=manifest.get('persona_digest'):
         raise VisualContractError('wrong_persona','Composite belongs to another person')
     _,images=_manifest_assets(root,manifest)
-    merged=images['background'].copy()
-    for role in ('spirit','subject','effects'):
-        merged=Image.alpha_composite(merged,images[role])
+    merged=compose_layers(manifest,images)
     path=Path(composite_path).resolve();ref=_ref(path,root)
     with Image.open(path) as selected:
         if pixel_digest(selected)!=pixel_digest(merged):

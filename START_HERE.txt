@@ -2,19 +2,21 @@ Twinlight · 与你同光
 
 最稳：在同一条消息上传完整 skill ZIP 并发送一次：
 
-“请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md 并使用完整项目资源，根据你实际了解的我，一次生成我的定义闪卡和 Twinlight HTML，完成后一起给我看。”
+“请使用本次上传的完整 Twinlight skill 包，先读包内 SKILL.md 和 AGENT.md，保留 V10 的星系与揭卡效果、精细幻想收藏卡风格，根据你实际了解的我，一次生成我的定义闪卡和 Twinlight HTML，完成后一起给我看。”
 
-AI 自动完成个人星图 HTML 和专属分层闪卡，把成品卡片接入页面，一起交付。
+AI 保留原有 V10 星系与揭卡效果、默认精细幻想收藏卡风格，完成当前人的内容和全新原生分层闪卡，把同一张卡片接入页面，一起交付。
+完整包包含无字审美参考，不包含作者的私人经历；已有本地完整包时优先使用，下载失败不改做简化页面。
 资料充分时直接完成本地草稿；只有必要资料缺失时才问两三个短问题。
 不会替你确认，也不会自动公开。卡片与页面各自生成、各自修复，保留已经成功的结果。
 
-只有链接时，也可用上述入口，但 AI 必须能下载完整资源、写文件和执行构建。
+已提供完整包时以包内同版文档为准，不混读另一版 main。
+只有链接时，可让 AI 读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md 并取得同版本完整项目；这使用远端已发布版本，且 AI 必须能下载、写文件和执行构建。
 已加载完整项目或 skill 时，可直接说“根据你实际了解的我，生成我的定义卡，完成后直接给我看”。
 有文件与执行能力的网页或 Agent 可读取 SKILL.md 或 AGENT.md，使用同一流程控制器。
 生图、透明图层和动态预览能力分别检查，不绑定 Codex，也不承诺所有 AI 网页均能执行。
 
 如果明确只要其中一个，可说“只生成个人星图 HTML”或“只制作专属闪卡”。
-独立闪卡说明：https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/CARD.md
+独立闪卡说明优先读完整包内 CARD.md；只有纯链接路线才读取同版本远端 CARD.md。
 提供聊天导出并要求原话出处时，保留严格模式的来源核对与本人审阅。
 
 HTML 可用现代浏览器直接打开，不需要 Node.js、Python 或服务器。

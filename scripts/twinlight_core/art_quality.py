@@ -176,7 +176,8 @@ def compile_visual_brief(text: str, role: str = "prototype") -> str:
 
 
 def _source(root: Path, entry: dict, role: str, prototype_hash: str, canvas: tuple,
-            run_id: str, persona: str, rejected: set[str], records: dict, inputs: dict, design: dict, design_hash: str) -> None:
+            run_id: str, persona: str, rejected: set[str], records: dict, inputs: dict, design: dict, design_hash: str,
+            canvas_mapping: dict | None = None) -> None:
     path = checked_ref(root, entry)
     digest = sha256(path)
     require(digest not in rejected, "rejected_asset_reused", "A previously rejected asset was selected: " + role)
@@ -226,7 +227,16 @@ def _source(root: Path, entry: dict, role: str, prototype_hash: str, canvas: tup
     inputs[str(prompt)] = sha256(prompt)
     if entry["mode"] == "generated":
         require(request.get("design_sha256") == design_hash, "wrong_prompt_design", "The invocation must bind the current art direction")
-        visual = compile_visual_brief(json.dumps(design, ensure_ascii=False), role=role)
+        if v2 and request.get("operation") == "image_edit":
+            from .visual_contract import layer_prompt
+            require(role != "prototype", "edit_phase", "Select a generated prototype before editing native layers")
+            base = checked_ref(root, request.get("edit_base"))
+            require(sha256(base) == prototype_hash and request.get("coordinate_policy") == "preserve_full_canvas",
+                    "edit_base_mismatch", "Native layer editing must retain the current approved prototype canvas")
+            inputs[str(base)] = sha256(base)
+            visual = layer_prompt(design, role, tuple(canvas))
+        else:
+            visual = compile_visual_brief(json.dumps(design, ensure_ascii=False), role=role)
         require(visual in prompt.read_text(encoding="utf-8"), "visual_brief_missing", "Actual prompt must include the current concrete visual brief")
     if role in ("subject", "effects", "spirit"):
         require(caps.get("native_transparency") is True and request.get("transparent") is True,
@@ -235,14 +245,43 @@ def _source(root: Path, entry: dict, role: str, prototype_hash: str, canvas: tup
         require(request.get("transparent") is False, "opaque_background_request", "Request an opaque background")
     references = request.get("reference_sha256", [])
     require(isinstance(references, list), "invalid_references", "Reference hashes must be a list")
+    if v2:
+        from .visual_contract import style_for, style_references
+        anchors = style_references(style_for(design["style"]["id"], design["style"]["version"]))
+        if anchors:
+            require(digest not in {anchor["sha256"] for anchor in anchors}, "style_reference_reused",
+                    "A bundled style reference is not newly generated personal artwork")
+        if anchors and role == "prototype":
+            attached = request.get("reference_images", [])
+            require(isinstance(attached, list), "style_reference_missing", "Record actual style reference image attachments")
+            staged = {}
+            for reference in attached:
+                p = checked_ref(root, reference)
+                image(p)
+                inputs[str(p)] = sha256(p)
+                staged[sha256(p)] = reference.get("purpose")
+            for anchor in anchors:
+                require(anchor["sha256"] in references and staged.get(anchor["sha256"]) == "style_only"
+                        and caps.get("reference_images") is True,
+                        "style_reference_missing", "The actual image request must attach the installed visual quality reference as style_only")
     if role != "prototype":
         require(caps.get("reference_images") is True and prototype_hash in references,
                 "prototype_reference_missing", "Every independent layer must reference the selected prototype")
+        if v2 and anchors:
+            attached = request.get("reference_images", [])
+            require(isinstance(attached, list) and len(attached) == 1
+                    and attached[0].get("sha256") == prototype_hash
+                    and attached[0].get("purpose") == "composition",
+                    "composition_reference_missing", "Native layer editing must use only the approved prototype as its composition authority")
+            p = checked_ref(root, attached[0])
+            image(p)
+            inputs[str(p)] = sha256(p)
     response = call.get("response", {})
     require(isinstance(response, dict) and response.get("sha256") == digest,
             "tool_output_mismatch", "Returned image bytes do not match the registered layer")
+    im = image(path)
     if v2:
-        require(response.get("canvas") == list(canvas), "returned_canvas", "Record actual returned image dimensions")
+        require(response.get("canvas") == list(im.size), "returned_canvas", "Record actual returned image dimensions, including native rounding")
     artifact = _string(response.get("artifact_id"), "artifact_id", maximum=500)
     raw = checked_ref(root, call.get("raw_response"), limit=MAX_JSON)
     raw_text = raw.read_text(encoding="utf-8")
@@ -252,8 +291,12 @@ def _source(root: Path, entry: dict, role: str, prototype_hash: str, canvas: tup
     key = tool + "\0" + call_id + "\0" + artifact
     require(key not in records, "duplicate_tool_output", "One returned image cannot fill multiple independent roles")
     records[key] = digest
-    im = image(path)
-    require(im.size == canvas, "canvas_mismatch", "Native images must share the original canvas without resizing")
+    from .canvas_mapping import native_dimensions_allowed
+    explicit_native_edit = bool(canvas_mapping and role in canvas_mapping.get("native_edit_roles", [])
+                                and v2 and request.get("operation") == "image_edit"
+                                and request.get("coordinate_policy") == "preserve_full_canvas")
+    require(native_dimensions_allowed(im.size, canvas, native_edit=explicit_native_edit),
+            "canvas_mismatch", "Only explicitly mapped native image edits may differ by one pixel; preserve original bytes")
 
 
 def _manifest_assets(root: Path, manifest: dict) -> tuple[dict, dict]:
@@ -322,10 +365,12 @@ def snapshot(manifest_path: Path, persona: str, *, stage: str = "final", front: 
     design = validate_design(read_json(brief_path), persona)
     reference_inputs = {}
     if design.get("version") == "art-direction-2":
-        from .visual_contract import style_for, STYLE_DIR
+        from .visual_contract import style_for, style_references, STYLE_DIR
         style = style_for(design["style"]["id"], design["style"]["version"])
         reference_inputs[style["path"]] = style["sha256"]
         reference_inputs[str(STYLE_DIR / "catalog.json")] = sha256(STYLE_DIR / "catalog.json")
+        for anchor in style_references(style):
+            reference_inputs[anchor["file"]] = anchor["sha256"]
     for ref in design.get("references", []):
         reference_path = checked_ref(root, ref)
         image(reference_path)
@@ -347,12 +392,13 @@ def snapshot(manifest_path: Path, persona: str, *, stage: str = "final", front: 
     inputs.update(reference_inputs)
     if stage != "prototype":
         paths, layers = _manifest_assets(root, manifest)
-        require(all(layer.size == im.size for layer in layers.values()), "canvas_mismatch", "Do not resize independent layers")
+        from .canvas_mapping import logical_canvas, compose_layers
+        require(logical_canvas(manifest, layers) == im.size, "canvas_mismatch", "The display canvas must remain the approved prototype canvas")
         require(layers["background"].getchannel("A").getextrema() == (255, 255),
                 "background_alpha", "Background must be completely opaque; draft is not an exemption")
         for role in ("subject", "effects", "text"):
             hist = layers[role].getchannel("A").histogram()
-            count = im.width * im.height
+            count = layers[role].width * layers[role].height
             require(sum(hist[:16]) / count > .01 and sum(hist[16:]) / count > .0005,
                     "layer_alpha", role + " must contain real transparent and occupied regions")
         alpha = layers["subject"].getchannel("A")
@@ -363,9 +409,7 @@ def snapshot(manifest_path: Path, persona: str, *, stage: str = "final", front: 
         fingerprints = {role: sha256(p) for role, p in paths.items()}
         for role in ("background", "subject", "effects", "spirit"):
             require(pixel_digest(layers[role]) != pixel_digest(im), "poster_reused", "Prototype cannot be reused as a layer")
-        raw = layers["background"].copy()
-        for role in ("spirit", "subject", "effects"):
-            raw = Image.alpha_composite(raw, layers[role])
+        raw = compose_layers(manifest, layers)
         composite_targets = {**base, "manifest_sha256": sha256(manifest_path), "layers_sha256": fingerprints,
                              "composite_pixels_sha256": pixel_digest(raw)}
         targets["composite"] = composite_targets
@@ -411,7 +455,8 @@ def check_evidence(manifest_path: Path, persona: str, *, stage: str = "final", f
             require(isinstance(entry, dict), "source_missing", "Missing actual image-tool evidence for " + role, status="needs_art_evidence")
             if role != "prototype":
                 require(entry.get("file") == manifest["assets"][role], "source_path_mismatch", "Evidence points to another " + role + " asset")
-            _source(root, entry, role, prototype_hash, canvas, run_id, persona, rejected, records, inputs, design, targets["prototype"]["design_sha256"])
+            _source(root, entry, role, prototype_hash, canvas, run_id, persona, rejected, records, inputs, design,
+                    targets["prototype"]["design_sha256"], manifest.get("canvas_mapping"))
             if entry["mode"] == "reused":
                 reused.append(role)
         report["evidence_checked"] = True

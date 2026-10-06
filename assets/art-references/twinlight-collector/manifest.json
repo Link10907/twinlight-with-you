@@ -1,0 +1,21 @@
+{
+  "version": "art-reference-1",
+  "style_id": "twinlight-collector",
+  "style_version": "1.0.0",
+  "usage": "style_only",
+  "no_persona": true,
+  "no_subject_copy": true,
+  "source": "Fictional wordless examples: a newly generated woman reviewed against the user-approved V10 visual baseline, plus the approved generated-demo nature creature. No user identity or narrative text. Copy finish and illustration quality only, never copy subject or pixels.",
+  "references": [
+    {
+      "file": "human-prototype.png",
+      "sha256": "e9497ca206e9b728fee69e684ba808c68d1ef4ed8fc7a3fd905460a5ece7c148",
+      "purpose": "style_only"
+    },
+    {
+      "file": "prototype.png",
+      "sha256": "82e9eb4c75d8d651b49f94f160228325c2aeecd8cf2e936bcd3d17629f5db0dc",
+      "purpose": "style_only"
+    }
+  ]
+}

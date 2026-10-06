@@ -14,6 +14,7 @@ from twinlight_core.art import validate_layers
 from twinlight_core.cardgen import card_spec, read_card_data
 from twinlight_core.common import check, load, save
 from twinlight_core.site import native_subject, open_card_image, ImageChops_safe
+from twinlight_core.canvas_mapping import native_dimensions_allowed,mapping_for
 
 
 def font_path(explicit: Path | None) -> Path:
@@ -98,18 +99,32 @@ def prepare(data: dict, background: Path, subject: Path, effects: Path,
             prototype: Path | None = None, art_prompt: str | None = None, spirit: Path | None = None) -> dict:
     sub = native_subject(subject)
     bg, fx = open_card_image(background), open_card_image(effects)
-    check(bg.size == sub.size == fx.size, '直接生成的各层必须使用完全相同的画布；不会裁剪、缩放或重摆')
+    canvas = open_card_image(prototype).size if prototype else sub.size
+    originals = {'background':bg,'subject':sub,'effects':fx}
+    native_edit_roles=[]
+    for role, im in originals.items():
+        if im.size == canvas:continue
+        check(prototype is not None and native_dimensions_allowed(im.size,canvas,native_edit=True),
+              '图层尺寸差超过原生编辑允许的 1 像素取整范围；不能裁剪或移动修正')
+        from twinlight_core.art_quality import checked_ref,read_json,sha256
+        evidence=read_json(out/'art-evidence.json')
+        entry=evidence.get('images',{}).get(role,{})
+        source={'background':background,'subject':subject,'effects':effects}[role]
+        check(entry.get('sha256')==sha256(source),'取整映射必须绑定已登记的原生编辑图层')
+        call=read_json(checked_ref(out,entry.get('call')));request=call.get('request',{})
+        check(request.get('operation')=='image_edit' and request.get('coordinate_policy')=='preserve_full_canvas'
+              and request.get('canvas')==list(canvas) and call.get('response',{}).get('canvas')==list(im.size),
+              '只有已登记的同原型原生编辑允许 1 像素显示采样')
+        native_edit_roles.append(role)
     check(bg.getchannel('A').getextrema() == (255, 255), '背景必须完整且完全不透明')
-    spec = card_spec(data, generated_at='2000-01-01T00:00:00Z', canvas=sub.size, composition=composition, art_prompt=art_prompt)
-    if prototype:
-        check(open_card_image(prototype).size == sub.size, '原型与独立图层必须保持同一实际画布；请重生成尺寸不符的图层')
+    spec = card_spec(data, generated_at='2000-01-01T00:00:00Z', canvas=canvas, composition=composition, art_prompt=art_prompt)
     if composition and composition.get('source_prototype_sha256'):
         check(prototype is not None, '构图锁绑定了原型，请使用 --prototype 提供同一张参考图')
         check(hashlib.sha256(prototype.read_bytes()).hexdigest() == composition['source_prototype_sha256'],
               '构图锁对应另一张原型；请使用当前选定的原型')
     spirit_image = open_card_image(spirit) if spirit else None
     if spirit_image is not None:
-        check(spirit_image.size == sub.size, 'spirit 必须保留同一原生画布；不会裁切或缩放')
+        check(spirit_image.size == canvas, 'spirit 必须保留同一逻辑画布；不会裁切或移动')
     elif (out/'spirit.png').exists():
         check(open_card_image(out/'spirit.png').getchannel('A').getbbox() is None,
               '已有非空 spirit；请显式提供 --spirit，不能用空层覆盖')
@@ -119,9 +134,9 @@ def prepare(data: dict, background: Path, subject: Path, effects: Path,
         from twinlight_core.art_quality import parse_json, validate_design
         from twinlight_core.art_typography import typeset
         design = validate_design(parse_json(art_prompt), spec['persona_digest'])
-        text_image, layout_report = typeset(data, sub.size, font, design['typography'], composition)
+        text_image, layout_report = typeset(data, canvas, font, design['typography'], composition)
     else:
-        text_image = typography(data, sub.size, font, composition)
+        text_image = typography(data, canvas, font, composition)
     out.mkdir(parents=True, exist_ok=True)
     # Copy files byte for byte. These are newly generated assets, not poster cutouts.
     paths = {}
@@ -136,7 +151,7 @@ def prepare(data: dict, background: Path, subject: Path, effects: Path,
             shutil.copyfile(spirit, target)
         paths['spirit'] = target.name
     else:
-        Image.new('RGBA', sub.size).save(out/'spirit.png')
+        Image.new('RGBA', canvas).save(out/'spirit.png')
     text_image.save(out/'text.png')
     if layout_report is not None:
         save(out/'typography-report.json', layout_report)
@@ -147,6 +162,8 @@ def prepare(data: dict, background: Path, subject: Path, effects: Path,
     manifest = spec['manifest_template']
     manifest['notes'] = 'Native independent layers assembled for this card; prototype is reference only. Visual review still required.'
     manifest['assets'].update(paths)
+    mapping=mapping_for(canvas,originals,native_edit_roles)
+    if mapping:manifest['canvas_mapping']=mapping
     save(out/'layers.json', manifest)
     save(out/'card-spec.json', spec)
     return validate_layers(out/'layers.json', spec['persona_digest'])

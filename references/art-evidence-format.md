@@ -1,93 +1,50 @@
-# 美术记录格式（art-evidence-1）
+# 实际美术记录：art-evidence-1
 
-用于默认 Lite/card-1 public `run` 的本地可追溯检查，不是签名、外部模型认证或自动审美。所有记录均由真实调用或实际观察而来；此文不是要求模型编造一次成功调用。
+`art-evidence-1` 是记录容器版本，当前设计仍使用 `art-direction-2`。这些本地记录用来避免串图、漏参考和继承过期观察；不认证提供商、不自动判断美感、不代本人许可。生产命令集中在 [CARD.md](../CARD.md)。
 
-## 文件引用
+## 文件和设计引用
 
-统一 `{ "file": "相对文件名", "sha256": "实际文件SHA256" }`。文件在 `layers.json` 所在目录及子目录内；不得使用 URL、绝对路径、父目录跳转或越界符号链接。JSON 记录最多 2 MiB；每个图像最多 24 MiB、1600 万像素。人物 digest 从当前 run-state / card-spec 读取，不自行编造。
+文件引用统一为 `{ "file": "目录内相对路径", "sha256": "实际字节摘要" }`。记录使用 layers 所在目录及子目录内的真实文件；不写 URL、越界绝对路径或父目录跳转。人物 digest 从当前 run-state / card-spec 读取。
 
-## 独立设计 art-direction.json
+设计保存 `art-direction-2`，字段与参考用途见 [视觉契约](visual-contract.md)。不要在此另写旧 `art-direction-1` 场景格式；历史格式只用于读旧记录。
 
-`version="art-direction-1"`、`persona_digest`，及：
+## 实际图像调用
 
-- `preferences={keep:[], avoid:[], basis:"偏好依据", rejected_asset_sha256:[]}`。keep/avoid 来自当前用户，不把例子复制为所有人的风格。
-- `scene={style, subject, action, setting, materials, palette, lighting, composition}`，每项为具体画面说明，不用“高级、精美”替代设计。
-- `decision={considered:[{name,rationale},...], selected, rationale}`，比较 2–3 个方向，选其中一个；比较记录不发给图像模型。
-- `reference_basis="text_only"` 配 `references=[]`；确实看过视觉参考才用 `visible_images` 并登记本地图片引用。
-- `typography={text_color, accent_color, scrim_color, scrim_opacity, frame, footer_top}`。颜色为 `#RRGGBB`，遮罩 0–220，边框 `none/single/double`，footer_top 为 0.68–0.84。由设计决定，不强制金色。
+由 `visual_plan.py record` 从真实输出登记 `image-call-1`，保存工具名、实际 call/artifact 标识、原图 hash、实际响应引用、请求 prompt、设计 hash 和 style binding。request 包含当前请求画布、透明开关、`reference_sha256` 和 `reference_images`；response 记录实际返回画布与原图字节。
 
-结构化设计传给 `--art-prompt-file`。序列化内容最多 6000 字符；它不写回只读人物 JSON。程序编译八项 scene 和 keep/avoid 形成实际视觉 brief。
+`reference_images` 每项说明文件、sha256、purpose。原型任务的品牌图标 `style_only`，图层编辑任务仅以当前已通过原型作 `composition`；所有应传图都必须在实际工具调用中附带。图层沿用已核验原型的品牌来源链，不伪报再次传入品牌图。缺实际传图不能用“提示词说了参考某图”补证。原生透明请求使用工具实际开关，不构造不存在的参数。工具只接受文字尺寸时如实记录 prompt_only 能力，返回后才确认尺寸。
 
-## 实际图像调用记录
+受控 `repair` 只更新下一次任务的具体反馈与逐项归属，保留同一设计/原型、原始输出及三次尝试预算。若旧输出仅因尺寸相差 1 像素而拒绝，可按现有 `native-rounding-1` 规则明确重新评定；保存原拒绝与复核原因，不删除尝试、不伪称重新生图。
 
-每个使用的独立原生输出登记一次 `image-call-1` 记录：
-
-```text
-version: image-call-1
-kind: image_tool
-tool: 实际工具名
-call_id: 实际调用标识
-run_id: 本次记录的唯一运行标识
-capabilities:
-  image_generation: 实际是否具备
-  native_transparency: 实际是否具备
-  reference_images: 实际是否具备
-request:
-  canvas: [实际请求与返回保持一致的宽, 高]
-  transparent: 实际请求的透明开关
-  prompt: 本次发给工具的完整提示词文件引用
-  design_sha256: 本次设计文件hash
-  reference_sha256: [实际传入参考图hash]
-response:
-  artifact_id: 工具实际返回的工件标识
-  sha256: 该原始输出文件的hash
-raw_response: 实际工具返回记录的文件引用
-```
-
-透明主体/前景必须有真实 transparent 请求；背景必须不透明；独立层的 reference_sha256 包含所选原型。工具不支持某项就不要编造支持，不要发不存在的参数。适配器应把真实工具调用规范化为此记录；当前代码不代替宿主接通图像工具。
-
-完整 prompt 必须包含程序 `compile_visual_brief()` 编译的当前视觉文本与当前层职责；不要把所有工作流说明放进 prompt。实际输出与记录的工件/hash 必须一致，不能把文件另存或程序绘图冒充模型输出。返回文字须确实含此工件标识；缺真实记录应停在来源未验证，而不是编一份 raw_response。
+实际返回文本与工件标识必须一致。宿主看不见提供商内部的 seed、payload 或模型版本就留未知；不为了通过检查伪造 raw_response。记录失败输出与尝试次数，不只保存最好一张。
 
 ## art-evidence.json
 
 ```text
 version: art-evidence-1
 persona_digest: 当前人物绑定
-run_id: 本次运行标识
-design: art-direction.json 的文件引用
+run_id: 本次记录标识
+design: art-direction.json 的引用
 images:
-  prototype: 图片引用 + mode + call
-  background: 图片引用 + mode + call
-  subject: 图片引用 + mode + call
-  effects: 图片引用 + mode + call
-  spirit: 仅非空时需要同样记录
-composite: 真实无字合成图引用
+  prototype/background/subject/effects: 当前原图引用、mode 与实际 call
+  spirit: 仅非空时需要真实调用
+composite: 当前无字合成图引用
 reviews:
-  prototype: 原型评审文件引用
-  composite: 无字合成评审文件引用
-  final: 最终卡面评审文件引用
+  prototype/composite/final: 相应实际观察记录引用
 ```
 
-`mode="generated"` 必须对应本次 run_id 与当前设计。`mode="reused"` 必须额外提供 `reuse={declared:true, persona_digest:当前绑定, reason:具体复用原因}`，保留原调用记录，并重新完成当前评审；不能把复用说成本次新生图。被当前偏好账本否决的资源不能被选择。
+`mode=generated` 对应本次设计和真实调用。确实复用同主人已授权素材时用 `mode=reused`、保留原调用并记录 declared/persona_digest/reason，再过本次观察；不能将复用声称为新生图。style_only 品牌参考不是当前层复用许可，被当前偏好否决的图不得被选择。
 
-原型阶段允许未来图层/合成/评审尚未存在。manifest 可先采用当前 card-spec 的模板，其路径约定不构成生成事实。
+## 三阶段观察
 
-## 三阶段评审
+`art_quality.py review-template` 只输出 pending 模板，不自动接受。实际打开当前文件后保留其 stage/targets，填写 observer、带时区 observed_at、decision，以及每项 `checks={criterion:{passed,observation}}`。记录真正看到的细节与缺陷，capture 指向实际观察/检查记录。
 
-用实际文件先计算 targets：
+默认品牌会检查 `visual_hierarchy`、`material_finish`、`spatial_depth` 与 `reference_quality_parity`，含义见 [质量工作流](quality-workflow.md)。逐项说明当前焦点、材料、纵深及相对参考的完成度，不能全部填写“精美通过”。
 
-```bash
-PY scripts/art_quality.py review-template --layers CARD/layers.json --persona-digest DIGEST --stage prototype --out CARD/prototype-review.pending.json
-PY scripts/art_quality.py review-template --layers CARD/layers.json --persona-digest DIGEST --stage composite --out CARD/composite-review.pending.json
-PY scripts/art_quality.py review-template --layers CARD/layers.json --persona-digest DIGEST --stage final --front RUN/card/front.png --preview RUN/card/preview.html --out CARD/final-review.pending.json
-```
+final 同时绑定当前 front 和 preview，views 包含真实 left/right/mobile 截图；左右不是相同像素。原型变动会影响其后图层，图层变动会影响合成与 final，文字/预览变动会使 final 过期。只改 targets/hash 不是重新观察。
 
-命令不会覆盖已有文件，不会生成接受意见。真实看图之后保留 `stage`、`targets`，填写 `observer`、带时区的 `observed_at`、`decision=accept/revise/pending`，逐项 `checks={criterion:{passed,observation}}`，以及 `capture` 实际检查记录引用。观察写清楚具体发现；不是每项抄一句“精致、符合、通过”。
+`check --stage ...` 的通过表示记录完整且一致，不是整件作品完成。完整交付仍需 public run 验证模板、内嵌、浏览器和实际成品。`quality_verified` / `generation_provenance_verified` 不得当外部认证自填 true。
 
-final 还需 `views={left:图片引用,right:图片引用,mobile:图片引用}`；左右必须不是相同像素。原型绑定当前设计与原型；合成绑定实际图层和叠加结果；最终绑定当前卡面/互动预览。修改 targets 不是自动继承先前观察的许可。
+## 报告与边界
 
-`check --stage ...` 会依次检查截至该阶段的记录，返回 0 为记录一致、2 为待补、1 为拒绝。公开完成仍需 public run 的模板、资产和浏览器关口；独立检查命令不返回完整作品认证。
-
-## 完成状态
-
-`run-report.json` 的 `outputs` 是通过当前关口的可交付文件；`candidate_outputs` 是待验卡片。`complete` 才是所请求作品的完成状态，不能用 `ok`、文件数、art_status 或本地旧报告替代。`delivery-report.json` 绑定实际交付文件、输入和状态，不内嵌原始聊天或工具凭证。
+`outputs` 是通过当前关口的文件，`candidate_outputs` 是待验素材；只以本次 `complete` 判断请求是否完成。不能以文件数、art_status、ok 或旧报告替代。导出收据绑定实际文件，不携带原始聊天或凭证。技术记录、视觉观察、本人确认与公开授权始终分别记录。

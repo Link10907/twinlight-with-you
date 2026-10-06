@@ -36,9 +36,8 @@ def main(argv=None):
             if manifest.get("persona_digest") != args.persona_digest:
                 raise ValueError("Manifest belongs to another persona")
             _, layers = _manifest_assets(root, manifest)
-            result = layers["background"].copy()
-            for role in ("spirit", "subject", "effects"):
-                result = Image.alpha_composite(result, layers[role])
+            from twinlight_core.canvas_mapping import compose_layers
+            result = compose_layers(manifest, layers)
             if args.out.suffix.lower() != ".png":
                 raise ValueError("Composite must be a PNG")
             args.out.parent.mkdir(parents=True, exist_ok=True)

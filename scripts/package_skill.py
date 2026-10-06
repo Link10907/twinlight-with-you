@@ -86,6 +86,10 @@ def package(root: Path, out: Path, include_demo: bool = False) -> dict:
             'mode': 'fictional_demo' if include_demo else 'personal_use',
             'contains_fictional_history': include_demo,
             'contains_author_showcase': False,
+            'contains_style_reference_artwork': any(
+                p.relative_to(root).parts[:2] == ('assets', 'art-references') and
+                p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'} for p in files),
+            'style_reference_scope': 'Fictional wordless visual anchors only; never personal facts, likenesses, card layers or finished output for another user.',
             'contains_generated_fictional_art': any(
                 p.relative_to(root).parts[:2] == ('examples', 'generated-demo') and
                 p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'} for p in files),

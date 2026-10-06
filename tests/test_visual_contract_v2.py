@@ -5,19 +5,20 @@ from unittest.mock import patch
 from PIL import Image
 from visual_v2_fixtures import design,images,dossier,save,ref,ROOT,PERSONA
 from twinlight_core.visual_contract import *
-from twinlight_core.generation_plan import write_plan,register_image,check_capabilities,bind_review,bind_composite
-from twinlight_core.art_quality import check_evidence
+from twinlight_core.generation_plan import write_plan,register_image,check_capabilities,bind_review,bind_composite,repair_plan
+from twinlight_core.art_quality import check_evidence,snapshot
 
 CAPS={'version':'image-capabilities-1','image_generation':True,'reference_images':True,'native_transparency':True,
       'source':'SYNTHETIC capability fixture for unit tests only.','native_canvases':[[600,800],[300,400]]}
 
 class VisualContractTests(unittest.TestCase):
-    def test_four_distinct_versioned_styles(self):
-        styles=catalog();self.assertEqual(len(styles),4);self.assertEqual(len({s['visual_language'] for s in styles}),4)
+    def test_distinct_versioned_styles_include_collector_default(self):
+        styles=catalog();self.assertGreaterEqual(len(styles),5);self.assertEqual(len({s['visual_language'] for s in styles}),len(styles));self.assertEqual(default_style()['id'],DEFAULT_STYLE)
     def test_every_style_resolves(self):
         for s in catalog():self.assertEqual(style_for(s['id'],'1.0.0')['sha256'],s['sha256'])
-    def test_no_default_gender_or_subject_in_catalog(self):
-        self.assertIsNone(json.loads((STYLE_DIR/'catalog.json').read_text())['default_style'])
+    def test_default_style_does_not_select_gender_or_subject(self):
+        self.assertEqual(json.loads((STYLE_DIR/'catalog.json').read_text())['default_style'],DEFAULT_STYLE)
+        self.assertNotIn('subject',default_style());self.assertNotIn('gender',default_style())
     def test_reject_unknown_style(self):
         with self.assertRaises(VisualContractError):style_for('arbitrary-space-gold')
     def test_reject_style_version_drift(self):
@@ -88,6 +89,37 @@ class VisualContractTests(unittest.TestCase):
         with self.assertRaises(VisualContractError):validate_design(design(),'b'*64)
     def test_no_mutation_of_subject(self):
         d=design();before=copy.deepcopy(d);layer_prompt(d,'subject',(600,800));self.assertEqual(d,before)
+    def test_collector_uses_visible_hashed_style_examples_without_identity(self):
+        refs=style_references(default_style());self.assertTrue(refs)
+        for ref in refs:
+            self.assertEqual(ref['purpose'],'style_only');self.assertEqual(sha256(Path(ref['file'])),ref['sha256'])
+        d=design(style=DEFAULT_STYLE)
+        self.assertEqual(style_binding(d)['reference_sha256'],[r['sha256'] for r in refs])
+        self.assertEqual(d['reference_basis'],'text_only');self.assertFalse(d['reference_consent'])
+    def test_collector_all_drawing_roles_keep_quality_and_geometry(self):
+        d=design(style=DEFAULT_STYLE)
+        for role in ('prototype','background','subject','effects'):
+            p=layer_prompt(d,role,(600,800))
+            self.assertIn('典藏卡共同几何约束',p);self.assertIn('精绘',p);self.assertIn('style_only',p)
+            if role != 'prototype':self.assertIn('composition',p);self.assertIn('不得重新设计',p)
+    def test_native_layer_edits_preserve_canvas_and_assign_foreground_once(self):
+        d=design(style=DEFAULT_STYLE)
+        background=layer_prompt(d,'background',(600,800));subject=layer_prompt(d,'subject',(600,800))
+        effects=layer_prompt(d,'effects',(600,800))
+        for text in (background,subject,effects):
+            self.assertIn('唯一输入 Image1',text);self.assertIn('原生编辑',text)
+            self.assertIn('禁止自动紧边裁切',text);self.assertIn('右下角两片',text)
+            self.assertNotIn('黑色齐耳短发',text)
+        self.assertIn('同时删除',background);self.assertIn('不得重复保留 effects 前景',background)
+        self.assertIn('头顶到上缘',subject);self.assertIn('只保留原图中的主体',subject)
+        self.assertIn('严格保持每块元素的原位置',effects)
+    def test_collector_requires_quality_parity_reviews(self):
+        for stage in ('prototype','composite','final'):
+            checks=review_checks(design(style=DEFAULT_STYLE),stage,())
+            self.assertTrue({'material_finish','spatial_depth','reference_quality_parity'}.issubset(checks))
+    def test_collector_cannot_silently_use_compact_text_profile(self):
+        d=design(style=DEFAULT_STYLE);d['typography'].pop('layout')
+        with self.assertRaises(VisualContractError):validate_design(d)
 
 class PlanTests(unittest.TestCase):
     def setUp(self):
@@ -141,6 +173,29 @@ class PlanTests(unittest.TestCase):
     def test_record_missing_response_id_rejected(self):
         self.make();raw=self.root/'raw';raw.write_text('different')
         with self.assertRaises(VisualContractError):register_image(self.out/'generation-plan.json','prototype',self.src/'prototype.png',raw,tool='TEST',call_id='x',artifact_id='absent')
+    def test_default_style_reference_is_copied_and_passed_as_tool_argument(self):
+        save(self.d,design(style=DEFAULT_STYLE));p=self.make();j=p['jobs'][0]
+        self.assertTrue(j['reference_images']);self.assertEqual(len(j['reference_images']),len(j['referenced_image_paths']))
+        for ref,path in zip(j['reference_images'],j['referenced_image_paths']):
+            self.assertEqual(ref['purpose'],'style_only');self.assertEqual(sha256(Path(path)),ref['sha256'])
+            self.assertEqual((self.out/ref['file']).resolve(),Path(path));self.assertIn(ref['sha256'],j['reference_sha256'])
+        self.record()
+        evidence=json.loads((self.out/'art-evidence.json').read_text())
+        call=json.loads((self.out/evidence['images']['prototype']['call']['file']).read_text())
+        self.assertEqual(call['request']['reference_images'],j['reference_images'])
+    def test_missing_default_style_image_cannot_be_registered(self):
+        save(self.d,design(style=DEFAULT_STYLE));p=self.make()
+        (self.out/p['jobs'][0]['reference_images'][0]['file']).unlink()
+        with self.assertRaises(VisualContractError):self.record()
+    def test_removed_default_style_binding_cannot_be_registered(self):
+        save(self.d,design(style=DEFAULT_STYLE));p=self.make()
+        p['jobs'][0]['reference_images']=[];p['jobs'][0]['reference_sha256']=[];save(self.out/'generation-plan.json',p)
+        with self.assertRaises(VisualContractError):self.record()
+    def test_prompt_only_canvas_records_native_output_without_invented_size_support(self):
+        caps={**CAPS,'native_canvases':[],'canvas_selection':'prompt_only'}
+        p=write_plan(self.d,self.out,capabilities=caps)
+        self.assertTrue(p['ready_for_image_call']);self.assertEqual(p['canvas_policy'],'observe_native_prototype_then_freeze')
+        r=self.record();self.assertEqual(r['returned_canvas'],[600,800]);self.assertEqual(r['requested_canvas'],[1080,1440])
 
 class EvidenceV2Tests(unittest.TestCase):
     def setUp(self):
@@ -157,6 +212,78 @@ class EvidenceV2Tests(unittest.TestCase):
     def test_compile_layers_after_bound_prototype_review(self):
         p=write_plan(self.root/'art-direction.json',self.root,phase='layers',capabilities=CAPS)
         self.assertEqual([j['role'] for j in p['jobs']],['background','subject','effects']);self.assertTrue(p['prototype'])
+        for job in p['jobs']:
+            self.assertEqual(job['operation'],'image_edit');self.assertEqual(job['edit_base'],p['prototype'])
+            self.assertEqual(job['coordinate_policy'],'preserve_full_canvas')
+            self.assertEqual(job['reference_images'],[{**p['prototype'],'purpose':'composition'}])
+            self.assertEqual(job['referenced_image_paths'],[str((self.root/'prototype.png').resolve())])
+            self.assertTrue((self.root/job['prompt']['file']).read_text().startswith('EXPLICIT LAYER OWNERSHIP'))
+            self.assertIn('右下角两片',job['ownership_instruction'])
+    def test_native_layer_call_binds_current_prototype_edit_intent(self):
+        write_plan(self.root/'art-direction.json',self.root,phase='layers',capabilities=CAPS)
+        raw=self.root/'returned.txt';raw.write_text('SYNTHETIC returned edit artifact edit-one')
+        r=register_image(self.root/'generation-plan.json','subject',self.root/'subject.png',raw,tool='SYNTHETIC-TEST-ADAPTER',call_id='edit1',artifact_id='edit-one')
+        self.assertTrue(r['ok'],r)
+        e=json.loads((self.root/'art-evidence.json').read_text())
+        call=json.loads((self.root/e['images']['subject']['call']['file']).read_text())
+        self.assertEqual(call['request']['operation'],'image_edit')
+        self.assertEqual(call['request']['edit_base'],ref(self.root/'prototype.png'))
+        self.assertEqual(call['request']['coordinate_policy'],'preserve_full_canvas')
+        # The source/evidence validator must accept the compiled native-edit brief,
+        # not demand the earlier verbose prompt that redesigned the whole scene.
+        result=check_evidence(self.manifest,PERSONA,stage='composite')
+        self.assertTrue(result['ok'],result)
+    def test_layer_edit_rejects_extra_style_reference_before_registering_output(self):
+        p=write_plan(self.root/'art-direction.json',self.root,phase='layers',capabilities=CAPS)
+        job=p['jobs'][0];job['reference_images'].append({**p['prototype'],'purpose':'style_only'})
+        job['reference_sha256'].append(p['prototype']['sha256']);save(self.root/'generation-plan.json',p)
+        raw=self.root/'returned.txt';raw.write_text('SYNTHETIC extra reference')
+        with self.assertRaises(VisualContractError) as failure:
+            register_image(self.root/'generation-plan.json','background',self.root/'background.png',raw,tool='SYNTHETIC-TEST-ADAPTER',call_id='extra',artifact_id='reference')
+        self.assertEqual(failure.exception.code,'edit_reference')
+    def test_repair_preserves_identity_history_other_layers_and_valid_base_prompt(self):
+        plan=write_plan(self.root/'art-direction.json',self.root,phase='layers',capabilities=CAPS)
+        e=json.loads((self.root/'art-evidence.json').read_text())
+        e['attempts']=[{'role':'subject','key':'TEST-rejected-1','status':'rejected'},
+                       {'role':'subject','key':'TEST-rejected-2','status':'rejected'}]
+        save(self.root/'art-evidence.json',e);evidence_before=(self.root/'art-evidence.json').read_bytes()
+        instruction='Observed retained foreground: remove both right-corner leaves entirely; preserve the shirt, hands and paper crane at their original positions.'
+        result=repair_plan(self.root/'generation-plan.json','subject',instruction)
+        self.assertEqual(result['attempts_used'],2);self.assertEqual(result['attempts_remaining'],1)
+        current=json.loads((self.root/'generation-plan.json').read_text())
+        for key in ('persona_digest','design','style_binding','prototype','canvas'):
+            self.assertEqual(current[key],plan[key])
+        self.assertEqual((self.root/'art-evidence.json').read_bytes(),evidence_before)
+        self.assertEqual(current['jobs'][0],plan['jobs'][0]);self.assertEqual(current['jobs'][2],plan['jobs'][2])
+        subject=current['jobs'][1];text=(self.root/subject['prompt']['file']).read_text()
+        self.assertTrue(text.startswith('LATEST OBSERVED FAILURE'));self.assertIn(instruction,text)
+        self.assertIn(layer_prompt(design(),'subject',(600,800)),text)
+        self.assertNotEqual(subject['prompt']['sha256'],plan['jobs'][1]['prompt']['sha256'])
+        raw=self.root/'repair-return.txt';raw.write_text('SYNTHETIC third artifact repair-final')
+        r=register_image(self.root/'generation-plan.json','subject',self.root/'subject.png',raw,tool='SYNTHETIC-TEST-ADAPTER',call_id='repair3',artifact_id='repair-final')
+        self.assertTrue(r['ok'],r)
+        e=json.loads((self.root/'art-evidence.json').read_text())
+        call=json.loads((self.root/e['images']['subject']['call']['file']).read_text())
+        self.assertEqual(call['request']['repair_instruction'],instruction)
+        snapshot(self.manifest,PERSONA,stage='composite')
+        with self.assertRaises(VisualContractError) as failure:
+            repair_plan(self.root/'generation-plan.json','subject',instruction)
+        self.assertEqual(failure.exception.code,'retry_limit')
+    def test_repair_rejects_prompt_tampering_and_wrong_phase(self):
+        plan=write_plan(self.root/'art-direction.json',self.root,phase='layers',capabilities=CAPS)
+        prompt=self.root/plan['jobs'][1]['prompt']['file'];prompt.write_text('Unregistered prompt mutation')
+        with self.assertRaises(VisualContractError) as failure:
+            repair_plan(self.root/'generation-plan.json','subject','Remove only the retained foreground objects.')
+        self.assertEqual(failure.exception.code,'prompt_changed')
+        with self.assertRaises(VisualContractError) as failure:
+            repair_plan(self.root/'generation-plan.json','prototype','This must never turn a layer repair into a new prototype.')
+        self.assertEqual(failure.exception.code,'repair_phase')
+    def test_repair_requires_bounded_actual_feedback(self):
+        write_plan(self.root/'art-direction.json',self.root,phase='layers',capabilities=CAPS)
+        for bad in ('', 'fix', 'x'*2501, 'remove\x00foreground'):
+            with self.assertRaises(VisualContractError) as failure:
+                repair_plan(self.root/'generation-plan.json','subject',bad)
+            self.assertEqual(failure.exception.code,'repair_instruction')
     def test_composite_binding_rejects_lettered_front(self):
         with self.assertRaises(VisualContractError):bind_composite(self.manifest,self.root/'front.png')
     def test_composite_binding_matches_actual_pixels(self):

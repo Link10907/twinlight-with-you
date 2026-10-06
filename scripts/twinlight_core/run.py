@@ -30,7 +30,7 @@ def _sha(path: Path) -> str:
 def _resources() -> str:
     """Invalidate outputs when a renderer, contract, gate or its approval changes."""
     paths = []
-    for directory in (ROOT / "assets/template", ROOT / "assets/card-preview", ROOT / "assets/art-styles",
+    for directory in (ROOT / "assets/template", ROOT / "assets/card-preview", ROOT / "assets/art-styles", ROOT / "assets/art-references",
                       ROOT / "schemas", ROOT / "scripts/twinlight_core"):
         paths.extend(p for p in directory.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
     paths.extend(ROOT / "scripts" / name for name in
@@ -304,7 +304,10 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
         selected.append(html)
         if html["status"] == "files_ready":
             outputs["html"] = str(workspace / "site/index.html")
-            dynamic.append(_browser(state, workspace, "html_browser", workspace / "site/index.html", browser=browser, disabled=no_browser))
+            # In both mode the integrated page is the delivered page. Delay the
+            # base-page check until we know whether it is the available partial.
+            if mode == "html":
+                dynamic.append(_browser(state, workspace, "html_browser", workspace / "site/index.html", browser=browser, disabled=no_browser))
 
     native = None
     if mode != "html":
@@ -378,8 +381,43 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
                         write_plan(design_path, workspace / "card", phase="prototype")
                     return {"persona_digest": spec["persona_digest"], "generation_status": "brief_only"}
 
+                def brief_handoff_gate():
+                    """A cached spec cannot stand in for a missing image handoff.
+
+                    The host advances generation-plan.json from prototype to
+                    layers, so bind its design and current prompt files rather
+                    than freezing its first-phase bytes in the stage cache.
+                    """
+                    spec = load(workspace / "card/card-spec.json")
+                    if spec.get("visual_contract", {}).get("version") != "art-direction-2":
+                        return {"ok": True}
+                    from .visual_contract import validate_design
+                    card_dir = workspace / "card"
+                    errors = []
+                    try:
+                        design_path = card_dir / "art-direction.json"
+                        validate_design(load(design_path), state["persona_digest"])
+                        plan = load(card_dir / "generation-plan.json")
+                        if (plan.get("persona_digest") != state["persona_digest"]
+                                or plan.get("design", {}).get("sha256") != _sha(design_path)):
+                            errors.append({"code": "generation_plan_design_changed"})
+                        jobs = plan.get("jobs", [])
+                        if not jobs:
+                            errors.append({"code": "generation_plan_jobs_missing"})
+                        for job in jobs:
+                            refs = [("prompt", job.get("prompt", {}))] + [
+                                ("reference", ref) for ref in job.get("reference_images", [])]
+                            for kind, ref in refs:
+                                path = (card_dir / ref.get("file", "")).resolve()
+                                if (not path.is_relative_to(card_dir.resolve()) or not path.is_file()
+                                        or _sha(path) != ref.get("sha256")):
+                                    errors.append({"code": "generation_" + kind + "_missing_or_changed"})
+                    except (OSError, ValueError, KeyError, TypeError) as exc:
+                        errors.append({"code": "generation_handoff_missing_or_invalid", "message": str(exc)})
+                    return {"ok": not errors, "errors": errors}
+
                 brief = _stage(state, workspace, "card_brief", brief_dep, make_brief,
-                               ["card/card-spec.json", "card/manifest-template.json"])
+                               ["card/card-spec.json", "card/manifest-template.json"], validate=brief_handoff_gate)
                 if brief["status"] == "files_ready":
                     next_action = {"type": "generate_native_layers", "card_spec": str(workspace / "card/card-spec.json"),
                                    "generation_plan": str(workspace / "card/generation-plan.json"),
@@ -397,7 +435,7 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
                                "typography_font": typography, "image_capability": "unknown_required",
                                "read": [str(ROOT / "references/art-direction.md")],
                                "resume": resume + ["--art-prompt-file", str(workspace / "card/art-direction.json")],
-                               "constraints": ["Author art-direction-2: one versioned style, one explicit visual subject, one action and at most one main prop; keep identity keywords out of drawing prompts."],
+                               "constraints": ["Author art-direction-2 with the installed twinlight-collector style unless the user explicitly requested another style. Use its bundled style-only reference; choose one current-person visual subject, one action and at most one main prop. Keep identity keywords out of drawing prompts."],
                                "schema": str(ROOT / "schemas/art-direction-v2.schema.json"),
                                "style_catalog": str(ROOT / "assets/art-styles/catalog.json")}
             state["stages"]["card"] = {"status": "needs_card", "attempts": 0,
@@ -419,6 +457,9 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
             outputs["html_with_card"] = str(workspace / "site-with-card/index.html")
             dynamic.append(_browser(state, workspace, "integration_browser", workspace / "site-with-card/index.html",
                                     browser=browser, disabled=no_browser))
+    if mode == "both" and "html" in outputs and "html_with_card" not in outputs:
+        dynamic.append(_browser(state, workspace, "html_browser", workspace / "site/index.html",
+                                browser=browser, disabled=no_browser))
     # Browser/image tools run after builds. Recheck the final files before
     # reporting links, so a mid-check rewrite cannot inherit an earlier gate.
     owners = {"html": "html", "card_preview": "card", "card_front": "card", "card_pack": "card",

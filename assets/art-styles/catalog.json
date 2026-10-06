@@ -2,6 +2,14 @@
   "version": "style-catalog-1",
   "styles": [
     {
+      "id": "twinlight-collector",
+      "file": "twinlight-collector.json"
+    },
+    {
+      "id": "forest-fantasy",
+      "file": "forest-fantasy.json"
+    },
+    {
       "id": "real-life-cinematic",
       "file": "real-life-cinematic.json"
     },
@@ -18,6 +26,6 @@
       "file": "paper-craft-story.json"
     }
   ],
-  "default_style": null,
-  "selection_policy": "Explicit current preference first; otherwise select one distinct style and record a visual rationale. Never derive a default subject, sex, animal or occupation from a style."
+  "default_style": "twinlight-collector",
+  "selection_policy": "Use the Twinlight collector visual family unless the current user explicitly requests an alternative style. The style never determines subject, gender, species or occupation."
 }

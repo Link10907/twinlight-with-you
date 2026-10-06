@@ -4,6 +4,7 @@ import math
 from pathlib import Path
 from PIL import Image, ImageChops, ImageStat
 from .common import check, local_asset, load, schema_check
+from .canvas_mapping import logical_canvas,render_layers,rounding_diagnostic
 
 
 def validate_composition(composition: dict, persona_digest: str, canvas: tuple[int, int]) -> None:
@@ -91,15 +92,13 @@ def validate_layers(manifest_path: Path, expected_persona: str | None = None) ->
             check(im.format in ("PNG","JPEG","WEBP"),"Layers must be raster PNG/JPEG/WebP, not SVG/code")
             check(im.width*im.height<=16_000_000,"Layer dimensions too large")
             images[name]=im.convert("RGBA")
-    sizes={im.size for im in images.values()}
-    check(len(sizes)==1,"All layers must use exactly the same canvas/coordinates")
-    w,h=next(iter(sizes))
+    w,h=logical_canvas(manifest,images)
     check(w>=256 and h>=256 and abs(w/h-.75)<.01,"Expected a 3:4 portrait canvas, at least 256 pixels")
     if "composition" in manifest:
         validate_composition(manifest["composition"], manifest["persona_digest"], (w,h))
     checks={}
     for name,im in images.items():
-        hist=im.getchannel("A").histogram(); total=w*h
+        hist=im.getchannel("A").histogram(); total=im.width*im.height
         transparent=sum(hist[:16])/total; occupied=sum(hist[16:])/total
         if name in ("subject","effects","text"):
             check(transparent>.01,f"{name}: no genuine transparent region (painted checkerboards are not alpha)")
@@ -108,7 +107,9 @@ def validate_layers(manifest_path: Path, expected_persona: str | None = None) ->
         if name=="lineart":
             grey=im.convert("L"); lo,hi=grey.getextrema()
             check(lo<128 and hi>200,"Lineart must contain dark registered contours on white")
-        checks[name]={"transparent_fraction":round(transparent,4),"occupied_fraction":round(occupied,4)}
+        checks[name]={"transparent_fraction":round(transparent,4),"occupied_fraction":round(occupied,4),
+                      "native_canvas":list(im.size)}
+        if im.size!=(w,h):checks[name]['canvas_mapping']=rounding_diagnostic(im.size,(w,h))
     depths=manifest["depths"]
     check(depths["background"]<0<depths["subject"]<depths["effects"],"Keep negative background depth and separated positive subject/effects depths")
     # Mechanical checks cannot prove visual quality, likeness, or personal meaning.
@@ -121,7 +122,8 @@ def validate_layers(manifest_path: Path, expected_persona: str | None = None) ->
                                         "face or main symbol remains readable; text stays aligned",
                                         "real figure likeness if authorized"]}
     if "composition" in manifest:
-        report["composition"] = _check_registered_composition(manifest["composition"], images)
+        report["composition"] = _check_registered_composition(manifest["composition"], render_layers(manifest,images))
+    if 'canvas_mapping' in manifest:report['canvas_mapping']=manifest['canvas_mapping']
     return report
 
 

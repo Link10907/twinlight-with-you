@@ -77,7 +77,11 @@ def deliver(core, input_path: Path, workspace: Path, **kwargs) -> dict:
         action["read"] = [str(Path(__file__).resolve().parents[2] / "references/quality-workflow.md")]
         action["schema"] = str(Path(__file__).resolve().parents[2] / "schemas/art-direction-v2.schema.json")
         action["style_catalog"] = str(Path(__file__).resolve().parents[2] / "assets/art-styles/catalog.json")
-        action["steps"] = ["Select one versioned art style; describe one concrete human/animal/object, its appearance and one action. Never use identity keywords as drawing input.",
+        from .visual_contract import default_style, style_references
+        default = default_style()
+        action["default_style"] = {"id": default["id"], "version": default["version"]}
+        action["style_reference_images"] = style_references(default)
+        action["steps"] = ["Keep the installed twinlight-collector style unless this user explicitly requested a different art style. Inspect its bundled style_only images; use their visual finish, never their subject or identity. Describe one concrete human/animal/object and one action.",
                            "Check actual image-generation, reference-image and native-alpha capabilities.",
                            "Generate and inspect a wordless prototype; do not generate layers before prototype review passes.",
                            "Create native independent layers, inspect the unlettered composite, then inspect final typography and foil.",

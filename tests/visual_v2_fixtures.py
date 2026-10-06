@@ -6,7 +6,7 @@ from PIL import Image,ImageDraw,ImageOps,ImageChops,ImageFilter
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'scripts'))
 from twinlight_core.art_quality import sha256,snapshot,REVIEW_CHECKS
-from twinlight_core.visual_contract import visual_brief,style_binding,review_checks
+from twinlight_core.visual_contract import visual_brief,style_binding,review_checks,default_style,DEFAULT_STYLE
 PERSONA='a'*64
 
 def save(p,d):
@@ -37,7 +37,7 @@ def design(kind='human',style='eastern-fantasy-scroll'):
             'basis':'Synthetic preferences for contract tests only, not personal data.','rejected_asset_sha256':[]},
             'selection_reason':'Only a synthetic subject for testing four independently versioned drawing templates.',
             'reference_basis':'text_only','references':[],'reference_consent':False,
-            'typography':{'text_color':'#FFFFFF','accent_color':'#CCDDEE','scrim_color':'#112233','scrim_opacity':180,'frame':'single','footer_top':.75}}
+            'typography':dict(default_style()['typography_default']) if style == DEFAULT_STYLE else {'text_color':'#FFFFFF','accent_color':'#CCDDEE','scrim_color':'#112233','scrim_opacity':180,'frame':'single','footer_top':.75}}
 
 def images(root,size=(600,800)):
     root=Path(root);root.mkdir(parents=True,exist_ok=True);w,h=size

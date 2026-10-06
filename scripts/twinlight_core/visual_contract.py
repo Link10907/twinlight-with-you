@@ -15,6 +15,7 @@ from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[2]
 STYLE_DIR = ROOT / 'assets/art-styles'
+DEFAULT_STYLE = 'twinlight-collector'
 SCHEMA = ROOT / 'schemas/art-direction-v2.schema.json'
 VERSION = 'art-direction-2'
 ROLES = ('prototype', 'background', 'subject', 'effects', 'spirit')
@@ -60,10 +61,12 @@ def _json(path: Path) -> Any:
 
 def catalog() -> list[dict]:
     cat = _json(STYLE_DIR / 'catalog.json')
-    if cat.get('version') != 'style-catalog-1' or len(cat.get('styles', [])) != 4:
-        raise VisualContractError('style_catalog', 'Exactly four versioned styles must be registered')
+    if cat.get('version') != 'style-catalog-1' or not cat.get('styles'):
+        raise VisualContractError('style_catalog', 'Register at least one versioned style')
     ids = [s['id'] for s in cat['styles']]
-    if len(set(ids)) != 4: raise VisualContractError('style_catalog', 'Style identifiers must be unique')
+    if len(set(ids)) != len(ids): raise VisualContractError('style_catalog', 'Style identifiers must be unique')
+    if cat.get('default_style') not in ids:
+        raise VisualContractError('style_catalog', 'The default style must be installed')
     result = []
     for entry in cat['styles']:
         id = entry['id']
@@ -85,13 +88,45 @@ def catalog() -> list[dict]:
     return result
 
 
-def style_for(id: str, version: str | None = None) -> dict:
+def style_for(id: str | None = None, version: str | None = None) -> dict:
+    if id is None:
+        id = _json(STYLE_DIR / 'catalog.json')['default_style']
     for style in catalog():
         if style['id'] == id:
             if version is not None and style['version'] != version:
                 raise VisualContractError('style_version', 'Selected style version is not installed; do not silently change it')
             return style
     raise VisualContractError('style_unknown', 'Select an installed style_id, not a free-form style label')
+
+
+def default_style() -> dict:
+    """One installed visual family; never a default person or animal."""
+    return style_for()
+
+
+def style_references(style: dict) -> list[dict]:
+    """Read privacy-scoped, byte-bound examples. These are never output layers."""
+    if not style.get('reference_manifest'):
+        return []
+    manifest_path = (ROOT / style['reference_manifest']).resolve()
+    if not manifest_path.is_relative_to((ROOT / 'assets/art-references').resolve()):
+        raise VisualContractError('style_reference_path', 'Style references must stay in the bundled reference library')
+    manifest = _json(manifest_path)
+    if (manifest.get('version') != 'art-reference-1' or manifest.get('style_id') != style['id']
+            or manifest.get('style_version') != style['version'] or manifest.get('usage') != 'style_only'
+            or manifest.get('no_persona') is not True or manifest.get('no_subject_copy') is not True):
+        raise VisualContractError('style_reference_scope', 'The reference must be explicitly fictional, style-only and not a subject-copy instruction')
+    refs = manifest.get('references')
+    if not isinstance(refs, list) or not refs or len(refs) > 3:
+        raise VisualContractError('style_reference_missing', 'The selected style needs its bundled visible reference images')
+    result = []
+    for ref in refs:
+        path = (manifest_path.parent / ref['file']).resolve()
+        if (not path.is_relative_to(manifest_path.parent) or not path.is_file()
+                or ref.get('purpose') != 'style_only' or sha256(path) != ref.get('sha256')):
+            raise VisualContractError('style_reference_hash', 'A bundled style reference is missing or changed')
+        result.append({'file': str(path), 'sha256': ref['sha256'], 'purpose': 'style_only'})
+    return result
 
 
 def _visible(value: str, field: str) -> None:
@@ -109,7 +144,9 @@ def validate_design(design: dict, persona: str | None = None) -> dict:
         raise VisualContractError('visual_schema', path + ': ' + errors[0].message[:250])
     if persona is not None and design['persona_digest'] != persona:
         raise VisualContractError('wrong_persona', 'This visual subject belongs to a different person')
-    style_for(design['style']['id'], design['style']['version'])
+    style_references(style_for(design['style']['id'], design['style']['version']))
+    if design['style']['id'] == DEFAULT_STYLE and design['typography'].get('layout') != 'collector':
+        raise VisualContractError('collector_typography', 'Use the collector typography profile from the selected style; do not silently fall back to compact lettering')
     subject = design['subject']
     if subject['kind'] == 'human' and subject['species'].casefold() not in ('human', '人', '人类', '人類'):
         raise VisualContractError('subject_species', 'Human subject must explicitly use species=人类 or human')
@@ -179,6 +216,10 @@ def visual_brief(design: dict, role: str = 'prototype') -> str:
     lines = ['固定画风：' + style['name'] + '。' + style['visual_language'],
              '材质与绘画光感：' + style['materials_and_light'], '固定配色语言：' + style['palette'],
              '本次光线：' + scene['lighting'], '共同构图与文字留白：' + scene['composition']]
+    if style.get('geometry'):
+        lines.append('典藏卡共同几何约束：' + json.dumps(style['geometry'], ensure_ascii=False))
+    if style.get('reference_manifest') and role == 'prototype':
+        lines.append('工具同时提供的 style_only 图像是必须查看的画风与完成度基准：只借鉴绘制品质、材质、光照、深度和主次关系。不得复制参考人物、动物、身份、场景、道具或任何参考像素作为本次输出。')
     if role in ('prototype','subject'):
         lines.append(subject_prompt(design))
     if role in ('prototype','background'):
@@ -195,18 +236,27 @@ def visual_brief(design: dict, role: str = 'prototype') -> str:
 
 
 def layer_prompt(design: dict, role: str, canvas: tuple[int, int], composition: dict | None = None) -> str:
+    validate_design(design)
     w,h = canvas
     if type(w) is not int or type(h) is not int or min(w,h) < 256 or w*h>16_000_000 or abs(w/h-.75)>=.01:
         raise VisualContractError('canvas', 'Use one actual native 3:4 canvas, without cropping or resampling')
     tasks = {
       'prototype':'只生成一张无字原型插画，不生成网页、导航、面板、屏幕截图或卡片展示场景。一个主体、一个清楚动作，至多一个主要道具。',
-      'background':'只生成完整不透明空场景，补齐原型中被遮挡的环境；不画任何主体、替身、残影、面孔或手持物。',
-      'subject':'只生成参考原型中的完整主体及其接触道具，不画背景或独立前景。保持原型的朝向、大小、位置、姿态和光照。',
-      'effects':'只生成指定的少量近景元素，避开主要焦点和文字区；不画主体、手持物、场景或第二张海报。',
+      'background':'原生编辑 Image1：删除原图中的主体及其接触道具，同时删除下文指定归属 effects 的全部独立近景元素。保留原有中远景位置、透视与光照，只在删除区域补绘合理连续的环境。输出完整不透明空场景；不得留下主体、替身、残影、手持物，也不得重复保留 effects 前景。',
+      'subject':'原生编辑 Image1：只保留原图中的主体及其接触道具，保持所有现有可见细节的原位置、原尺度、原朝向和原光照。移除全部中远景和独立近景，其他区域改为真实 alpha 透明。若指定前景遮住少量衣料，只在该遮挡位置补全同一衣料。不要重新生成角色立绘、缩放至填满画布或把人物居中；头顶到上缘、道具到左右边缘的距离必须与原图相同。',
+      'effects':'原生编辑 Image1：仅保留下文指定的独立近景元素，严格保持每块元素的原位置、原大小、原景深与原遮挡轮廓，其余整个画布改为真实 alpha 透明。不得保留主体、接触道具或中远景，也不得把前景重新摆放成装饰边框或覆盖满屏。',
       'spirit':'本简洁构图不设置第二主体；此任务不调用图像模型，由程序创建同尺寸全透明层。'}
     if role not in tasks: raise VisualContractError('layer_role', 'Unsupported image role')
-    lines = [visual_brief(design, role), '本次任务：' + tasks[role], f'全画布 {w}×{h}，竖版 3:4；不得自动裁切、缩放或重摆主体。']
-    if role != 'prototype': lines.append('使用同一张已审查原型作为真实图像参考，沿用共同坐标；不是只在文字里提及参考图。')
+    if role == 'prototype':
+        lines = [visual_brief(design, role), '本次任务：' + tasks[role]]
+    else:
+        style = style_for(design['style']['id'], design['style']['version'])
+        lines = ['唯一输入 Image1 是当前已审查原型，也是本次 composition 编辑画布与唯一坐标权威。执行图像工具原生编辑，不是参考图再创作；没有其他 style_only 图，也不要追加品牌示范图或用户照片。',
+                 '本次任务：' + tasks[role],
+                 '沿用 Image1 已审查通过的' + style['name'] + '精绘风格、表面材质与光照，不重新设计人物、场景或配色。',
+                 '典藏卡共同几何约束以 Image1 的实际画布为准：保留完整画幅、视野、位置、大小、透视和透明空白，禁止自动紧边裁切、缩放放大、居中、重新取景或补出画布外的身体；不得重新设计或换姿势。',
+                 '指定 effects 独立前景（本层只按上述保留或移除任务处理）：' + '；'.join(design['scene']['foreground'])]
+    lines.append(f'全画布 {w}×{h}，竖版 3:4；必须与 Image1 相同原生像素尺寸，不能靠之后裁切、缩放或平移修正。' if role != 'prototype' else f'全画布 {w}×{h}，竖版 3:4；不得自动裁切、缩放或重摆主体。')
     if role in ('subject','effects'): lines.append('启用工具真实 alpha 透明输出；主体外完全透明，不画棋盘、纯色幕布或假透明。')
     if role in ('prototype','background'): lines.append('输出完全不透明的场景 PNG。')
     if composition:
@@ -219,7 +269,11 @@ def layer_prompt(design: dict, role: str, canvas: tuple[int, int], composition: 
 def style_binding(design: dict) -> dict:
     validate_design(design)
     s = style_for(design['style']['id'], design['style']['version'])
-    return {'id':s['id'],'version':s['version'],'sha256':s['sha256']}
+    result = {'id':s['id'],'version':s['version'],'sha256':s['sha256']}
+    refs = style_references(s)
+    if refs:
+        result['reference_sha256'] = [r['sha256'] for r in refs]
+    return result
 
 
 def review_checks(design: dict, stage: str, base: tuple[str,...]) -> tuple[str,...]:
@@ -227,4 +281,5 @@ def review_checks(design: dict, stage: str, base: tuple[str,...]) -> tuple[str,.
     extras = {'prototype':('concrete_subject','style_fidelity','simple_composition'),
               'composite':('style_fidelity','single_subject'),
               'final':('style_fidelity','fixed_text','touch_keyboard_reduced_motion')}
-    return tuple(dict.fromkeys((*base,*extras.get(stage,()))))
+    collector = ('visual_hierarchy','material_finish','spatial_depth','reference_quality_parity') if design['style']['id'] == DEFAULT_STYLE and stage in ('prototype','composite','final') else ()
+    return tuple(dict.fromkeys((*base,*extras.get(stage,()),*collector)))

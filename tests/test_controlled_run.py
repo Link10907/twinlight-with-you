@@ -61,6 +61,53 @@ class ControlledRun(unittest.TestCase):
         self.assertNotIn("card", result["stages"])
         self.assertFalse((self.ws / "card").exists())
 
+    def test_integrated_delivery_checks_only_the_two_delivered_html_files(self):
+        """An irrelevant base-page check cannot block the final native card."""
+        manifest = self.art()
+        checked = []
+
+        def browser(state, workspace, key, html, **kwargs):
+            checked.append(key)
+            if key == "html_browser":
+                raise AssertionError("Undelivered base HTML must not get a duplicate browser run")
+            return {"status": "passed", "checks": [{"passed": True}]}
+
+        with mock.patch.object(controlled, "_browser", side_effect=browser):
+            result = controlled._run_mechanical(self.input, self.ws, layers=manifest)
+        self.assertEqual(checked, ["card_browser", "integration_browser"])
+        self.assertEqual(result["status"], "files_ready")
+        self.assertTrue(result["dynamic_verified"])
+
+    def test_missing_v2_handoff_is_rebuilt_when_spec_cache_is_intact(self):
+        from visual_v2_fixtures import design
+        direction = design()
+        direction["persona_digest"] = lite.persona_digest(self.data)
+        brief = self.folder / "art-direction.json"
+        save(brief, direction)
+        first = self.execute(art_prompt_file=brief)
+        self.assertEqual(first["stages"]["card_brief"]["status"], "files_ready")
+        plan = self.ws / "card/generation-plan.json"
+        self.assertTrue(plan.is_file())
+        plan.unlink()
+        resumed = self.execute(art_prompt_file=brief)
+        self.assertFalse(resumed["stages"]["card_brief"]["reused"])
+        self.assertTrue(plan.is_file())
+        self.assertTrue(resumed["stages"]["card_brief"]["verification"]["ok"])
+
+    def test_changed_v2_generation_prompt_is_not_silently_reused(self):
+        from visual_v2_fixtures import design
+        direction = design()
+        direction["persona_digest"] = lite.persona_digest(self.data)
+        brief = self.folder / "art-direction.json"
+        save(brief, direction)
+        self.execute(art_prompt_file=brief)
+        prompt = self.ws / "card/prompts/prototype.txt"
+        expected = prompt.read_bytes()
+        prompt.write_text("unbound replacement drawing instructions")
+        resumed = self.execute(art_prompt_file=brief)
+        self.assertFalse(resumed["stages"]["card_brief"]["reused"])
+        self.assertEqual(prompt.read_bytes(), expected)
+
     def test_card_only_accepts_independent_card_content_without_galaxy(self):
         card = {key: self.data[key] for key in ("name", "summarizer", "card")}
         card["twinlight"] = "card-1"

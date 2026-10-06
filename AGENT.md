@@ -1,51 +1,56 @@
-# 一次请求编排 · V2
+# 一次请求执行入口
 
-宿主负责内容理解、真实图像工具、实际看图与展示。程序负责输入冻结、版本化提示词、原图登记、构建、字节比对、浏览器与导出。程序不生图、不看懂人物、不授予公开许可。
+宿主做三件事：理解当前资料、调用真实图像工具、实际看成品。程序完成模板组装、提示编译、原图记录、排字、验证与导出。不要把整个手册发送给图像模型。
 
-以下 `PY` 是可用 Python 3.10+；`ROOT` 是本次完整项目，所有命令由宿主执行。默认是一个人的一个私人 workspace；不要复制示例人格。
+下文 `PY` 指当前可用 Python 3.10+，`ROOT` 指完整 skill 目录，`RUN` / `CARD` 指当前人的私人输出目录。命令由宿主执行。沿同一工作区的 `next_action.resume` 续跑，已成功模块不重做。
 
-## 1. 开始
+## 1. 固定资源和当前内容
 
-按 `PROMPT.md` 检查完整资源与模板锁。读取 `references/lite-content.md`，从当前授权资料写 `person.json`；美术不写入此文件。资料充分时直接生成私人未确认草稿，不编造经历或肖像。明确只要卡片可用 card-1。
+运行 `PY ROOT/scripts/bootstrap.py --root ROOT`。只有 URL 时先取得 bootstrap，再用 `--out` 获取同一 commit 的完整资源。下载失败先用当前可用的完整离线包或已有完整仓库重查；缺模板、品牌参考或执行依赖就先修资源。无法取得完整资源时保留资料和真实已有成品，不手写一个“候选 HTML”绕过模板，也不以代码绘画替代图像工具。完整基准见 [V10 品质标准](references/quality-workflow.md)。
+
+读取 `references/lite-content.md`，仅从当前授权资料写 `person.json`。资料足够就做私人草稿；不为了填满页面补经历。记录实际总结者，未知型号留空。明确要求来源追溯的材料使用 `references/workflow.md`，不转换成 Lite 绕过来源审核。
 
 ```sh
 PY ROOT/scripts/twinlight.py run person.json --workspace RUN --mode both
 ```
 
-未生成卡片时基础 HTML 可以先完成，但不是 both 的最终交付。保存 public 返回的真实路径、persona_digest、字体状态和 `next_action.resume`。输入冻结后不在相同 workspace 改人物、文案或模式。
+保存真实 `persona_digest`、字体状态、输出路径与 `next_action`。同一工作区内不改已冻结的文案、主人或模式。基础 `site/index.html` 可以先成功，它只是中间产物；both 的目标仍是已接入卡片的页面。
 
-## 2. 独立完成美术
+## 2. 用品牌参考完成当前人的卡
 
-`needs_card` / `needs_art_direction`：按 `CARD.md` 写 `art-direction-2`，选择明确的 style.id/version，并把一个具体形象说明编译成真正的 per-layer prompt。保留当前人的偏好与否决项，不固化作者形象。
+按 [CARD.md](CARD.md) 执行。没有明确换画风请求时，使用 `twinlight-collector` 和其随包 `style_only` 参考；不随机从四个无关美术方向中挑一个。画面题材由当前资料决定，参考只提供绘画完成度和视觉语言。
 
-`needs_art_evidence`：执行缺失的真实图片工具任务或登记已有真实返回，不能手写不存在的调用。`needs_art_review`：打开当前指定原型/合成/最终图，做具名观察；pending 模板不能自动批准。`art_rejected`：只重生失败层，保留合格原图。每层最多三次返回尝试，不能换目录假装重新获得次数。
+| public 状态 | 下一步 |
+|---|---|
+| `needs_card` / `needs_art_direction` | 写一个具体画面，编译 `art-direction-2`；不要改人物文案 |
+| `needs_art_evidence` | 执行缺失的真实图像任务，登记实际返回 |
+| `needs_art_review` | 打开指定的当前图像或预览，填写实际观察 |
+| `art_rejected` | 按具体缺陷修失败原型或失败层，保留其余合格素材 |
+| `dynamic_unverified` | 检查浏览器和 renderer；文件存在不等于动态通过 |
+| `partial_success` / `failed` | 处理报告指出的模块，继续其他独立待办 |
 
-所有当前文件、工具返回、文字和评审属于同一 persona。由 `visual_plan.py` 编译、登记和绑定记录；旧图复用必须明确同主人与范围。完成合成后用原排字脚本输出固定文字和同像素轮廓。
+原型先通过审美关，再投入分层；分层只参考当前原型作图像工具原生编辑，保留画布与尺度，不再同时传入其他人物的品牌示范图重新创作主角。主角简单是指视觉主线清楚，不是把画面改成平面图标、稀疏剪纸或廉价模型。每角色最多三次真实返回，失败记录保留；达到上限仍不合格，就准确报告未完成，不用坏图占位凑成功。
 
-## 3. 自动续跑接入
+## 3. 同一次运行接入成品卡
 
 ```sh
 PY ROOT/scripts/twinlight.py run person.json --workspace RUN --mode both --layers CARD/layers.json
 ```
 
-优先使用实际 `next_action.resume`，保留输入、模式、字体、brief 和浏览器参数。第一次会生成最终候选 `RUN/card/front.png` / `preview.html`；最终美术 review 必须绑定这两个真实文件。观察并绑定后续跑；不要把另一份预览的哈希改掉继承旧意见。
+优先执行报告实际给出的 `next_action.resume`，保留字体、brief、浏览器参数。首次续跑会写当前 `RUN/card/front.png` 与 `preview.html` 候选；按 CARD 的 final review 实际检查这两个文件并绑定，再续跑。不能拿另一预览的观察换哈希继承批准。
 
-public run 检查版本化形象、原生层、三阶段观察、固定模板、卡片浏览器和 HTML 浏览器，并重新比较最终 HTML 中六层原始字节与所选素材，含两份 persona 与平面预览。任何一处不一致，都不能选择旧基础 HTML 凑成品。
+public run 验证原生层、当前美术观察、模板来源、真实卡片和整页浏览器，再比较最终 HTML 内嵌的六层字节、平面预览与 persona。both 的主文件必须来自 `html_with_card`。禁止手工替换旧 HTML 的 data URI 或更新模板锁来绕过差异。
 
-`partial_success` / `failed`：按失败模块修复，继续独立待办；不要重画成功卡或丢失成功 HTML。`dynamic_unverified`：文件可保留，但动态未验不能完整交付；CSS 降级不能证明镭射通过。
+除脚本检查外，实际看最终页面的首页、进入行星、双星系交融、提问、揭卡和返回。揭卡要看到同一张通过审美的卡，不能只证明页面能加载。视觉观察要点见 `references/quality-workflow.md`。
 
-## 4. 交付同一份实际成品
+## 4. 导出并展示同一份文件
 
 ```sh
 PY ROOT/scripts/deliver_artifacts.py --workspace RUN --out DELIVERY
 ```
 
-导出器只接收当前 complete=true 的 public 报告，逐个核对输出哈希；both 模式主文件必须来自 `html_with_card`。导出目录必须独立且空。交付 HTML、front、独立 preview、便携卡包，必要限制保持简短；内部来源与字体文件不打包给用户。
+导出到独立空目录，只接受当前 `complete=true` 的 public 报告。给用户真实 HTML、正面卡图、独立互动预览和便携卡包；打开实际成品并附真实预览，不生一张网页效果图替代运行结果。
 
-未完成时直接保留 public outputs / 标注清楚的 candidate_outputs，明确缺口，不使用 complete 导出器伪装成功。
+完成消息区分：文件完成、本地动态验证、聊天内预览。`host-preview.json` 只记本次对相同文件的实际观察，未知为 `not_tested`；宿主不能执行附件 HTML 时，交付可在现代浏览器打开的单文件。具体格式见 `references/delivery-v2.md`。
 
-## 5. 预览与权限
-
-分别报告文件完成、本地浏览器验证、聊天内预览。`host-preview.json` 只记录本次宿主对相同文件的实际观察与 hash；默认 not_tested，不凭浏览器截图、账号品牌、下载成功推定 available。无法内嵌执行时交付本地可开的单文件及真实静态预览，不能再生成一个伪网页图片替代。
-
-私人草稿、本人文本确认、宿主美术观察、来源认证是不同状态。保持 draft=true / share_allowed=false；发布必须另外获得明确授权。不得为解决预览问题把个人内容自动部署到公共仓库。
+默认 `draft=true / share_allowed=false`。内容核对、美术观察和公开授权是不同状态；不自动 push、部署、公开个人资料。未完成结果可明确交付成功模块和真实候选预览，不能使用 complete 导出器伪装完成。

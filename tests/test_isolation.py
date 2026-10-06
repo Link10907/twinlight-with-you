@@ -68,6 +68,9 @@ class Isolation(unittest.TestCase):
             self.assertFalse(manifest['contains_fictional_history'])
             self.assertFalse(manifest['contains_author_showcase'])
             self.assertFalse(manifest['contains_generated_fictional_art'])
+            self.assertTrue(manifest['contains_style_reference_artwork'])
+            self.assertIn('twinlight-with-you/assets/art-references/twinlight-collector/prototype.png', names)
+            self.assertFalse(any('/examples/generated-demo/' in n for n in names))
             for name, expected in manifest['files_sha256'].items():
                 self.assertEqual(hashlib.sha256(archive.read('twinlight-with-you/' + name)).hexdigest(), expected)
 

@@ -12,6 +12,7 @@ import re
 from html.parser import HTMLParser
 from pathlib import Path
 from PIL import Image, ImageChops, ImageFilter, ImageOps
+from .canvas_mapping import logical_canvas, compose_layers
 
 ROLES=('background','spirit','subject','effects','text','lineart')
 MAX_HTML=128*1024*1024
@@ -88,19 +89,21 @@ def _source_assets(manifest_path):
         require(path not in resolved,'duplicate_layer_file','One file cannot fill multiple layer roles');resolved.add(path)
         require(path.stat().st_size<=MAX_ASSET,'asset_size','Native asset exceeds size limit')
         assets[role]=path.read_bytes();images[role]=_image(assets[role])
-    sizes={im.size for im in images.values()}
-    require(len(sizes)==1,'canvas_mismatch','Empty 4x4 substitutes or mismatched layers are not a native card')
-    w,h=next(iter(sizes))
+    try:
+        w,h=logical_canvas(manifest,images)
+    except ValueError as exc:
+        raise EmbeddingError('canvas_mismatch',str(exc)) from exc
     require(min(w,h)>=256 and abs(w/h-.75)<.01,'canvas_ratio','All original layers must share one native 3:4 canvas')
     require(images['background'].getchannel('A').getextrema()==(255,255),'background_alpha','Background must be fully opaque')
     for role in ('subject','effects','text'):
-        hist=images[role].getchannel('A').histogram();total=w*h
+        hist=images[role].getchannel('A').histogram();total=images[role].width*images[role].height
         require(sum(hist[:16])/total>.01 and sum(hist[16:])/total>.0005,
                 'empty_or_flat_layer',role+' needs visible content and genuine transparent regions')
     alpha=images['subject'].getchannel('A')
     edge=ImageChops.difference(alpha.filter(ImageFilter.MaxFilter(5)),alpha.filter(ImageFilter.MinFilter(5)))
     registered=ImageOps.invert(edge).convert('RGBA')
-    require(images['lineart'].tobytes()==registered.tobytes(),'unregistered_lineart','Lineart must follow the final subject alpha at the same pixels')
+    require(images['lineart'].size==registered.size and images['lineart'].tobytes()==registered.tobytes(),
+            'unregistered_lineart','Lineart must follow the final subject alpha at the same native pixels')
     d=manifest.get('depths',{})
     require(all(type(d.get(k)) in (int,float) for k in ('background','subject','effects','text')),
             'layer_depths','Missing layer depths')
@@ -139,8 +142,7 @@ def audit_embedding(html_path: Path, manifest_path: Path, expected_persona: str)
             fingerprints[role]=actual
         match=re.findall(r'^\s*const\s+V9_CARD_IMAGE\s*=\s*([\'\"])(.*?)\1\s*;',scripts,re.M)
         require(len(match)==1,'flat_preview_missing','Expected the embedded flattened preview of the same native card')
-        flat=_data_uri(match[0][1]);image=images['background'].copy()
-        for role in ('spirit','subject','effects','text'):image=Image.alpha_composite(image,images[role])
+        flat=_data_uri(match[0][1]);image=compose_layers(manifest,images,include_text=True)
         buffer=io.BytesIO();image.convert('RGB').save(buffer,format='JPEG',quality=92)
         require(hashlib.sha256(flat).digest()==hashlib.sha256(buffer.getvalue()).digest(),
                 'flat_preview_mismatch','Flattened preview is not this exact assembled native card')

@@ -9,6 +9,7 @@ import importlib.metadata
 import importlib.util
 import io
 import json
+import os
 import re
 import stat
 import sys
@@ -55,9 +56,13 @@ REQUIRED += (
     'assets/art-styles/catalog.json',
 )
 REQUIRED += tuple('assets/art-styles/' + name + '.json' for name in
-                  ('real-life-cinematic', 'eastern-fantasy-scroll', 'futuristic-clean', 'paper-craft-story'))
+                  ('twinlight-collector', 'forest-fantasy', 'real-life-cinematic', 'eastern-fantasy-scroll', 'futuristic-clean', 'paper-craft-story'))
+REQUIRED += ('assets/art-references/twinlight-collector/prototype.png',
+             'assets/art-references/twinlight-collector/human-prototype.png',
+             'assets/art-references/twinlight-collector/manifest.json',
+             'assets/art-references/forest-fantasy.json')
 REQUIRED += tuple('scripts/twinlight_core/' + name + '.py' for name in
-                  ('visual_contract', 'generation_plan', 'embedded_card', 'export_delivery'))
+                  ('visual_contract', 'generation_plan', 'embedded_card', 'export_delivery', 'canvas_mapping'))
 
 
 def fetch(url: str, limit: int) -> bytes:
@@ -127,7 +132,7 @@ def check_root(root: Path) -> dict:
         else:
             hashes[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
     dependencies, unavailable = {}, []
-    for module_name in ('jsonschema', 'PIL'):
+    for module_name in ('jsonschema', 'PIL', 'playwright'):
         try:
             importlib.import_module(module_name)
             try:
@@ -157,6 +162,7 @@ def check_root(root: Path) -> dict:
             locked = module.verify_lock(root / 'assets/template', sources)
         except (OSError, ValueError, TypeError, AttributeError, ImportError, SyntaxError):
             pass
+    browser = browser_preflight()
     return {'ok': not missing and runtime_ok and package_verified is not False and locked['ok'],
             'resource_complete': not missing, 'resource_root': str(root),
             'required_files_sha256': hashes, 'missing_resources': missing,
@@ -164,7 +170,35 @@ def check_root(root: Path) -> dict:
             'template_lock': locked,
             'runtime': {'python': sys.version.split()[0], 'minimum_python': '3.10',
                         'dependencies': dependencies, 'missing_dependencies': unavailable, 'ok': runtime_ok},
+            'browser': browser,
+            'ready_for_local_browser_checks': runtime_ok and browser['executable_available'],
             'scope': 'Resource/runtime and release-local template lock only; no HTML build, model analysis, image generation or visual verification.'}
+
+
+def browser_preflight() -> dict:
+    """Locate an existing browser without launching or downloading one."""
+    configured = os.environ.get('TWINLIGHT_BROWSER')
+    choices = ([configured] if configured else [
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+        '/Applications/Chromium.app/Contents/MacOS/Chromium',
+        '/usr/lib/chromium/chromium', '/usr/bin/google-chrome',
+        '/usr/bin/chromium', '/usr/bin/chromium-browser',
+        r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+    ])
+    binary = next((str(Path(p).resolve()) for p in choices if Path(p).is_file()), None)
+    if binary is None and not configured:
+        try:
+            from playwright.sync_api import sync_playwright
+            with sync_playwright() as playwright:
+                cached = Path(playwright.chromium.executable_path)
+                if cached.is_file():
+                    binary = str(cached.resolve())
+        except (ImportError, OSError, RuntimeError):
+            pass
+    return {'executable_available': binary is not None, 'executable': binary,
+            'status': 'located_not_launched' if binary else 'unavailable',
+            'next': None if binary else 'Host must locate an existing browser and pass --browser, or install the browser runtime when allowed before final validation.',
+            'scope': 'Read-only capability preflight; no rendering, WebGL, sandbox or image-generation capability is implied.'}
 
 
 def main() -> int:

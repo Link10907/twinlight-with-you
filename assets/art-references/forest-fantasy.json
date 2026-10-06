@@ -1,0 +1,16 @@
+{
+  "version": "art-reference-1",
+  "style_id": "forest-fantasy",
+  "style_version": "1.0.0",
+  "usage": "style_only",
+  "no_persona": true,
+  "no_subject_copy": true,
+  "source": "Existing approved fictional wordless nature illustration. Reuse only its forest visual language, natural materials and finish, never its animal identity, props, composition or pixels.",
+  "references": [
+    {
+      "file": "twinlight-collector/prototype.png",
+      "sha256": "82e9eb4c75d8d651b49f94f160228325c2aeecd8cf2e936bcd3d17629f5db0dc",
+      "purpose": "style_only"
+    }
+  ]
+}

@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 from .common import ROOT, VERSION, check, load, save, safe_script_json, local_asset, digest
 from .compiler import compile_profile, check_approval
 from .art import validate_layers, asset_digest
+from .canvas_mapping import compose_layers
 
 TEMPLATE=ROOT/'assets/template'
 TEMPLATE_MODULES={'RENDER':'render','CONTROLS':'controls','V6':'v6','V7':'v7','V8':'v8','FINALE':'finale','V9':'v9','HOLO':'holo-card','V10':'v10','ADAPTER':'adapter'}
@@ -74,8 +75,7 @@ def ImageChops_safe(a,b):
 
 def flatten_layers(manifest_path: Path) -> bytes:
     m=load(manifest_path);images={k:Image.open(local_asset(manifest_path.parent,p)).convert('RGBA') for k,p in m['assets'].items()}
-    im=images['background'].copy()
-    for k in ['spirit','subject','effects','text']:im=Image.alpha_composite(im,images[k])
+    im=compose_layers(m,images,include_text=True)
     stream=io.BytesIO();im.convert('RGB').save(stream,format='JPEG',quality=92);return stream.getvalue()
 
 PERSONAL_TOKENS=('PROFILE','CARD_DATA','CARD_LAYERS','V9_CARD_IMAGE','DEPTH_BG','DEPTH_SUBJECT','DEPTH_EFFECTS')
@@ -232,9 +232,7 @@ def render_card_preview(data: dict, out: Path, *, layers: Path|None=None,
         for role, path in manifest['assets'].items():
             with Image.open(local_asset(layers.parent, path)) as original:
                 images[role] = original.convert('RGBA')
-        image = images['background']
-        for role in ('spirit', 'subject', 'effects', 'text'):
-            image = Image.alpha_composite(image, images[role])
+        image = compose_layers(manifest,images,include_text=True)
         kind = 'registered_layers'
     elif prototype or portrait:
         image = open_card_image(prototype or portrait)

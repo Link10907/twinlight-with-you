@@ -11,7 +11,7 @@
 | 测理解与提取 | 小样本聊天或 `prompts/06-smoke-test.txt` | 逐条归属、状态、引用与排除判断 | 与事后人工标准答案比较 |
 | 看固定界面/分层效果 | 明确的虚构 demo 请求 | 渲染冻结资料与图层 | 只能说明界面与素材，不说明提取准确率 |
 
-个人任务不读示例补全；效果测试不自动变成生图或公开发布。真人 `examples/showcase/` 不进入通用查看器或分发包。虚构的 `examples/demo/`、`examples/lite/`、`examples/generated-demo/` 仅用于明确测试，不能换昵称当新人物结果。
+个人任务不读示例补全；`assets/art-references/` 的 `style_only` 无字参考属于可复用品牌资源，应该实际观看和传给图像工具；效果测试不自动变成生图或公开发布。真人 `examples/showcase/` 不进入通用查看器或分发包。虚构的 `examples/demo/`、`examples/lite/`、`examples/generated-demo/` 仅用于明确测试，不能换昵称当新人物结果。
 
 ## 平台入口与能力
 
@@ -24,7 +24,7 @@
 - **Cursor Agent**：可直接读取项目；支持 `.agents/skills/` 与 `.cursor/skills/`。[Agent Skills](https://cursor.com/docs/skills)。
 - **其他聊天网站**：按实际工具执行对应模块；只有聊天/生图工具时不能声称完成 HTML 构建。手动查看器导入由用户明确选择，最终仍下载个人 HTML。
 
-最稳入口是同一次消息提供启动语和完整 skill ZIP。仅有 URL 时，AI 需实际下载/文件/执行能力；从 raw `PROMPT.md` 取得编排，按其 bootstrap 步骤下载完整资源，不能只读提示词就写替代网页。链接不等于工具或资源已齐全，不自动改变交付目标。
+最稳入口是同一次消息提供启动语和完整 skill ZIP，并优先读包内同版本 SKILL/AGENT，不混读远端另一个版本。仅有 URL 时，AI 需实际下载/文件/执行能力；从 raw `PROMPT.md` 取得编排，按其 bootstrap 步骤下载完整资源，不能只读提示词就写替代网页。链接不等于工具或资源已齐全，不自动改变交付目标。
 
 仓库根 `viewer.html` 是单独下载的离线查看器，不进入默认 skill ZIP；其中示例完全虚构，只用于显式展示，不成为当前用户的输入。网页 AI 需要可读链接时可用 `https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md`；能执行代码的 Agent 对应 `AGENT.md`。GitHub Pages 只有维护者明确手动发布后才是可选线上入口，不宣称已经上线，不自动部署。
 
@@ -73,6 +73,6 @@ python scripts/package_skill.py --out outputs/twinlight-with-you.zip
 python scripts/package_skill.py --include-demo --out outputs/twinlight-with-you-demo.zip
 ```
 
-默认包只含一个顶层 skill 文件夹与通用脚本、提示、schema、模板和结构清单，不含示例人物。演示包只增加白名单中的虚构 history/lite/生成图层测试；始终排除真人 showcase、标准答案、隐藏文件、缓存与私人目录。`package-manifest.json` 准确记录模式、资料范围和文件哈希。
+默认包包含一个顶层 skill 文件夹与通用脚本、提示、schema、固定模板、无字品牌参考和结构清单，不含示例人物的历史与预写分析。演示包只增加白名单中的虚构 history/lite/生成图层测试；始终排除真人 showcase、标准答案、隐藏文件、缓存与私人目录。`package-manifest.json` 准确记录模式、资料范围和文件哈希。
 
 此命令只打包，不运行模型、安装技能、上传账户资料或发布插件。
