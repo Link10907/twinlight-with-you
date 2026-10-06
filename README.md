@@ -1,4 +1,4 @@
-> **V10 品质基准**：固定原有星系与揭卡体验，默认 `twinlight-collector` 精细幻想收藏卡。完整包携带无字审美参考，生成时实际传图；当前人的角色和故事独立设计。最终交付仍以 public `run` 的 `complete` 和 `primary_output` 为准。详见 [品质标准](references/quality-workflow.md)、[视觉契约](references/visual-contract.md) 和 [成品交付](references/delivery-v2.md)。
+> **V10 品质基准**：固定原有星系与揭卡体验，默认 `twinlight-collector` 精细幻想收藏卡。完整包携带无字审美参考，生成时实际传图；当前人的角色和故事独立设计。public `run` 的 `complete` 和 `primary_output` 验证构建；`request_satisfied` 另核对本次预览要求。详见 [品质标准](references/quality-workflow.md)、[视觉契约](references/visual-contract.md) 和 [成品交付](references/delivery-v2.md)。
 
 # Twinlight · 与你同光
 
@@ -6,9 +6,11 @@
 
 ## 一句话启动
 
-最稳的方式是在同一次消息中上传完整 skill ZIP 并发送以下启动语：
+在同一次消息中上传完整 skill ZIP 并发送以下启动语：
 
 > 请使用本次上传的完整 Twinlight skill 包，先读包内 SKILL.md 和 AGENT.md，保留 V10 的星系与揭卡效果、精细幻想收藏卡风格，根据你实际了解的我，一次生成我的定义闪卡和 Twinlight HTML，完成后一起给我看。
+
+希望在 GPT 内直接体验时，在同一请求补充：“请在当前聊天里直接展示可交互的星系和揭卡；先检查实际预览入口，下载附件不能算满足这个要求。”AI 会使用可用的原生 HTML 入口并实际验证；宿主不支持时保留文件并说明体验尚未完成，不以更换模型或上传 ZIP 本身作能力保证。
 
 AI 会自动整理本次材料、生成页面和闪卡，再把完成的卡片接入页面；你不需要再发第二条生成命令。资料充分时直接完成本地草稿，只有必要资料缺失时才问两三个短问题。尚未审阅的内容如实标为草稿，不替你确认，公开发布仍由你决定。
 
@@ -55,7 +57,9 @@ HTML 和闪卡使用独立内部提示词，各自验收、各自修复。页面
 | 效果实验与分发 | [测试与使用](references/quickstart.md) |
 | 从新原始材料到两份成品的验证 | [新生成实验](references/fresh-generation-eval.md) |
 
-HTML 输入不要求 `art_prompt`；public 闪卡流程使用独立的 `art-direction-2` JSON，不修改页面数据或人物绑定。旧自由美术描述保留作诊断。闪卡支持只含卡片文字的 `card-1` 输入，无需 themes。默认最终 HTML 必须通过六层内嵌字节复核；用 `scripts/deliver_artifacts.py` 导出 HTML、正面、独立预览与卡包。两模块失败只修对应部分，保留另一份已成功结果。
+HTML 输入不要求 `art_prompt`；public 闪卡流程使用独立的 `art-direction-2` JSON，不修改页面数据或人物绑定。旧自由美术描述保留作诊断。闪卡支持只含卡片文字的 `card-1` 输入，无需 themes。默认最终 HTML 必须通过六层内嵌字节复核；用 `scripts/deliver_artifacts.py` 导出 HTML、正面、独立预览与卡包，再按实际生成的 `handoff.json` 和 `delivery-reply.md` 一次交付。两模块失败只修对应部分，保留另一份已成功结果。
+
+明确要求站内交互时，首次 `run` 加 `--require-in-chat-preview`；需求随续跑保留，只有最终 HTML 的真实 `host-preview-2` 交互观察通过才满足要求。脚本不能替宿主发送附件，也不保证任何 AI 网页都支持本模板，首轮实际展示仍需宿主执行与端到端验证。
 
 ```bash
 python scripts/package_skill.py --out outputs/twinlight-with-you.zip

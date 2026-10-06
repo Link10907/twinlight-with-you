@@ -8,6 +8,6 @@
 
 然后只按 [AGENT.md](AGENT.md) 执行总流程。绘画步骤读取 [CARD.md](CARD.md)：实际看随包无字审美参考，先做一个通过观察的原型，再用图像工具在该原型上原生编辑出同画布背景、透明主体与前景，程序排字和装层。参考的风格可用，旧人物经历、称号和成品卡不能套用。
 
-按 public `scripts/twinlight.py run` 的 `next_action` 自动完成缺项并续跑；成功卡通过 `run --layers` 接入同一页面。以当前 `complete=true` 与 `primary_output` 为完成依据，用 `scripts/deliver_artifacts.py` 导出；both 模式交付 `site-with-card/index.html`。
+按 public `scripts/twinlight.py run` 的 `next_action` 自动完成缺项并续跑；图片返回后继续组装，不以生图回复结束整项任务。成功卡通过 `run --layers` 接入同一页面。`complete=true` 与 `primary_output` 证明构建完成；用户要求聊天内操作时首次加 `--require-in-chat-preview`，还须满足 `request_satisfied`。用 `scripts/deliver_artifacts.py` 导出，依据生成的交付清单在同一最终回复中展示真实卡图、HTML、独立互动入口和完整包；both 模式来源为 `site-with-card/index.html`。
 
 不让用户负责环境配置、参数选择或再次发继续。真实能力不足时说明具体缺口并保留成功模块。默认私人草稿，不自动公开。静态图片不等于分层互动，能下载文件不等于聊天内能执行 HTML。

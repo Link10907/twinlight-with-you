@@ -512,8 +512,9 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
 
 def run(input_path: Path, workspace: Path, *, mode: str = "both", layers: Path | None = None,
         art_prompt_file: Path | None = None, browser: str | None = None, no_browser: bool = False,
-        font: Path | None = None) -> dict:
+        font: Path | None = None, require_in_chat_preview: bool = False) -> dict:
     """Default production route: mechanical files, source evidence and visual review gates."""
     from .delivery import deliver
     return deliver(_run_mechanical, input_path, workspace, mode=mode, layers=layers,
-                   art_prompt_file=art_prompt_file, browser=browser, no_browser=no_browser, font=font)
+                   art_prompt_file=art_prompt_file, browser=browser, no_browser=no_browser, font=font,
+                   require_in_chat_preview=require_in_chat_preview)

@@ -20,16 +20,18 @@ PY ROOT/scripts/visual_plan.py check CARD/art-direction.json --persona-digest DI
 PY ROOT/scripts/visual_plan.py compile CARD/art-direction.json --out CARD --canvas W H --capabilities CARD/capabilities.json
 ```
 
-编译器只写任务和提示。宿主实际读取 prompt，并把任务列出的真实参考图传入图像工具；本地路径或图片 hash 不等于参考图已传入。明确区分 `style_only` 参考与当前原型的构图参考，不要求复制旧角色。
+编译器只写任务和提示。每次图像调用只发送当前 job 的编译 prompt、所列真实参考图和该任务需要的图像参数；整份手册、用户的“闪卡 + HTML”请求与页面/下载交付要求由宿主执行，不投给图像工具。实际读取 prompt，确认它描述当前原型或图层；若设计输入混入网页布局或交付要求，先修输入并重编译。
 
-先生成一张无字、无框、无预烘焙镭射的原型。真实返回立即保留原字节与实际响应：
+本地路径或图片 hash 不等于参考图已传入。将 job 列出的真实图像附给工具，区分 `style_only` 审美参考与当前原型的构图参考，不要求复制旧角色。
+
+原型是一幅占满指定竖幅画布的独立插画：当前选定的人物、动物或物件主角，在一个连续场景中做一件看得懂的事；无字、无框、无预烘焙镭射。真实返回立即保留原字节与实际响应：
 
 ```sh
 PY ROOT/scripts/visual_plan.py record CARD/generation-plan.json --role prototype --image RAW --raw-response RESPONSE --tool TOOL --call-id CALL --artifact-id ARTIFACT
 PY ROOT/scripts/art_quality.py review-template --layers CARD/layers.json --persona-digest DIGEST --stage prototype --out CARD/prototype-review.json
 ```
 
-**把原型和审美参考实际并排看。** 检查主体吸引力、结构与材质、焦点、空间层次和文字区域，并逐项指出主角/道具、背景和前景的归属。前景宜在边缘且与人物轮廓可分辨；原型若把近景帷幕画成大块同色衣摆般的遮挡，先调整可分离性，不等到三个层各自抢救。记录具体观察。若原型只是轮廓正确但粗糙、扁平、塑料化或与品牌无关，此时返工；不投入三张图层去“救”一张差原型。review 模板只提供 pending 字段，实际观察后才能填写接受意见。
+**先确认返回的是本次原型插画，再与审美参考按相同显示尺寸并排看。** 按[质量工作流](references/quality-workflow.md)逐项检查产物类型、主体、材料、焦点、空间与文字区，指出看得见的差异和主角/道具、背景、前景的归属。类型错误先核对实际发送的任务；原型粗糙、扁平、塑料化或与所选画风不符时先修绘画；近景与主体混在一起时先修可分离性。原型合格后才投入分层。review 模板只提供 pending 字段，实际观察后才能填写接受意见。
 
 ```sh
 PY ROOT/scripts/visual_plan.py bind-review --layers CARD/layers.json --review CARD/prototype-review.json

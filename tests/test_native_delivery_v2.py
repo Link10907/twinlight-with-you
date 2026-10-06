@@ -5,7 +5,7 @@ from unittest.mock import patch
 from PIL import Image
 from visual_v2_fixtures import *
 from twinlight_core.embedded_card import audit_embedding
-from twinlight_core.delivery import deliver
+from twinlight_core.delivery import deliver, HOST_CHECKS
 from twinlight_core.export_delivery import export
 
 class EmbeddedCardTests(unittest.TestCase):
@@ -72,14 +72,72 @@ class DeliveryTests(unittest.TestCase):
         if self.after_gate:self.after_gate(workspace,outputs)
         return {'mode':mode,'status':'files_ready' if self.dynamic else 'dynamic_unverified','ok':True,'stages':stages,
                 'outputs':outputs,'dynamic_verified':self.dynamic,'next_action':None}
-    def run_delivery(self,mode='both'):
-        return deliver(self.core,self.input,self.ws,mode=mode,layers=self.manifest)
+    def run_delivery(self,mode='both',**kwargs):
+        return deliver(self.core,self.input,self.ws,mode=mode,layers=self.manifest,**kwargs)
+    def host_observation(self,result,**overrides):
+        observed={'version':'host-preview-2','status':'available','surface':'in_chat',
+                  'html_sha256':ref(Path(result['primary_output']))['sha256'],
+                  'tool':'synthetic-test-tool','artifact_reference':'synthetic-test-only',
+                  'observation':'Synthetic host observation for unit tests only; no real host was opened.',
+                  'checks':{key:{'passed':True,'observation':'Synthetic observed interaction for this unit test only.'}
+                            for key in HOST_CHECKS[result['mode']]}}
+        observed.update(overrides);save(self.ws/'host-preview.json',observed)
+        return observed
     def test_native_v2_delivery_complete_with_controlled_browser_status(self):
         r=self.run_delivery();self.assertTrue(r['complete'],r);self.assertTrue(r['embedded_card_verified']);self.assertFalse(r['quality_verified'])
     def test_primary_is_integrated_never_base(self):
         r=self.run_delivery();self.assertEqual(r['primary_output'],r['outputs']['html_with_card']);self.assertNotEqual(r['primary_output'],r['outputs']['html'])
     def test_host_preview_not_inferred_from_local_check(self):
         r=self.run_delivery();self.assertEqual(r['host_preview']['status'],'not_tested');self.assertFalse(r['in_chat_preview_verified'])
+        self.assertTrue(r['request_satisfied']);self.assertFalse(r['delivery_requirements']['in_chat_preview'])
+    def test_explicit_in_chat_request_keeps_completed_files_but_not_request_success(self):
+        r=self.run_delivery(require_in_chat_preview=True)
+        self.assertTrue(r['complete']);self.assertFalse(r['request_satisfied'])
+        self.assertEqual(r['request_status'],'host_preview_unverified')
+        self.assertEqual(r['next_action']['type'],'verify_in_chat_preview')
+        self.assertIn('--require-in-chat-preview',r['next_action']['resume'])
+        self.assertEqual(r['next_action']['target'],r['outputs']['html_with_card'])
+        self.assertTrue(json.loads((self.ws/'run-state.json').read_text())['delivery_requirements']['in_chat_preview'])
+    def test_resume_cannot_silently_drop_explicit_chat_requirement(self):
+        self.run_delivery(require_in_chat_preview=True)
+        r=self.run_delivery()
+        self.assertTrue(r['delivery_requirements']['in_chat_preview']);self.assertFalse(r['request_satisfied'])
+    def test_current_in_chat_interactions_satisfy_requested_contract(self):
+        r=self.run_delivery(require_in_chat_preview=True);self.host_observation(r)
+        r=self.run_delivery()
+        self.assertTrue(r['request_satisfied']);self.assertTrue(r['in_chat_interaction_verified'])
+        self.assertTrue(r['in_chat_preview_verified']);self.assertIsNone(r['next_action'])
+        self.assertTrue(json.loads((self.ws/'delivery-report.json').read_text())['request_satisfied'])
+    def test_old_available_record_does_not_prove_new_interaction_requirement(self):
+        r=self.run_delivery(require_in_chat_preview=True);self.host_observation(r,version='host-preview-1',checks={})
+        r=self.run_delivery()
+        self.assertTrue(r['in_chat_preview_verified']);self.assertFalse(r['in_chat_interaction_verified'])
+        self.assertFalse(r['request_satisfied'])
+    def test_local_browser_surface_cannot_be_claimed_as_in_chat_interaction(self):
+        r=self.run_delivery(require_in_chat_preview=True);self.host_observation(r,surface='local_browser')
+        r=self.run_delivery();self.assertFalse(r['request_satisfied']);self.assertFalse(r['in_chat_interaction_verified'])
+    def test_in_chat_check_must_observe_foil_and_not_accept_truthy_strings(self):
+        for defect in ('missing','truthy','empty'):
+            with self.subTest(defect=defect):
+                r=self.run_delivery(require_in_chat_preview=True);observed=self.host_observation(r)
+                if defect=='missing':del observed['checks']['foil_angle']
+                elif defect=='truthy':observed['checks']['foil_angle']['passed']='true'
+                else:observed['checks']['foil_angle']['observation']=''
+                save(self.ws/'host-preview.json',observed)
+                self.assertFalse(self.run_delivery()['request_satisfied'])
+    def test_limited_host_reports_limitation_and_preserves_completed_files(self):
+        for status in ('unsupported','blocked'):
+            with self.subTest(status=status):
+                r=self.run_delivery(require_in_chat_preview=True);self.host_observation(r,status=status,checks={})
+                r=self.run_delivery();self.assertTrue(r['complete']);self.assertFalse(r['request_satisfied'])
+                self.assertEqual(r['request_status'],'host_preview_'+status)
+                self.assertEqual(r['next_action']['type'],'report_host_limitation')
+    def test_mode_specific_host_checks_do_not_require_an_absent_module(self):
+        for mode in ('card','html'):
+            with self.subTest(mode=mode):
+                self.ws=self.root/('run-'+mode)
+                r=self.run_delivery(mode,require_in_chat_preview=True);self.host_observation(r)
+                r=self.run_delivery(mode);self.assertTrue(r['request_satisfied'])
     def test_host_observation_requires_exact_current_hash(self):
         r=self.run_delivery();save(self.ws/'host-preview.json',{'version':'host-preview-1','status':'available','html_sha256':'0'*64,'observation':'Synthetic host observation, deliberately wrong file.'})
         self.assertFalse(self.run_delivery()['in_chat_preview_verified'])
@@ -109,6 +167,62 @@ class DeliveryTests(unittest.TestCase):
         r=export(self.ws,self.root/'export');self.assertEqual(r['primary_file'],'Twinlight.html')
         with zipfile.ZipFile(r['archive']) as z:
             self.assertNotIn('private.txt',z.namelist());self.assertIn('Twinlight.html',z.namelist());self.assertEqual(len(z.namelist()),6)
+            self.assertNotIn('handoff.json',z.namelist());self.assertNotIn('delivery-reply.md',z.namelist())
+    def test_export_handoff_points_to_every_actual_export_with_current_bytes(self):
+        self.run_delivery();r=export(self.ws,self.root/'export with spaces')
+        handoff=json.loads(Path(r['handoff_file']).read_text());reply=Path(r['reply_file']).read_text()
+        self.assertFalse(handoff['delivery_sent']);self.assertFalse(r['delivery_sent'])
+        self.assertEqual(handoff['attachments'][0]['key'],'html_with_card')
+        self.assertEqual({a['key'] for a in handoff['attachments']},{'html_with_card','card_front','card_preview','card_pack','archive'})
+        for attachment in handoff['attachments']:
+            actual=Path(attachment['path']);self.assertTrue(actual.is_file())
+            self.assertEqual(attachment['sha256'],ref(actual)['sha256'])
+            self.assertEqual(attachment['bytes'],actual.stat().st_size)
+            self.assertIn(attachment['markdown'],reply)
+            if attachment['key']=='card_front':
+                self.assertIn(attachment['preview_markdown'],reply)
+                self.assertTrue(attachment['preview_markdown'].startswith('![闪卡正面]'))
+        self.assertNotIn(str(self.ws),reply);self.assertIn('export%20with%20spaces',reply)
+    def test_single_module_exports_mention_only_existing_files(self):
+        for mode in ('card','html'):
+            with self.subTest(mode=mode):
+                self.ws=self.root/('run-'+mode);self.run_delivery(mode)
+                out=self.root/('export-'+mode);r=export(self.ws,out)
+                note=(out/'READ-ME.txt').read_text();reply=Path(r['reply_file']).read_text()
+                absent='Twinlight.html' if mode=='card' else 'card-preview.html'
+                self.assertNotIn(absent,note);self.assertNotIn(absent,reply)
+                self.assertEqual(len(r['attachments']),4 if mode=='card' else 2)
+    def test_export_preserves_unmet_chat_requirement_in_reply_and_receipt(self):
+        self.run_delivery(require_in_chat_preview=True);r=export(self.ws,self.root/'export')
+        self.assertTrue(r['complete']);self.assertFalse(r['request_satisfied'])
+        self.assertIn('聊天内直接交互尚未完成',Path(r['reply_file']).read_text())
+        self.assertFalse(json.loads((self.root/'export/delivery.json').read_text())['request_satisfied'])
+    def test_portable_receipt_excludes_host_private_observations_and_paths(self):
+        r=self.run_delivery(require_in_chat_preview=True)
+        self.host_observation(r,artifact_reference=str(self.ws/'private-host-entry.html'),
+                              observation='PRIVATE HOST OBSERVATION FOR THIS SYNTHETIC TEST ONLY')
+        self.run_delivery();r=export(self.ws,self.root/'export')
+        with zipfile.ZipFile(r['archive']) as archive:
+            raw=archive.read('delivery.json').decode('utf-8');receipt=json.loads(raw)
+        self.assertTrue(receipt['request_satisfied'])
+        self.assertEqual(set(receipt['host_preview']),{'version','status','html_sha256','surface'})
+        self.assertNotIn(str(self.ws),raw);self.assertNotIn('PRIVATE HOST OBSERVATION',raw)
+        self.assertIn('private-host-entry.html',(self.ws/'delivery-report.json').read_text())
+    def test_export_refuses_mismatched_request_receipt(self):
+        self.run_delivery(require_in_chat_preview=True)
+        receipt=json.loads((self.ws/'delivery-report.json').read_text());receipt['delivery_requirements']['in_chat_preview']=False
+        save(self.ws/'delivery-report.json',receipt)
+        with self.assertRaisesRegex(ValueError,'Inconsistent delivery requirements'):export(self.ws,self.root/'export')
+    def test_export_rechecks_interaction_success_instead_of_trusting_a_boolean(self):
+        self.run_delivery(require_in_chat_preview=True)
+        for name in ('run-report.json','delivery-report.json'):
+            doc=json.loads((self.ws/name).read_text());doc['request_satisfied']=True;save(self.ws/name,doc)
+        with self.assertRaisesRegex(ValueError,'Inconsistent request_satisfied'):export(self.ws,self.root/'export')
+    def test_sandbox_links_cannot_be_invented_for_local_files(self):
+        self.run_delivery()
+        with self.assertRaisesRegex(ValueError,'actual exported files under /mnt/data'):
+            export(self.ws,self.root/'export',link_style='sandbox')
+        self.assertFalse((self.root/'export').exists())
     def test_export_rejects_incomplete(self):
         self.dynamic=False;self.run_delivery()
         with self.assertRaises(ValueError):export(self.ws,self.root/'export')

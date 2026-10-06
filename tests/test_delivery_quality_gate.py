@@ -112,6 +112,14 @@ class DeliveryQualityGateTests(unittest.TestCase):
         self.assertTrue(r['complete']); self.assertTrue(r['stages']['html']['reused'])
         self.assertEqual((path.read_bytes(), path.stat().st_mtime_ns), before)
 
+    def test_chat_requirement_survives_real_controller_pending_art_resume(self):
+        first = self.execute(require_in_chat_preview=True)
+        self.assertEqual(first['request_status'], 'files_pending')
+        r = self.execute(layers=self.manifest)
+        self.assertTrue(r['complete']); self.assertFalse(r['request_satisfied'])
+        self.assertTrue(r['delivery_requirements']['in_chat_preview'])
+        self.assertEqual(r['next_action']['type'], 'verify_in_chat_preview')
+
     def test_later_missing_review_invalidates_previously_ready_delivery(self):
         self.assertTrue(self.execute(layers=self.manifest)['complete'])
         p = self.manifest.parent / 'art-evidence.json'; e = load(p); del e['reviews']['final']; save(p, e)

@@ -8,4 +8,4 @@
 
 both 的 `primary_output` 必须是 `html_with_card`。脚本、纹理、音乐与图像在单文件中自包含；HTML 不含字体文件、聊天原文或工具响应。不能通过替换 data URI、修改 art_status 或更新模板锁掩盖差异。
 
-public 报告完成后用 `deliver_artifacts.py` 导出相同文件。宿主内预览与本地浏览器通过分开记录；WebGL 降级、声音首次需点击等实际限制照实说明。未通过只修失败模块，保留已完成的独立卡片与页面。
+public 报告完成后用 `deliver_artifacts.py` 导出相同文件，读取 `handoff.json` 和 `delivery-reply.md`，向主执行者返回实际附件，不自行编写猜测路径。宿主内预览与本地浏览器通过分开记录；明确要求聊天内交互时按 `platform-adapters.md` 接入实际入口，并检查 `request_satisfied`。WebGL 降级、声音首次需点击等实际限制照实说明。未通过只修失败模块，保留已完成的独立卡片与页面。

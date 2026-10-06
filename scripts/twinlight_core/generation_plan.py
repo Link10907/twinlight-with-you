@@ -17,6 +17,28 @@ IMAGE_ROLES = ('prototype', 'background', 'subject', 'effects')
 MAX_BYTES = 24 * 1024 * 1024
 
 
+def _task_scope(role: str) -> dict:
+    """One image-tool deliverable, distinct from the host's complete product."""
+    return {'version':'image-task-scope-1','output_count':1,'role':role,
+            'artifact_kind':'single_scene_illustration' if role == 'prototype' else 'native_layer',
+            'host_renderer_only':['website_ui','card_frame','typography','foil_animation']}
+
+
+def _task_instruction(design: dict, role: str, canvas: tuple[int, int]) -> str:
+    """Put the current output first; keep the evidenced base prompt unchanged."""
+    if role == 'prototype':
+        subject = design['subject']
+        lines = ['本次唯一产物：一张占满画布的无字连续场景插画。'
+                 '画布本身就是作品；一个主角、一个清楚动作。',
+                 f'原生画布：{canvas[0]}×{canvas[1]}，竖版 3:4；主体按下述构图保留边距。',
+                 '当前主角：' + subject['species'] + '；当前动作：' + subject['pose'] + '。']
+    else:
+        lines = ['本次唯一产物：一张 ' + role + ' 原生编辑图层。只处理当前已通过原型的这一层，'
+                 '保持原型完整画布与原坐标，执行下述具体保留/删除任务。']
+    lines.append('本次图像调用的职责到这张图为止。Twinlight 网页、卡框、中文排字与动态镭射由宿主程序组装；图像输出只包含当前插画或图层。')
+    return '\n'.join(lines)
+
+
 def _save(path: Path, value) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + '.tmp')
@@ -178,10 +200,11 @@ def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(
     for role in roles:
         path=prompt_dir/(role+'.txt')
         ownership = _ownership_instruction(design, role) if prototype_ref else None
-        path.write_text((ownership+'\n\n' if ownership else '')+layer_prompt(design,role,canvas)+'\n',encoding='utf-8')
+        path.write_text((ownership+'\n\n' if ownership else '')+_task_instruction(design,role,canvas)+'\n\n'+layer_prompt(design,role,canvas)+'\n',encoding='utf-8')
         refs = ([{**prototype_ref, 'purpose': 'composition'}] if prototype_ref else style_refs + [
             {**x, 'purpose': 'user_reference'} for x in design['references']])
         jobs.append({'role':role,'prompt':_ref(path,out),'requested_canvas':list(canvas),
+                     'task_scope':_task_scope(role),
                      'transparent':role in ('subject','effects'),
                      'operation':'image_edit' if prototype_ref else 'image_generation',
                      'edit_base':prototype_ref,
@@ -202,6 +225,7 @@ def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(
           'image_generation_performed':False,'requires_host_tool_call':True,
           'next_action':'call_prototype_image_tool' if phase=='prototype' else 'call_native_layer_image_tools',
           'limits':['This is a host handoff, not an authenticated provider call.',
+                    'Send exactly one current job.prompt text per image call. Its task_scope is the image deliverable; the complete website, card assembly and delivery request stay with the host.',
                     'Pass each job.referenced_image_paths to the actual image tool; a prompt mentioning a reference is not an image reference.',
                     'For image_edit jobs, the only input is this approved prototype. Preserve its full canvas and coordinates; do not append style examples or create a recentered character sheet.',
                     'If canvas_selection is prompt_only, requested_canvas is a prompt preference, not a provider size parameter. Inspect native dimensions after the call; never resample.',
@@ -223,6 +247,8 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
     if role not in IMAGE_ROLES or len(jobs)!=1:
         raise VisualContractError('wrong_phase','This phase does not permit that image role')
     job=jobs[0];design_path=(root/plan['design']['file']).resolve()
+    if 'task_scope' in job and job['task_scope'] != _task_scope(role):
+        raise VisualContractError('image_task_scope', 'The current image job must deliver one illustration or one native layer; recompile its scope before calling the tool')
     if not design_path.is_relative_to(root) or sha256(design_path)!=plan['design']['sha256']:
         raise VisualContractError('design_changed','Design changed after prompt compilation')
     design=validate_design(_json(design_path),plan['persona_digest'])
@@ -342,6 +368,7 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
                      'operation':job.get('operation','legacy_image_request'),
                      'edit_base':job.get('edit_base'),
                      'coordinate_policy':job.get('coordinate_policy'),
+                     'task_scope':job.get('task_scope'),
                      'ownership_instruction':job.get('ownership_instruction'),
                      'repair_instruction':job.get('repair_instruction'),
                      'prompt_transport':'host_instruction_record_not_provider_authentication'},

@@ -4,7 +4,7 @@ description: Create a personal Twinlight galaxy HTML and an embedded illustrated
 ---
 # Twinlight · 与你同光
 
-默认一次完成 **个人星系单文件 HTML + 同一张原生分层 SSR 闪卡**。用户明确只要一项时使用对应模式。执行入口只有 [AGENT.md](AGENT.md)；不让用户选择内部参数或反复发“继续”。
+默认在同一次请求中制作并一起交付 **个人星系单文件 HTML + 同一张原生分层 SSR 闪卡**。用户明确只要一项时使用对应模式。执行入口只有 [AGENT.md](AGENT.md)；不让用户选择内部参数或反复发“继续”。用户要求“在聊天里直接玩/渲染”时，把真实聊天内交互也列为本次交付条件，不能自行降为下载文件。
 
 ## 先保住作品，再替换个人内容
 
@@ -16,17 +16,17 @@ description: Create a personal Twinlight galaxy HTML and an embedded illustrated
 
 ## 最短生产链
 
-1. 核对完整资源与 V10 模板，整理当前授权资料并冻结本次文案。
+1. 核对完整资源、V10 模板和本次宿主能力，确定实际预览入口，整理当前授权资料并冻结文案。
 2. 按 [CARD.md](CARD.md) 选一个行为隐喻、一个主体和一个清楚动作；看参考，生成并审查无字原型。
 3. 用图像工具在同一原型画布上原生编辑出背景、主体、少量前景，保住尺度与坐标；程序独立排字、装层。
-4. 原图、合成、实际动态逐项验收，通过同一 public `run --layers` 嵌入固定页面并导出。
+4. 原图、合成、实际动态逐项验收，通过同一 public `run --layers` 嵌入固定页面；打开真实预览后，按导出的附件清单在同一最终回复中交付。
 
 美术判据见 [质量工作流](references/quality-workflow.md)。图像工具负责插画；程序负责页面、精确文字和效果；实际看图决定美术是否达标。增加记录或检查项不能代替一张好看的原型。
 
 ## 完成判定
 
-只交付当前 `run-report.json` / `delivery-report.json` 中 `complete=true` 指向的成品。both 模式主文件必须是 `site-with-card/index.html`，通过 `scripts/deliver_artifacts.py` 导出。基础 HTML、静态海报、待验图层和效果截图不是完整双模块结果。
+完整成品只认当前 `run-report.json` / `delivery-report.json` 中 `complete=true` 指向的文件。both 模式主文件必须是 `site-with-card/index.html`，通过 `scripts/deliver_artifacts.py` 导出。基础 HTML、静态海报、待验图层和效果截图不是完整双模块结果。
 
-文件完成、本地动态通过、聊天内可交互预览分别报告。遇到能力缺口或有限返工仍失败，保留成功模块并说明具体缺口，不把缺项改成通过。默认私人未确认草稿，不自动公开；不携带字体文件、原始聊天或工具凭证。
+`complete` 表示构建完成；`request_satisfied` 才反映本次文件与预览要求是否满足。文件完成、本地动态通过、聊天内可交互预览分别报告。生图返回是中间结果，宿主还须继续装层、验收和导出；最后按真实 `handoff.json` 展示卡图、页面、独立预览和完整下载包。遇到能力缺口或有限返工仍失败，保留成功模块并说明具体缺口，不把缺项改成通过。默认私人未确认草稿，不自动公开；不携带字体文件、原始聊天或工具凭证。
 
-需要逐句原话出处时读 [严格来源流程](references/workflow.md)；换宿主或能力不足时读 [平台适配](references/platform-adapters.md)。其他参考仅在相应步骤需要时读取。
+需要逐句原话出处时读 [严格来源流程](references/workflow.md)；首次在某宿主运行、要求聊天内交互或能力不足时读 [平台适配](references/platform-adapters.md)；最终回复按 [交付协议](references/delivery-v2.md)。其他参考仅在相应步骤需要时读取。

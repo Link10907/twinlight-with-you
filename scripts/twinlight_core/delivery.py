@@ -6,6 +6,35 @@ from pathlib import Path
 from .art_quality import check_evidence, read_json, sha256, checked_ref
 from .embedded_card import audit_embedding
 
+HOST_CHECKS = {
+    "html": ("galaxy_navigation", "galaxy_merge", "question_transition", "return_navigation"),
+    "card": ("card_parallax", "foil_angle", "fixed_typography"),
+    "both": ("galaxy_navigation", "galaxy_merge", "question_transition", "card_reveal",
+             "card_parallax", "foil_angle", "fixed_typography", "return_navigation"),
+}
+
+
+def host_interaction_verified(observed: dict, mode: str, html_sha256: str) -> bool:
+    """Validate a host's bounded observation; this is not platform attestation."""
+    checks = observed.get("checks")
+    return (observed.get("version") == "host-preview-2" and observed.get("status") == "available"
+            and observed.get("html_sha256") == html_sha256 and observed.get("surface") == "in_chat"
+            and all(isinstance(observed.get(k), str) and len(observed[k].strip()) >= minimum
+                    for k, minimum in (("tool", 1), ("artifact_reference", 1), ("observation", 12)))
+            and isinstance(checks, dict)
+            and all(isinstance(checks.get(k), dict) and checks[k].get("passed") is True
+                    and isinstance(checks[k].get("observation"), str)
+                    and len(checks[k]["observation"].strip()) >= 12 for k in HOST_CHECKS[mode]))
+
+
+def request_outcome(files_complete: bool, required: bool, observed: dict, verified: bool) -> tuple[bool, str]:
+    if not files_complete:
+        return False, "files_pending"
+    if not required or verified:
+        return True, "satisfied"
+    status = observed.get("status")
+    return False, "host_preview_" + (status if status in ("unsupported", "blocked") else "unverified")
+
 
 def _save(path: Path, value: dict):
     tmp = path.with_name(path.name + ".tmp")
@@ -13,9 +42,17 @@ def _save(path: Path, value: dict):
     tmp.replace(path)
 
 
-def deliver(core, input_path: Path, workspace: Path, **kwargs) -> dict:
+def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview: bool = False, **kwargs) -> dict:
     """No CLI switch disables this gate. Low-level render/build commands remain diagnostics."""
     workspace = Path(workspace).resolve()
+    state_path = workspace / "run-state.json"
+    previous = read_json(state_path) if state_path.is_file() else {}
+    # A resumed run may omit the CLI flag; that must not quietly relax the user's request.
+    previous_requirements = previous.get("delivery_requirements", {})
+    if not isinstance(previous_requirements, dict):
+        raise ValueError('Invalid saved delivery requirements')
+    require_in_chat_preview = (require_in_chat_preview is True
+                               or previous_requirements.get("in_chat_preview") is True)
     decisions = []
 
     def review_gate(content, layers, folder, persona):
@@ -133,29 +170,51 @@ def deliver(core, input_path: Path, workspace: Path, **kwargs) -> dict:
     result["host_preview"] = {"status": "not_tested", "html_sha256": None,
                               "note": "A file attachment and a local browser check do not establish in-chat HTML execution."}
     result["in_chat_preview_verified"] = False
+    result["in_chat_interaction_verified"] = False
     # An optional real host-preview observation must bind this exact HTML; never infer it from account/model names.
     host_path = workspace / "host-preview.json"
     if host_path.is_file() and result["primary_output"]:
         try:
             observed = read_json(host_path)
             target_sha = sha256(Path(result["primary_output"]))
-            if (observed.get("version") == "host-preview-1" and observed.get("html_sha256") == target_sha
+            if (observed.get("version") in ("host-preview-1", "host-preview-2") and observed.get("html_sha256") == target_sha
+                    and (observed.get("version") == "host-preview-1" or observed.get("surface") == "in_chat")
                     and observed.get("status") in ("available", "unsupported", "blocked")
                     and isinstance(observed.get("observation"), str) and len(observed["observation"]) >= 12):
                 result["host_preview"] = observed
-                result["in_chat_preview_verified"] = observed["status"] == "available"
+                result["in_chat_interaction_verified"] = host_interaction_verified(observed, mode, target_sha)
+                # Keep legacy preview observations readable; they cannot prove the new interaction contract.
+                result["in_chat_preview_verified"] = (observed.get("version") == "host-preview-1"
+                                                       and observed["status"] == "available") or result["in_chat_interaction_verified"]
         except (ValueError, OSError, TypeError):
             pass
+    result["delivery_requirements"] = {"in_chat_preview": require_in_chat_preview}
+    result["request_satisfied"], result["request_status"] = request_outcome(
+        result["complete"], require_in_chat_preview, result["host_preview"], result["in_chat_interaction_verified"])
+    if result["complete"] and not result["request_satisfied"]:
+        limited = result["host_preview"].get("status") in ("unsupported", "blocked")
+        result["next_action"] = {
+            "type": "report_host_limitation" if limited else "verify_in_chat_preview",
+            "target": result["primary_output"], "evidence": str(host_path),
+            "required_checks": list(HOST_CHECKS[mode]), "user_confirmation_required": False,
+            "resume": [sys.executable, str(Path(__file__).resolve().parents[1] / "twinlight.py"), "run",
+                       str(Path(input_path).resolve()), "--workspace", str(workspace), "--mode", mode,
+                       "--require-in-chat-preview"],
+            "constraints": ["Export the completed files and state the unmet in-chat requirement accurately. A local browser or download link cannot satisfy it.",
+                            "Record host-preview-2 only from the actual same-file in-chat surface and observed interactions; do not invent a tool result."]}
+        for name in ("layers", "browser", "font", "art_prompt_file"):
+            if kwargs.get(name) is not None:
+                result["next_action"]["resume"] += ["--" + name.replace("_", "-"), str(kwargs[name])]
     result["art_reviewed_by_host"] = bool(decision and decision.get("host_visual_review_recorded") and decision.get("ok"))
     result["generation_evidence_checked"] = bool(decision and decision.get("evidence_checked"))
     result["quality_verified"] = False
     result["generation_provenance_verified"] = False
-    result["completion_scope"] = "complete means requested files, versioned visual-subject evidence, actual embedded native bytes and local browser effects passed. In-chat preview is a separate observed capability; no independent aesthetic or provider authentication is claimed."
+    result["completion_scope"] = "complete means requested files, versioned visual-subject evidence, actual embedded native bytes and local browser effects passed. request_satisfied additionally requires the explicitly requested in-chat interactions. Neither field proves attachments were sent, independent aesthetic quality or provider authentication."
     result["text_confirmed"] = False
     # Save the public result last; do not edit the maintained template lock or weaken asset validation.
-    state_path = workspace / "run-state.json"
     if state_path.is_file():
         state = read_json(state_path)
+        state["delivery_requirements"] = result["delivery_requirements"]
         if decision is not None:
             state["stages"]["art_quality"] = decision
         state["stages"]["embedded_card"] = embedding
@@ -173,6 +232,9 @@ def deliver(core, input_path: Path, workspace: Path, **kwargs) -> dict:
         "delivery_files": result["delivery_files"],
         "host_preview": result["host_preview"],
         "in_chat_preview_verified": result["in_chat_preview_verified"],
+        "in_chat_interaction_verified": result["in_chat_interaction_verified"],
+        "delivery_requirements": result["delivery_requirements"],
+        "request_satisfied": result["request_satisfied"], "request_status": result["request_status"],
         "quality_verified": False, "generation_provenance_verified": False,
         "draft": True, "share_allowed": False,
     })
