@@ -1,8 +1,9 @@
 """Fail-closed review contracts; local records are NOT authenticated agent identities.
 
 The host must create the actual isolated reviewer invocation. This module never
-calls a model, invents observations, or approves images. Host-level read/write
-separation is needed to prevent a producer from forging review records.
+calls a model, invents observations, or approves images. Artifact-bound review is the default; OS read-only permissions are not a product
+prerequisite. This code does not authenticate a task runner or prevent a malicious
+same-permission process from forging local files.
 """
 from __future__ import annotations
 import hashlib
@@ -40,6 +41,10 @@ def check_handoff(root: Path, review: dict, inputs: dict) -> None:
     h = review.get("handoff")
     _require(isinstance(h, dict), "reviewer_missing", "A real isolated reviewer invocation is required; producer self-review cannot approve.")
     _require(h.get("mode") == "independent_agent", "reviewer_not_independent", "A renamed role in the producer conversation is not an independent reviewer.")
+    if h.get("evidence_mode") == "artifact_bound":
+        _check_artifact_handoff(root, review, inputs)
+        _check_blockers(review)
+        return
     for key in ("producer_session_id", "reviewer_session_id", "invocation_id"):
         _require(isinstance(h.get(key), str) and len(h[key].strip()) >= 2,
                  "reviewer_identity_missing", "Keep the actual host-issued " + key)
@@ -60,6 +65,10 @@ def check_handoff(root: Path, review: dict, inputs: dict) -> None:
     original = {k: v for k, v in review.items() if k != "handoff"}
     _require(response == original, "reviewer_response_changed",
              "Do not rewrite the reviewer's verdict or checks when importing the response.")
+    _check_blockers(review)
+
+
+def _check_blockers(review: dict) -> None:
     _require(isinstance(review.get("blockers"), list), "reviewer_blockers_missing", "Record concrete blockers, or an empty list after a real pass.")
     blockers=review["blockers"]
     _require(len(blockers) <= 3, "reviewer_blocker_count", "Report at most three prioritized root defects.")
@@ -71,6 +80,44 @@ def check_handoff(root: Path, review: dict, inputs: dict) -> None:
                      "reviewer_blocker_detail", "Each blocker needs object, location, evidence and repair.")
     if review.get("decision") == "accept":
         _require(not review["blockers"], "reviewer_blockers", "A blocking defect cannot be averaged away by other successful checks.", "art_rejected")
+
+
+def _check_artifact_handoff(root: Path, review: dict, inputs: dict) -> None:
+    """Check actual response/packet bytes; no invented IDs or permission claims.
+
+    A real independent task must still have happened. Local files cannot prove
+    who ran that task. The host is responsible for invoking it, not this helper.
+    """
+    from .art_quality import checked_ref, read_json, sha256
+    from .review_exchange import validate_packet
+    h = review["handoff"]
+    _require(h.get("context") == "isolated", "reviewer_context", "Use a real independent task, not producer roleplay.")
+    for key in ("producer_session_id", "reviewer_session_id", "invocation_id"):
+        value = h.get(key)
+        _require(value is None or isinstance(value, str) and bool(value.strip()),
+                 "reviewer_identity_invalid", "Missing provider IDs must be null, not fabricated.")
+    producer, reviewer = h.get("producer_session_id"), h.get("reviewer_session_id")
+    if producer and reviewer:
+        _require(producer.strip() != reviewer.strip(), "self_review", "Producer and reviewer must not be the same session.")
+    trace_path = checked_ref(root, h.get("trace")); inputs[str(trace_path)] = sha256(trace_path)
+    trace = read_json(trace_path)
+    _require(trace.get("version") == "review-binding-1" and trace.get("record_origin") == "local_artifact_binding",
+             "reviewer_binding", "This record is a local binding, not a platform receipt.")
+    _require(trace.get("execution_basis") == "host_supplied_independent_task_response" and trace.get("context") == "isolated",
+             "reviewer_not_independent", "Import only the result returned by a real independent reviewer task.")
+    _require(trace.get("scope_sha256") == canonical_sha(review["targets"]),
+             "reviewer_trace_mismatch", "Bind the same current targets.")
+    for key in ("producer_session_id", "reviewer_session_id", "invocation_id", "read_only_artifacts"):
+        _require(trace.get(key) == h.get(key), "reviewer_trace_mismatch", "Imported audit metadata changed: " + key)
+    _require(trace.get("provider_identity_authenticated") is False,
+             "reviewer_authentication_claim", "Do not claim provider authentication from local files.")
+    _require(all(isinstance(trace.get(k), str) and bool(trace[k].strip()) for k in ("reviewer_tool", "reviewer_source")),
+             "reviewer_source", "Name the actual independent-task facility used, not a fabricated session ID.")
+    packet_path = checked_ref(root, trace.get("packet")); inputs[str(packet_path)] = sha256(packet_path)
+    validate_packet(packet_path, review, inputs)
+    raw_path = checked_ref(root, trace.get("raw_response")); inputs[str(raw_path)] = sha256(raw_path)
+    _require(read_json(raw_path) == {k: v for k, v in review.items() if k != "handoff"},
+             "reviewer_response_changed", "Do not rewrite the independent reviewer's returned decision or observations.")
 
 
 def release_targets(workspace: Path, outputs: dict, mode: str) -> dict:

@@ -8,15 +8,17 @@ import io
 import json
 from pathlib import Path
 from PIL import Image, ImageChops, ImageStat
+from twinlight_core.browser_runtime import launch_flags
 
 
-def verify(html: Path, out: Path, binary: str | None = None) -> dict:
+def verify(html: Path, out: Path, binary: str | None = None, *, gpu_mode: str = "auto", headed: bool = False, channel: str | None = None) -> dict:
     from playwright.sync_api import sync_playwright
     html, out = html.resolve(), out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     content = html.read_bytes()
     report = {'ok': False, 'html_sha256': hashlib.sha256(content).hexdigest(), 'checks': [],
-              'webgl': False, 'interaction_verified': False, 'foil_verified': False,
+              'requested_runtime': {'gpu_mode':gpu_mode,'headed':headed,'channel':channel},
+              'release_authorized':False, 'webgl': False, 'interaction_verified': False, 'foil_verified': False,
               'fixed_text_verified': False, 'touch_verified': False, 'reduced_motion_verified': False,
               'scope': 'Real shared card renderer; desktop and emulated mobile, native pixel motion, view-dependent foil, fixed text, drag, flip, keyboard and reduced motion.',
               'not_tested': ['Illustration quality and subject likeness', 'External generation provenance',
@@ -32,9 +34,10 @@ def verify(html: Path, out: Path, binary: str | None = None) -> dict:
     browser = None
     try:
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(executable_path=binary, headless=True, args=[
-                '--no-sandbox', '--disable-gpu-sandbox', '--ignore-gpu-blocklist',
-                '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'])
+            if binary and channel: raise ValueError('--browser and --channel are mutually exclusive')
+            browser = pw.chromium.launch(executable_path=binary, channel=channel,
+                                         headless=not headed, args=launch_flags(gpu_mode))
+            report['browser_version']=browser.version
             errors = []
             for width, height in ((1440, 900), (390, 844)):
                 context = browser.new_context(viewport={'width': width, 'height': height},
@@ -129,9 +132,12 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--html',type=Path,required=True);parser.add_argument('--out',type=Path,required=True)
     parser.add_argument('--browser')
+    parser.add_argument('--gpu-mode',choices=('auto','swiftshader'),default='auto')
+    parser.add_argument('--headed',action='store_true')
+    parser.add_argument('--channel')
     args=parser.parse_args()
     try:
-        result=verify(args.html,args.out,args.browser)
+        result=verify(args.html,args.out,args.browser,gpu_mode=args.gpu_mode,headed=args.headed,channel=args.channel)
     except (OSError,ValueError,ImportError) as exc:
         result={'ok':False,'failure':str(exc),'checks':[]}
         args.out.mkdir(parents=True,exist_ok=True)

@@ -1,35 +1,42 @@
-# 宿主能力契约 · 先查清，后生产
+# 宿主能力：先确认可执行任务，认证信息不作生产门槛
 
-`preflight.py template` 生成 `host-capabilities-2`，全部未知项为 null；不是已连接能力，不会创建 Agent。由当前宿主从实际工具契约与探针结果记录，不要求用户手填。`preflight.py check` 只核验声明一致性，不认证服务商。
+`preflight.py template` 创建 `host-capabilities-2` 的待填写表。表名保留兼容旧工作区，v2.1 改变的是判定语义。宿主从当前工具接口与实际观察填写事实，不要求用户填问卷，不虚构能力。
 
-## 必须取得的事实
+## 功能与审计分开
 
-| 范围 | 必须记录 | 不可接受的替代 |
+| 范围 | 生产所需 | 不应导致拒绝启动 |
 |---|---|---|
-| 宿主 | host、真实 producer_session_id | 随手编一个会话名 |
-| 图像 | 实际 tool 与 source；image_generation、reference_images、native_transparency、native_image_editing、post_image_continuation | 能生成图片就假设所有编辑能力都有 |
-| 文本传输 | prompt_transport=explicit_prompt 或 isolated_task_context | 参数弃用但仍写 prompt；共享完整上下文自动推断 |
-| 图片传输 | reference_transport=explicit_attachments 或 isolated_task_context | 在文字里只写文件名、hash 或“已看参考” |
-| 原生画布 | 实测 native_canvases；或诚实声明 canvas_selection=prompt_only | 把提示比例说成接口保证；后期裁切修成 3:4 |
-| Reviewer | 实际 tool/source；isolated_session、read_only_inputs、visual_inputs、runtime_evidence | 同一会话改角色名、纯文本模型不看图 |
-| 运行 | 实际 browser、WebGL 探针/source | 根据 Chrome/Safari 名称推定 shader 可用 |
+| 图像 | 实际生成、真实参考传入、原生透明编辑、单任务隔离、返回后可继续执行 | 服务商不暴露 call_id/artifact_id |
+| 独立审查 | 实际独立任务、视觉输入、当前候选与参考 | 缺少生产/审查 session ID、签名回执、OS 只读权限 |
+| 浏览器 | 可调用浏览器与来源说明；预览阶段实测 | 尚未构建预览时 WebGL 为 null |
+| 完整放行 | 真实美术裁决、当前图层/HTML、必要浏览器与动态证据 | 身份未经过服务商认证这一事实本身 |
 
-`prompt_only` 仅是尺寸偏好；返回尺寸仍逐张检查。任务整体执行受到宿主系统规则限制：本包不能让弃用字段生效，也不能让一个结束即返回的生图模式继续组装；需要当前确实可用的持续执行/隔离工具。没有就保持 `capability_blocked`，不反复生成网站海报。
+`reviewer.isolated_session=true` 表示实际可用独立任务上下文，不要求得到平台会话编号。`visual_inputs=true` 必须能看图。不能用同会话角色扮演、换 observer 名字或纯文本复述代替。
 
-生图与审查的隔离是两件事：前者防止“做网站”的上下文污染插画任务，后者防止生产者给自己签通过。即使工具只允许上下文推断，也只能在真实隔离任务中使用；不能把大量强制提示公开发到聊天后假装隔离完成。
+`producer_session_id` 无法获取时为 null/省略；`reviewer.read_only_inputs=false` 表示没有 OS 强制只读，仍可通过独立任务的“不改源文件”约束和 packet 前后哈希检查执行审查。`runtime_evidence` 可先留 null，到 final/release 必须实际给出证据。不能把 false/null 改成 true 消除警告。
 
-## 使用
+`runtime.webgl=null` 表示等待真实预览测试，预检返回 deferred_checks，不因“未测试”阻止第一张原型。若已经实测 WebGL 不可用，修实际浏览器问题；不能称正常可用，也不能拿 CSS fallback 冒充完整镭射。完整放行始终依据最终目标的实际动态验证，不依据能力表承诺。
 
-能力表放在 `WORK/host.json`，不放进用户最终交付包。首次 public run 用 `--host-capabilities WORK/host.json`；后续可省略，工作区记住来源。修改能力表会触发重新检查，不继承旧通过。编译器可直接接受完整 host 表并取 image 子表。
+图像传输仍必须是实际有效 prompt 或真实隔离任务上下文；参考图需真实附件/有效图像输入。共享整条“网页+闪卡”上下文、弃用 prompt 参数、只写本地图片路径但不传图，不算支持。native_canvases 记录真实接口尺寸；prompt_only 仅为尺寸偏好，返回仍检查，不后期裁成竖图。
 
-图像 dispatch 会冻结实际 prompt 文本、参考文件、设计、宿主表哈希与唯一角色。只把 `prompt_text`、真正参考图片和工具支持参数传给生图工具，不把整个 envelope 传入。派发记录、能力表均保留 `provider_input_verified=false` / `host_identity_authenticated=false`。日志一致不等于接口有效输入经过认证。
+## 调用和结果
 
-本版新卡生成需要满足完整能力表；缺少能力仍可构建本地候选。最终三种 mode 均需要独立 Reviewer 与浏览器；html 不依赖生图或卡片 WebGL。站内入口是否满足仍由独立 `host-preview-2` 实测，不因这里的 available 声明而通过。
+```sh
+PY ROOT/scripts/preflight.py template --out WORK/host.json
+# 宿主据实际接口填写，不按示例伪造。已有 host.json 只更新事实，保留已有内容与 run。
+PY ROOT/scripts/preflight.py check --capabilities WORK/host.json --mode both
+```
 
-## 隐私与故障
+`ok=true` / `may_start_image_calls=true` 只允许进入生产，不等于作品完成。`warnings` 是审计信息不足，不能按 gaps 处理。`deferred_checks` 是后续必须实测的项目，不先编一个成功探针。`host_identity_authenticated=false` 不是产品失败理由。
 
-source 只记录工具能力摘要或不含凭证的说明，不放密钥、令牌、原始聊天。宿主无法取得真实会话或回执标识时准确记录缺口，不创造编号冒充。权限由宿主真实执行，JSON 中的 read_only_inputs=true 不是操作系统权限隔离。
+新增可执行入口 `execution.py image/review` 见 [接入说明](execution-adapters.md)，由其实际请求和原样响应形成绑定。没有主宿主内置子 Agent 时可选择已授权 API/CLI。下述是原生宿主兼容路线。
 
-预检受阻时一次说明具体原因与可保留模块，不以“换模型”“重新上传”“再发继续”为默认解决方案。只有用户明确同意才切换需要付费、连接外部服务或上传资料的路线。
+默认 Reviewer 走 [REVIEWER.md](../REVIEWER.md) 的 packet + 实际独立任务返回 + 无 trace 导入。helper 自己不创建 Agent，因此 agent_invoked=false 正常。不要把本地文件哈希叫作平台会话 ID，不要要求宿主为了运行本 Skill 新建认证服务。
 
-CLI compile 未指定 --canvas 时，从已声明的原生尺寸选择最大的有效 3:4 画布；prompt_only 路线只给尺寸偏好，仍检查实际返回。原生分层继续冻结已批准原型的实际画布。
+图像 dispatch 仍在真实调用前冻结 prompt、参考、角色及预算。`visual_plan.py record` 的 provider call_id/artifact_id 可省略：脚本会生成带 `local-call:` / `local-artifact:` 前缀的本地字节绑定，并明确 provider_*_id=null。这不是平台回执。实际原始图像和非空的真实返回消息/附件记录仍须保存；未知调用、没有输出、程序绘图不能冒充生图。
+
+## 恢复与隐私
+
+保留 v2 已有 WORK/person.json、RUN 和 V10 页面候选；旧报告因新代码重新检查，重新运行相同 public 命令，不重建人格、不删 outputs。不追补从未发生的图像或审查调用。详细见 [恢复被 v2 阻断的任务](resume-v2-blocked.md)。
+
+不收集密钥、原始聊天或多余用户数据来“认证”审查者，不自动安装服务/调用付费 API/公开文件。只有真正缺少生图、编辑、独立视觉审查或浏览器等功能才说明具体缺口；不能因缺少平台管理能力交付空结果。

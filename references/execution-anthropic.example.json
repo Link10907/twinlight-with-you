@@ -1,0 +1,24 @@
+{
+  "version": "twinlight-execution-1",
+  "image": {
+    "kind": "openai_images",
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY",
+    "model": "gpt-image-2.5-sunburst",
+    "model_env": "TWINLIGHT_IMAGE_MODEL",
+    "native_canvas": [
+      1152,
+      1536
+    ],
+    "quality": "high",
+    "timeout_seconds": 240
+  },
+  "reviewer": {
+    "kind": "anthropic_messages",
+    "base_url": "https://api.anthropic.com/v1",
+    "api_key_env": "ANTHROPIC_API_KEY",
+    "model_env": "TWINLIGHT_REVIEW_MODEL",
+    "max_output_tokens": 12000,
+    "timeout_seconds": 240
+  }
+}

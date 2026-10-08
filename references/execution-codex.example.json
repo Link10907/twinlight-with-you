@@ -1,0 +1,23 @@
+{
+  "version": "twinlight-execution-1",
+  "image": {
+    "kind": "openai_images",
+    "base_url": "https://api.openai.com/v1",
+    "api_key_env": "OPENAI_API_KEY",
+    "model": "gpt-image-2.5-sunburst",
+    "model_env": "TWINLIGHT_IMAGE_MODEL",
+    "native_canvas": [
+      1152,
+      1536
+    ],
+    "quality": "high",
+    "timeout_seconds": 240
+  },
+  "reviewer": {
+    "kind": "codex_exec",
+    "executable": "codex",
+    "model_env": "TWINLIGHT_REVIEW_MODEL",
+    "timeout_seconds": 240,
+    "ignore_user_config": true
+  }
+}

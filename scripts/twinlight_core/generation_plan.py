@@ -243,7 +243,7 @@ def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(
 
 
 def register_image(plan_path: Path, role: str, image_path: Path, raw_response: Path, *,
-                   tool: str, call_id: str, artifact_id: str, dispatch_path: Path|None=None, _revalidate_attempt: str|None=None) -> dict:
+                   tool: str, call_id: str | None = None, artifact_id: str | None = None, dispatch_path: Path|None=None, _revalidate_attempt: str|None=None) -> dict:
     """Copy original output bytes and register an observed response. No synthetic calls."""
     plan_path=Path(plan_path).resolve();root=plan_path.parent
     plan=_json(plan_path)
@@ -289,12 +289,34 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
         raise VisualContractError('image_file','Actual tool output is missing or oversized')
     if not raw_response.is_file() or raw_response.stat().st_size>2*1024*1024:
         raise VisualContractError('response_file','Capture the actual tool response, without credentials')
+    # Optional provider metadata must not force an invented provider receipt.
+    # Local IDs name recorded bytes/reservations, not service-side calls.
+    local_call = call_id is None or isinstance(call_id, str) and call_id.startswith('local-call:')
+    local_artifact = artifact_id is None or isinstance(artifact_id, str) and artifact_id.startswith('local-artifact:')
+    if local_call:
+        dp = dispatch_path
+        if dp is None and _revalidate_attempt:
+            prior = next((a for a in _json(root/'art-evidence.json').get('attempts', []) if a.get('key') == _revalidate_attempt), {})
+            dp = root / prior.get('dispatch', {}).get('file', '')
+        if dp is None or not Path(dp).is_file():
+            raise VisualContractError('dispatch_missing', 'A real pre-call dispatch is required; local IDs cannot invent a call')
+        expected_call = 'local-call:' + sha256(Path(dp))
+        if call_id is not None and call_id != expected_call:
+            raise VisualContractError('local_call_mismatch', 'Local call key must bind the actual dispatch bytes')
+        call_id = expected_call
+    if local_artifact:
+        expected_artifact = 'local-artifact:' + sha256(image_path)
+        if artifact_id is not None and artifact_id != expected_artifact:
+            raise VisualContractError('local_artifact_mismatch', 'Local artifact key must bind the actual native output bytes')
+        artifact_id = expected_artifact
     if not all(isinstance(s,str) and 1<=len(s)<=500 for s in (tool,call_id,artifact_id)):
-        raise VisualContractError('tool_identifiers','Use the actual tool, call and returned artifact identifiers')
+        raise VisualContractError('tool_identifiers','Name the actual tool; omit provider IDs when unavailable')
     if tool.casefold() in ('python','pillow','svg','canvas','placeholder'):
         raise VisualContractError('not_image_tool','Code drawings are not native image-tool outputs')
     raw_text=raw_response.read_text(encoding='utf-8')
-    if artifact_id not in raw_text:
+    if not raw_text.strip():
+        raise VisualContractError('response_file', 'Preserve the actual returned message or attachment record; do not fabricate one')
+    if not local_artifact and artifact_id not in raw_text:
         raise VisualContractError('response_mismatch','Artifact identifier is absent from the captured tool response')
     evidence_path=root/'art-evidence.json'
     evidence=_json(evidence_path) if evidence_path.exists() else {
@@ -374,6 +396,9 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
     ext={'PNG':'.png','WEBP':'.webp','JPEG':'.jpg'}[fmt]
     target=root/(role+ext);shutil.copyfile(native_copy,target)
     call={'version':'image-call-1','kind':'image_tool','tool':tool,'call_id':call_id,'run_id':evidence['run_id'],
+          'call_id_origin':'local_binding' if local_call else 'provider',
+          'provider_call_id':None if local_call else call_id,
+          'provider_identity_authenticated':False,
           'capabilities':{k:plan['capabilities'][k] for k in ('image_generation','reference_images','native_transparency')},
           'request':{'role':role,'canvas':list(canvas),'transparent':job['transparent'],
                      'prompt':_ref(prompt_copy,root),'design_sha256':plan['design']['sha256'],
@@ -387,7 +412,9 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
                      'repair_instruction':job.get('repair_instruction'),
                      'prompt_transport':'host_instruction_record_not_provider_authentication',
                      'dispatch':_ref(Path(dispatch_path),root) if dispatch_record else previous_attempt.get('dispatch')},
-          'response':{'artifact_id':artifact_id,'sha256':sha256(target),'canvas':list(actual_canvas)},
+          'response':{'artifact_id':artifact_id,'sha256':sha256(target),'canvas':list(actual_canvas),
+                      'artifact_id_origin':'local_binding' if local_artifact else 'provider',
+                      'provider_artifact_id':None if local_artifact else artifact_id},
           'raw_response':_ref(raw_copy,root)}
     if role!='prototype' and actual_canvas!=canvas:
         call['response']['canvas_mapping']=rounding_diagnostic(actual_canvas,canvas)

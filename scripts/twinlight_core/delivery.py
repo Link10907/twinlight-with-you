@@ -191,7 +191,7 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
                 "read": [str(Path(__file__).resolve().parents[2] / "REVIEWER.md")],
                 "candidate": result["primary_output"], "review": str(workspace / "release-review.json"),
                 "errors": release.get("errors", []), "user_confirmation_required": False,
-                "constraints": ["Delegate to a real isolated reviewer with read-only artifacts.",
+                "constraints": ["Delegate to a real independent visual task. Give a separate packet and verify input hashes; OS read-only permissions and provider IDs are optional audit metadata.",
                                 "Do not self-approve or rewrite a rejected verdict. Preserve the candidate and repair only the failing stage."]}
     result["stages"]["release_review"] = release
     result["independent_release_review_recorded"] = release.get("independent_review_recorded") is True

@@ -14,6 +14,9 @@ def main(argv=None):
     p.add_argument('--root',type=Path,help='For import: card directory for art stages, run directory for release')
     p.add_argument('--stage',choices=('prototype','composite','final','release'),default='release')
     p.add_argument('--layers',type=Path);p.add_argument('--front',type=Path);p.add_argument('--preview',type=Path)
+    p.add_argument('--packet',type=Path,help='Pre-task reviewer packet (portable import, no provider trace required)')
+    p.add_argument('--host-capabilities',type=Path,help='Actual independent reviewer capability source')
+    p.add_argument('--evidence',type=Path,help='Actual capture_review.py output for dynamic review; never a producer verdict')
     p.add_argument('--response',type=Path);p.add_argument('--trace',type=Path);p.add_argument('--out',type=Path)
     a=p.parse_args(argv)
     try:
@@ -22,9 +25,10 @@ def main(argv=None):
             from twinlight_core.review_exchange import activate_release
             r=activate_release(a.workspace,a.response)
         elif a.command=='import':
-            if not all((a.root,a.response,a.trace,a.out)): p.error('import needs --root, --response, --trace and --out')
+            if not all((a.root,a.response,a.out)): p.error('import needs --root, --response and --out')
+            if not a.trace and not all((a.packet,a.host_capabilities)): p.error('Use --packet and --host-capabilities, or an existing real --trace')
             from twinlight_core.review_exchange import import_response
-            r=import_response(a.root,a.response,a.trace,a.out)
+            r=import_response(a.root,a.response,a.trace,a.out,packet_path=a.packet,host_path=a.host_capabilities)
         elif a.command=='check':
             if not a.workspace:p.error('--workspace is required')
             run=read_json(a.workspace/'run-report.json');r=check_release(a.workspace,run.get('outputs',{}),run['mode'])
@@ -52,11 +56,20 @@ def main(argv=None):
                 if not a.layers:p.error('--layers is required for art review')
                 manifest=read_json(a.layers)
                 targets,_,design,sources=snapshot(a.layers,manifest['persona_digest'],stage=a.stage,front=a.front,preview=a.preview)
+                if a.stage=='prototype':
+                    # Downstream asset registration legitimately changes the manifest.
+                    # Prototype approval binds persona/design/prototype/style, not future layers.
+                    sources.pop(str(a.layers.resolve()),None)
                 from twinlight_core.visual_contract import review_checks
                 r={'stage':a.stage,'targets':targets[a.stage],'observer':None,'observed_at':None,'decision':'pending',
                    'checks':{k:{'passed':False,'observation':''} for k in review_checks(design,a.stage,REVIEW_CHECKS[a.stage])},
                    'capture':None,'handoff':None,'blockers':[]}
                 if a.stage=='final':r['views']={'left':None,'right':None,'mobile':None}
+            if a.evidence:
+                from twinlight_core.review_exchange import attach_runtime_evidence
+                evidence_root = a.workspace if a.stage=='release' else a.layers.parent
+                r,extra=attach_runtime_evidence(r,a.evidence,evidence_root)
+                sources.update(extra)
             if a.command=='packet':
                 from twinlight_core.review_exchange import packet
                 # Temporary pending template is not a review and is removed after packet assembly.

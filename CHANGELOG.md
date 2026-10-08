@@ -1,3 +1,19 @@
+# v2.2 · Executable bridge + runtime diagnosis
+
+- 实际 Images API 单项提示/图片调用，原图无处理登记，已有三次预算与失败原件保留。
+- 实际全新 Responses/Anthropic 视觉请求，或项目目录之外的 Codex CLI 独立任务；原样导入 veto。
+- 离线 doctor、真实视觉探针和 browser WebGL 绘制探针分别报告，不混成艺术成功。
+- 多视角与卡片区域 foil/depth A/B 采集可进入 final/release 同一请求，运行事实不可被模型改写。
+- 合并交融 reduced/fallback 超时路由修复、默认正常 GPU 后端与显式软件诊断。
+- 原 V10 assets/template lock 未改；原生宿主工具路线仍支持，不强制新付费接入。
+- 测试是软件与本地模拟传输验证，不是实时模型端到端艺术验收。
+
+# v10-quality-2.1-portable-review
+
+修复 v2 将独立质量审查误写为平台认证门槛的问题。会话/调用 ID 与 OS 只读权限为可选审计信息；新默认导入用真实独立任务返回与调用前 packet，原件和副本哈希在导入/放行复查。WebGL 尚未测试可在预览阶段验证。图像平台 ID 可省略但保留真实图像与返回记录，自动关联键明确为 local 而非 provider。原型审查不绑定随后必然更新的图层登记清单，避免正常进入分层后误撤销原型批准。全部美术、原生分层、动态和最终同版校验不变；V10 资源不改。
+
+新增 30 项对应宿主故障、原型完整续跑与负向回归，连同原 80 项合计 110 项。仅为合成测试，不代表真实独立 Agent 或新艺术成品已通过。保留已有工作区并从原步骤恢复，详见 references/resume-v2-blocked.md。
+
 # v10-quality-2 · 生产质量升级
 
 ## 不变

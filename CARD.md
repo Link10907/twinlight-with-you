@@ -1,9 +1,11 @@
 # 闪卡制作：先把一张画做对
 
+> v2.2 实际执行入口：[可执行接入](references/execution-adapters.md)。生图用 `execution.py image`，独立看图用 `execution.py review`；旧 dispatch/packet 仍只准备材料，不能代替调用。
+
 > 本版调用前必须完成 [宿主预检](references/host-contract.md)，每个角色先 `visual_plan.py dispatch` 再调用真实图像工具，`record` 需传对应 `--dispatch`。编译时 `--capabilities WORK/host.json` 可直接读取完整能力表。原型与各层均如此；具体可运行顺序以 AGENT 为准，不能先调用再补派发。
 
 
-总流程与自动接入由 [AGENT.md](AGENT.md) 负责。本文件只制作当前人的卡。每个 review 均由 [REVIEWER.md](REVIEWER.md) 规定的真实独立会话执行；生成者不能自签。文案从只读 `person.json` 取用；设计写进 `art-direction-2`，不能为迁就图片改称号、经历或主人绑定。
+总流程与自动接入由 [AGENT.md](AGENT.md) 负责。本文件只制作当前人的卡。每个 review 均由 [REVIEWER.md](REVIEWER.md) 的真实独立任务执行，默认不需要平台 ID/回执或 OS 只读权限；生成者不能自签。文案从只读 `person.json` 取用；设计写进 `art-direction-2`，不能为迁就图片改称号、经历或主人绑定。
 
 ## 1. 看参考，再决定当前画面
 
@@ -30,7 +32,7 @@ PY ROOT/scripts/visual_plan.py compile CARD/art-direction.json --out CARD --canv
 原型是一幅占满指定竖幅画布的独立插画：当前选定的人物、动物或物件主角，在一个连续场景中做一件看得懂的事；无字、无框、无预烘焙镭射。真实返回立即保留原字节与实际响应：
 
 ```sh
-PY ROOT/scripts/visual_plan.py record CARD/generation-plan.json --role prototype --dispatch CARD/dispatch/prototype-1.json --image RAW --raw-response RESPONSE --tool TOOL --call-id CALL --artifact-id ARTIFACT
+PY ROOT/scripts/visual_plan.py record CARD/generation-plan.json --role prototype --dispatch CARD/dispatch/prototype-1.json --image RAW --raw-response RESPONSE --tool TOOL
 PY ROOT/scripts/art_quality.py review-template --layers CARD/layers.json --persona-digest DIGEST --stage prototype --out CARD/prototype-review.json
 ```
 
@@ -98,3 +100,5 @@ PY ROOT/scripts/visual_plan.py repair CARD/generation-plan.json --role subject -
 每角色最多三次真实返回，保留全部尝试与失败原因。一次反馈只修造成失败的主问题，例如“保持原型脸部与衣料细节，当前主体变成平涂且光源反了”；不要每次同时换题材、画风和构图。已合格层不重画。设计确需改变则保留原版本，新版本重过受影响审查，不靠换目录重置预算。文件存在、美术通过、本人确认分别记录。
 
 原图与评审机制详见 `references/art-evidence-format.md`。没有图像能力或达到有限返工上限时，保留真实原型和成功 HTML，清楚标明未完成项；不以代码插画、静态图或待验卡冒充 V10 成品。
+
+平台未提供图像 call/artifact ID 时省略这些可选参数；脚本使用明确标记的 local 字节绑定，保留真实原图与返回消息/附件记录。不要编平台 ID。独立审查默认使用 reviewer import --packet --host-capabilities，不因缺 trace 阻断；完整美术与动态标准不变。

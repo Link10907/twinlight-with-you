@@ -1,19 +1,12 @@
-# 一次请求执行入口 · v10-quality-2
+# 一次请求执行入口 · v10-quality-2.2-executable-bridge
 
 同一生产工作区内续跑，不要求用户发送第二条生成指令。`PY` 是宿主实际 Python 3.10+；`ROOT` 为完整包；`WORK` 为本次私人目录；`RUN=WORK/run`，`CARD=RUN/card`。命令由执行宿主完成，不让用户填写工具问卷。
 
-## 0. 先决定这条路线能不能执行
+## 0. 先接通真实执行，不重复填写能力问卷
 
-运行 `PY ROOT/scripts/bootstrap.py --root ROOT` 检查资源、依赖、清单与模板锁。优先完整离线包，不混用另一个 main 版本。读 [宿主契约](references/host-contract.md)，创建 **pending** 能力表：
+读 [可执行接入](references/execution-adapters.md)。先运行 bootstrap；从原 run-state 定位 WORK/RUN/CARD，不新建替代人格。选用户已有授权的图片服务和独立视觉路线，把示例复制到 WORK/execution.json。运行 `execution.py doctor`（不调用），然后浏览器探针和一次实际 Reviewer 看图探针，`execution.py host` 写 WORK/host-execution.json。下面 WORK/host.json 均指这个实际新来源，沿 run 命令显式传入；不覆盖旧证据。
 
-```sh
-PY ROOT/scripts/preflight.py template --out WORK/host.json
-PY ROOT/scripts/preflight.py check --capabilities WORK/host.json --mode both
-```
-
-两命令之间由宿主查真实工具说明、必要运行探针及实际会话信息，再填能力事实；模板不是现成通过记录。特别检查：图像 prompt 是否有效或可用真正隔离子任务、参考图片能否确实传入、原生编辑/透明/竖幅、图像返回后能否继续、真实独立 Reviewer 和 WebGL。共享自动上下文而没有隔离能力时，不调用生图碰运气。
-
-缺项一次说明并保留独立可做模块；不要画完整套才发现没有审查 Agent。不自动开付费服务、上传个人信息或新建账号。当前工具接口优先于包内命令示意；不得往弃用参数中塞文本冒充任务传输。
+默认实际调用使用 `execution.py image/review`，精确命令见可执行接入。后文手动 dispatch/record/packet/import 是已具备原生窄任务的宿主兼容路线；**二选一，不给同一次 image 重复 dispatch，不手写 Reviewer 响应**。配置不足先指出缺失的具体账户环境变量、可执行文件或模型；不把“没有平台 session ID/不能 chmod/没有内置子 Agent”当作无解。也不自动购买 API 或读取私人凭证。
 
 ## 1. 冻结当前资料，先构建页面候选
 
@@ -34,14 +27,23 @@ PY ROOT/scripts/visual_plan.py compile CARD/art-direction.json --out CARD --phas
 PY ROOT/scripts/visual_plan.py dispatch CARD/generation-plan.json --role prototype --workspace RUN --host-capabilities WORK/host.json --out CARD/dispatch/prototype-1.json
 ```
 
-`dispatch` 冻结当前图像任务并消耗一个调用预留；**不会调用模型**。宿主实际只发送 dispatch 的 `prompt_text`、列出的真实图片和工具支持的图像参数，不发送完整 JSON、历史对话、网页需求或本手册。无法这样发送就停止图像环节。返回后保留原字节与真实响应：
+手动路线的 `dispatch` 冻结当前图像任务并消耗一个调用预留；**不会调用模型**。默认 `execution.py image` 内部完成派发、真实调用和登记，不再单独执行这条 dispatch。宿主实际只发送 dispatch 的 `prompt_text`、列出的真实图片和工具支持的图像参数，不发送完整 JSON、历史对话、网页需求或本手册。无法这样发送就停止图像环节。返回后保留原字节与真实响应：
 
 ```sh
-PY ROOT/scripts/visual_plan.py record CARD/generation-plan.json --role prototype --dispatch CARD/dispatch/prototype-1.json --image RAW_IMAGE --raw-response RAW_RESPONSE --tool ACTUAL_TOOL --call-id ACTUAL_CALL --artifact-id ACTUAL_ARTIFACT
+PY ROOT/scripts/visual_plan.py record CARD/generation-plan.json --role prototype --dispatch CARD/dispatch/prototype-1.json --image RAW_IMAGE --raw-response RAW_RESPONSE --tool ACTUAL_TOOL
 PY ROOT/scripts/reviewer.py packet --stage prototype --layers CARD/layers.json --out CARD/reviewer-input/prototype-1
 ```
 
-宿主把 packet 的独立任务交给真实 Reviewer；实际读图，比较随包参考，不只看 JSON。原型错误类型、粗糙、偏画风、不可分层就 revise。按 REVIEWER 导入并 bind 裁决；accept 前禁止请求图层。相同模型可以，生产和审查会话必须不同。
+平台给出实际 call/artifact ID 时可附加 --call-id/--artifact-id；没有则省略，脚本仅生成明确的本地字节绑定，不伪造平台记录。
+
+默认用 `execution.py review --packet ... --root CARD --layers CARD/layers.json ... --allow-provider-calls` 实际调用、导入并绑定。原生宿主路线把 packet 的独立任务交给真实 Reviewer；实际读图，比较随包参考，不只看 JSON。原型错误类型、粗糙、偏画风、不可分层就 revise。按 REVIEWER 导入并 bind 裁决；accept 前禁止请求图层。同一模型可以，生产与审查必须是实际独立任务，不要求平台提供会话编号。原型返回后用以下默认路径导入（没有 trace 也可执行）：
+
+```sh
+PY ROOT/scripts/reviewer.py import --root CARD --response CARD/reviewer-results/prototype-1.json --packet CARD/reviewer-input/prototype-1 --host-capabilities WORK/host.json --out CARD/review-history/prototype-1.json
+PY ROOT/scripts/visual_plan.py bind-review --layers CARD/layers.json --review CARD/review-history/prototype-1.json
+```
+
+response 文件必须来自刚执行的独立任务；主执行者不得代写观察。composite/final 同样使用各自 packet 与返回。
 
 ## 3. 原生分层、排字与独立预览
 
@@ -63,15 +65,15 @@ PY ROOT/scripts/twinlight.py run WORK/person.json --workspace RUN --mode both --
 PY ROOT/scripts/reviewer.py packet --workspace RUN --stage release --out RUN/reviewer-input/release-1
 ```
 
-Reviewer 亲自检查同一 HTML，桌面/手机、星系/交融/提问/揭卡/返回与同张卡的受控 foil/depth 对照。原型/图层看过，不等于集成已通过。宿主原样保存实际 JSON 响应和真实调用 trace，在 RUN 内导入，再选择当前裁决：
+先用 `capture_review.py` 采集同一目标的真实多视角/A-B 证据，`reviewer.py packet --evidence ...` 绑定，再让 Reviewer 读取这些实际画面与运行状态并检查同一 HTML，桌面/手机、星系/交融/提问/揭卡/返回与同张卡的受控 foil/depth 对照。原型/图层看过，不等于集成已通过。宿主原样保存实际 JSON 响应，用调用前 packet 核对原件与输入副本未变，在 RUN 内导入，再选择当前裁决。无需手写平台 trace：
 
 ```sh
-PY ROOT/scripts/reviewer.py import --root RUN --response RUN/reviewer-results/raw-1.json --trace RUN/reviewer-results/trace-1.json --out RUN/review-history/imported-1.json
+PY ROOT/scripts/reviewer.py import --root RUN --response RUN/reviewer-results/raw-1.json --packet RUN/reviewer-input/release-1 --host-capabilities WORK/host.json --out RUN/review-history/imported-1.json
 PY ROOT/scripts/reviewer.py activate --workspace RUN --response RUN/review-history/imported-1.json
 PY ROOT/scripts/reviewer.py check --workspace RUN
 ```
 
-pending/blocked/revise 都不放行；新裁决不覆盖旧原始响应。`activate` 不把 complete 改为 true；继续 public run 才重新核验全部依赖。Reviewer 的真实身份、权限由宿主实现，本地记录始终不是不可伪造认证。
+pending/blocked/revise 都不放行；新裁决不覆盖旧原始响应。`activate` 不把 complete 改为 true；继续 public run 才重新核验全部依赖。没有平台认证如实保留 false，不作为作品未通过理由。真正独立任务仍须发生，本地绑定不是身份认证或 OS 权限隔离。
 
 ## 5. 一次交付，精确说明完成范围
 

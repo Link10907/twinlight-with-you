@@ -82,7 +82,7 @@ def package(root: Path, out: Path, include_demo: bool = False) -> dict:
         for path in files:
             archive.write(path, 'twinlight-with-you/' + path.relative_to(root).as_posix())
         archive.writestr('twinlight-with-you/package-manifest.json', json.dumps({
-            'schema_version': '1.0', 'skill_revision': 'v10-quality-2', 'renderer_baseline': 'V10', 'files_sha256': hashes,
+            'schema_version': '1.0', 'skill_revision': 'v10-quality-2.2-executable-bridge', 'renderer_baseline': 'V10', 'files_sha256': hashes,
             'mode': 'fictional_demo' if include_demo else 'personal_use',
             'contains_fictional_history': include_demo,
             'contains_author_showcase': False,

@@ -55,3 +55,6 @@ final 同时绑定当前 front 和 preview，views 包含真实 left/right/mobil
 最终产物另需 `RUN/release-review.json`；pending、rejected、能力阻断或文件过期均不得完整导出。原型与独立卡审查不能替代最终内嵌页面审查。`reviewer_identity_authenticated=false` 始终保留：本地记录不是宿主权限隔离或提供商认证。
 
 本版 art-direction-2 的每份 image-call request 还须带真实调用前 `dispatch:{file,sha256}`。生成记录和最终美术证据都会检查同一 RUN 的消耗记录、原 prompt、参考和原始响应；仅提供文件/手写 call_id 不再满足结构要求。它依然不是服务商身份认证。
+
+### v2.1 可选平台 ID
+图像返回仍保留实际原图、非空真实工具返回/附件记录以及调用前 dispatch。call_id/artifact_id 无法获得时由脚本创建 local-call:<dispatch_sha256> 与 local-artifact:<image_sha256>，并明确 origin=local_binding、provider_*_id=null。它们是本地关联键，不是伪造的平台回执。平台提供 ID 时仍验证其真实返回对应关系。独立审查默认使用 packet + 实际独立任务响应；仅审计元数据缺失不阻断。

@@ -13,20 +13,27 @@ import sys
 from pathlib import Path
 from PIL import Image,ImageChops,ImageStat
 from playwright.sync_api import sync_playwright
+from twinlight_core.browser_runtime import launch_flags, finale_route, runtime_snapshot
 
 p=argparse.ArgumentParser();p.add_argument('--html',type=Path,required=True);p.add_argument('--out',type=Path,required=True)
 p.add_argument('--require-webgl',action='store_true');p.add_argument('--browser')
+p.add_argument('--gpu-mode',choices=('auto','swiftshader'),default='auto',help='Use the normal browser backend by default; explicitly select swiftshader for a separate software-rendering probe.')
+p.add_argument('--headed',action='store_true',help='Use an available desktop display. Never inferred from an absent WebGL context.')
+p.add_argument('--channel',help='Installed Playwright browser channel, e.g. chrome; cannot be combined with --browser.')
 p.add_argument('--skip-continuous',action='store_true',help='Skip the real-time finale when checking additional layout variants. The normal invocation plays it once.')
 p.add_argument('--timeout',type=int,default=120,help='Maximum seconds for the browser worker, including cleanup. Timeout keeps partial checks and reports failure.')
 p.add_argument('--browser-worker',action='store_true',help=argparse.SUPPRESS)
 a=p.parse_args();a.out.mkdir(parents=True,exist_ok=True)
 if a.timeout<=0:p.error('--timeout must be positive')
+if a.channel and a.browser:p.error('--channel and --browser are mutually exclusive')
 html_bytes=a.html.read_bytes();html_text=html_bytes.decode('utf-8')
-checks=[];errors=[];warnings=[];network=[]
+checks=[];errors=[];warnings=[];network=[];unverified=[]
 report={'environment':f'{platform.system()} {platform.machine()} · headless Chromium desktop + emulated touch. No Safari/real-device performance claim.',
  'html':str(a.html.resolve()),'html_sha256':hashlib.sha256(html_bytes).hexdigest(),
  'verifier_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
  'checks':checks,'errors':errors,'warnings':warnings,'external_requests':network,'webgl':None,'ok':False,'status':'unverified','stage':'browser_launch',
+ 'release_authorized':False,'checks_ok':False,'continuous_verified':False,'full_effects_verified':False,
+ 'requested_runtime':{'gpu_mode':a.gpu_mode,'headed':a.headed,'channel':a.channel},
  'not_tested':['Safari','physical phone','real-history semantic accuracy','sustained device performance']}
 def save_report():
  pending=a.out/'report.pending.json';pending.write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8');pending.replace(a.out/'report.json')
@@ -119,15 +126,18 @@ try:
  with sync_playwright() as pw:
   binary=a.browser or os.environ.get('TWINLIGHT_BROWSER')
   if not binary and Path('/usr/lib/chromium/chromium').exists():binary='/usr/lib/chromium/chromium'
-  flags=['--no-sandbox','--disable-gpu-sandbox','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']
-  try:b=pw.chromium.launch(executable_path=binary,headless=True,args=flags)
+  if a.channel:binary=None
+  flags=launch_flags(a.gpu_mode)
+  try:b=pw.chromium.launch(executable_path=binary,channel=a.channel,headless=not a.headed,args=flags)
   except Exception as exc:
    # Playwright's bundled build may be missing or mismatched; an installed Chrome/Chromium is an equivalent engine.
    system=[x for x in ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/Applications/Chromium.app/Contents/MacOS/Chromium',
      '/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser',r'C:\Program Files\Google\Chrome\Application\chrome.exe'] if Path(x).exists()]
-   if binary or not system:raise exc
-   b=pw.chromium.launch(executable_path=system[0],headless=True,args=flags);report['browser']=system[0]
-  report['stage']='desktop_checks';q=b.new_page(viewport={'width':1440,'height':900});load_page(q)
+   if binary or a.channel or not system:raise exc
+   b=pw.chromium.launch(executable_path=system[0],headless=not a.headed,args=flags);report['browser']=system[0]
+  report['browser_version']=b.version
+  report['stage']='desktop_checks';q=b.new_page(viewport={'width':1440,'height':900},reduced_motion='no-preference');load_page(q)
+  report['initial_runtime']=runtime_snapshot(q);save_report()
   st=q.evaluate('()=>twinlightSkill.getState()');report['webgl']=q.evaluate('()=>state.gl')
   static_art=st.get('artMode')=='static' or st.get('artStatus')=='static'
   report['card_art']={'mode':st.get('artMode'),'status':st.get('artStatus'),'layered_ready':st['artReady']}
@@ -155,6 +165,7 @@ try:
    appearance=q.evaluate('()=>__holo.getState()')
    record('Static prototype cannot enable depth or rainbow foil',appearance['depth']==0 and appearance['foil']==0 and appearance['finish']==2 and appearance['layers']==1,appearance)
   if q.evaluate('()=>holo.ready'):
+   report['card_webgl']=True
    record('Card WebGL compiles',q.evaluate('()=>holo.gl.getError()===0'))
    if static_art:
     im1=image(q);q.evaluate('()=>__holo.setView(0,.45)');im2=image(q)
@@ -166,7 +177,10 @@ try:
     record('Depth zero eliminates parallax',diff(im1,im2)<.15,round(diff(im1,im2),3))
     q.evaluate('()=>{holo.depth=1;holo.foil=.5}')
   else:
-   report['webgl_unverified']='Both shader compilation and GPU particle rendering unverified in this environment.'
+   report['card_webgl']=False
+   report['webgl_unverified']='The card WebGL renderer is unavailable in this tested configuration; this is not a statement about other browser configurations.'
+   report['capability_unavailable']=True
+   unverified.append('card WebGL parallax and view-dependent foil')
    record('CSS fallback shows registered card images' if static_art else 'CSS fallback has independent real layers',q.locator('.holo-fallback img').count()==5 and q.locator('.holo-fallback').is_visible())
    q.evaluate('()=>__holo.setView(0,-.45)')
    l=q.locator('.holo-fallback img').evaluate_all('(images)=>images.map(e=>e.style.transform)')
@@ -181,15 +195,50 @@ try:
   q.locator('#cardFlip').click();q.wait_for_timeout(350);record('Flip works',q.evaluate('()=>v8.flipped'))
   record('No horizontal overflow desktop',q.evaluate('()=>document.documentElement.scrollWidth<=innerWidth'))
   if not a.skip_continuous:
-   report['stage']='real_time_finale'
-   q.locator('#identityClose').click();q.evaluate('()=>{v10.musicChosen=true;galaxyDebug.resume()}');q.locator('#v10HomeFinale').click()
-   q.wait_for_function('()=>v10.time>3.3&&v10.phase==="merge"&&!testing',timeout=10000)
-   record('Real-time finale advances beyond AI introduction',q.evaluate('()=>v10.playing&&state.mergePlaying&&!v8.cardOpen'))
-   q.wait_for_function('()=>v8.cardOpen&&v10.time===14',timeout=20000)
-   record('Real-time finale automatically reveals the card',q.locator('#identityScene').is_visible())
-   q.locator('#identityClose').click();q.evaluate(SETTLE)
-   record('Return button restores interactive personal galaxy',q.evaluate('()=>!v8.cardOpen&&!state.encounterCinematic&&state.mode==="personal"&&!document.querySelector("[inert]")') and q.locator('#v10HomeFinale').is_visible())
+   report['stage']='finale_runtime_route';save_report()
+   q.locator('#identityClose').click();q.bring_to_front()
+   q.evaluate('()=>{v10.musicChosen=true;galaxyDebug.resume()}')
+   before=runtime_snapshot(q);report['finale']={'before':before,**finale_route(before)};save_report()
+   if report['finale']['route']=='autoplay':
+    report['stage']='real_time_finale';save_report()
+    # A passive click/rAF observer measures the existing animation. It never seeks,
+    # edits the timeline or changes reduced motion/WebGL state to obtain a pass.
+    q.evaluate('''()=>{window.__twFinaleProbe={start:null,end:null,frames:0};
+     document.getElementById('v10HomeFinale').addEventListener('click',()=>{
+      const p=window.__twFinaleProbe;p.start=performance.now();
+      const observe=()=>{p.frames++;if(v8.cardOpen){p.end=performance.now();return;}
+       if(performance.now()-p.start<25000)requestAnimationFrame(observe);};requestAnimationFrame(observe);
+     },{capture:true,once:true});}''')
+    q.locator('#v10HomeFinale').click()
+    q.wait_for_function('()=>v10.time>3.3&&v10.phase==="merge"&&!testing',timeout=10000,polling=100)
+    record('Real-time finale advances beyond AI introduction',q.evaluate('()=>v10.playing&&state.mergePlaying&&!v8.cardOpen'))
+    q.wait_for_function('()=>v8.cardOpen&&v10.time===14&&window.__twFinaleProbe.end!==null',timeout=20000,polling=100)
+    measured=q.evaluate('()=>window.__twFinaleProbe');report['finale']['measurement']=measured
+    elapsed=(measured['end']-measured['start'])/1000;report['finale']['wall_seconds']=elapsed
+    record('Real-time finale automatically reveals the card',q.locator('#identityScene').is_visible())
+    record('Real-time finale finishes within the 15 second limit',0<elapsed<=15,elapsed)
+    report['continuous_verified']=True;report['finale'].update(status='verified',autoplay_verified=True)
+   elif report['finale']['route']=='manual_reduced_motion':
+    # WebGL failure intentionally sets state.reduced in the locked V10 renderer.
+    # That mode waits for a manual reveal, so an autoplay wait is invalid.
+    report['stage']='fallback_manual_reveal';report['capability_unavailable']=True
+    unverified.append('real-time full galaxy merger: '+report['finale']['reason']);save_report()
+    q.locator('#v10HomeFinale').click()
+    q.wait_for_function('()=>document.getElementById("v10RevealNow")&&!document.getElementById("v10RevealNow").hidden',timeout=5000,polling=100)
+    report['finale']['after_start']=runtime_snapshot(q);save_report()
+    record('Fallback explicitly waits for manual reveal, not automatic playback',q.evaluate('()=>state.reduced&&!state.mergePlaying&&!v8.cardOpen'))
+    q.locator('#v10RevealNow').click()
+    record('Fallback manual reveal remains usable',q.locator('#identityScene').is_visible())
+   else:
+    report['capability_unavailable']=True
+    unverified.append('real-time full galaxy merger: '+report['finale']['reason']);save_report()
+   if q.evaluate('()=>v8.cardOpen'):
+    q.locator('#identityClose').click();q.evaluate(SETTLE)
+    record('Return button restores interactive personal galaxy',q.evaluate('()=>!v8.cardOpen&&!state.encounterCinematic&&state.mode==="personal"&&!document.querySelector("[inert]")') and q.locator('#v10HomeFinale').is_visible())
+   report['finale']['after']=runtime_snapshot(q);save_report()
    q.evaluate('()=>galaxyDebug.freeze()')
+  else:
+   report['finale']={'route':'explicit_skip','status':'not_tested','reason':'Caller requested a layout-only variant. Not evidence of real-time playback.'}
   q.close()
   report['stage']='mobile_checks'
   ctx=b.new_context(viewport={'width':390,'height':844},is_mobile=True,has_touch=True);m=ctx.new_page();load_page(m)
@@ -220,9 +269,21 @@ try:
   record('No page exceptions',not errors,errors);record('No external requests',not network,network)
   if a.require_webgl:record('WebGL required by invocation',report['webgl'] is True and 'webgl_unverified' not in report)
 except Exception as exc:
- status=1;report['failure']=str(exc)
+ status=1;report['failure']=str(exc);report['failed_stage']=report.get('stage')
+ try:
+  if 'q' in locals() and not q.is_closed():report['failure_runtime']=runtime_snapshot(q)
+ except Exception:pass
 finally:
- report['ok']=status==0;report['not_tested']=['Safari','physical phone','real-history semantic accuracy','sustained device performance']
+ report['checks_ok']=status==0
+ report['not_tested']=['Safari','physical phone','real-history semantic accuracy','sustained device performance']+unverified
  if a.skip_continuous:report['not_tested'].append('real-time finale playback (skipped for this additional variant)')
- report['stage']='complete' if status==0 else 'failed';report['status']='passed' if status==0 else 'failed';save_report()
+ # This verifier does not perform the standalone card's complete foil comparison.
+ report['full_effects_verified']=False
+ report['effects_scope']='Timeline and UI diagnostics only; full card foil validation and independent release review are separate.'
+ if status==0 and unverified:
+  status=2;report['status']='capability_unavailable';report['stage']='completed_partial_checks'
+  report['failure']='Partial interaction checks completed; requested effects remain unverified: '+'; '.join(unverified)
+ else:
+  report['status']='passed' if status==0 else 'failed';report['stage']='complete' if status==0 else 'failed'
+ report['ok']=status==0;save_report()
 raise SystemExit(status)

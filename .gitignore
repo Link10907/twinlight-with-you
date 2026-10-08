@@ -21,3 +21,8 @@ verification/browser/
 verification/browser-pipeline/
 verification/*-home.png
 verification/*-card.png
+
+# Execution credentials/settings are local only
+execution.local.json
+.env
+.twinlight-patch-backups/

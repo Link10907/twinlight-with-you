@@ -2,7 +2,7 @@
 
 This is a transport handoff, NOT an authenticated provider request. The producer
 cannot obtain a second-agent capability by editing these records. Hosts must
-actually isolate image tasks and enforce writer separation.
+actually isolate image tasks; reviewers must not modify candidates. Packet hashes detect changes, not enforce OS permissions.
 """
 from __future__ import annotations
 import datetime as dt
@@ -57,7 +57,7 @@ def dispatch(plan_path: Path, role: str, workspace: Path, host_path: Path, out: 
         used=sum(a.get('role')==role for a in ledger['attempts'])
         if used>=3: _fail('retry_limit','Three call reservations already exist for this role in the same run; preserve partial results')
         payload={'version':'image-dispatch-1','role':role,'persona_digest':plan['persona_digest'],
-                 'producer_session_id':host['producer_session_id'],'workspace':str(workspace),
+                 'producer_session_id':host.get('producer_session_id'),'workspace':str(workspace),
                  'plan_sha256':sha256(plan_path),'design':plan['design'],
                  'prompt':job['prompt'],'prompt_text':prompt.read_text(encoding='utf-8'),
                  'reference_images':job['reference_images'],'task_scope':job['task_scope'],

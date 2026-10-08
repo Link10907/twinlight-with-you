@@ -289,7 +289,16 @@ def _source(root: Path, entry: dict, role: str, prototype_hash: str, canvas: tup
         check_recorded_dispatch(root, call, inputs)
     raw_text = raw.read_text(encoding="utf-8")
     inputs[str(raw)] = sha256(raw)
-    require(artifact in raw_text, "uncaptured_response", "The recorded artifact is absent from the captured tool response")
+    require(bool(raw_text.strip()), "uncaptured_response", "Preserve the actual returned message or attachment record")
+    if response.get("artifact_id_origin") == "local_binding":
+        require(artifact == "local-artifact:" + digest and response.get("provider_artifact_id") is None,
+                "local_artifact_mismatch", "A local artifact key is a file hash, not a provider ID")
+    else:
+        require(artifact in raw_text, "uncaptured_response", "The recorded artifact is absent from the captured tool response")
+    if call.get("call_id_origin") == "local_binding":
+        dispatched = checked_ref(root, request.get("dispatch"))
+        require(call_id == "local-call:" + sha256(dispatched) and call.get("provider_call_id") is None,
+                "local_call_mismatch", "A local invocation key binds the pre-call dispatch, not a platform receipt")
     # Track call/artifact pairs rather than allowing one returned image to fill several roles.
     key = tool + "\0" + call_id + "\0" + artifact
     require(key not in records, "duplicate_tool_output", "One returned image cannot fill multiple independent roles")

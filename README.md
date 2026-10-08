@@ -1,6 +1,8 @@
 # Twinlight · 与你同光
 
-**v10-quality-2**：保留 V10 星系与揭卡视觉，完善任务隔离、独立审查、局部返工及成品导出。本版是工作流升级，不是重设计页面或替换指定画风。
+> v2.2 实际执行入口：[可执行接入](references/execution-adapters.md)。生图用 `execution.py image`，独立看图用 `execution.py review`；旧 dispatch/packet 仍只准备材料，不能代替调用。
+
+**v10-quality-2.1-portable-review**：保留 V10 星系与揭卡视觉，完善任务隔离、独立审查、局部返工及成品导出。本版是工作流升级，不是重设计页面或替换指定画风。
 
 ## 一句话启动
 
@@ -36,7 +38,7 @@
 |---|---|
 | 最小执行规则 | [SKILL.md](SKILL.md) |
 | 完整一次请求流程 | [AGENT.md](AGENT.md) |
-| 独立审查角色和真实回执 | [REVIEWER.md](REVIEWER.md) |
+| 独立任务审查与产物绑定 | [REVIEWER.md](REVIEWER.md) |
 | 指定画风、原型、原生分层 | [CARD.md](CARD.md) |
 | 实际工具能力与隔离 | [宿主契约](references/host-contract.md) |
 | 失败定位、预算与失效 | [返工规则](references/recovery-policy.md) |
@@ -57,3 +59,7 @@ python scripts/package_skill.py --out /path/out/twinlight-with-you.zip
 包内资源清单与 V10 模板锁分别校验。已上传完整包时以包内同版内容为准；不混读远端 main。低层 render/build 命令仅用于诊断，默认 public run 的完整性要求不能借此绕过。旧版没有 dispatch / host contract 的工作区不会自动升格通过；保留旧成果及未验证说明。
 
 原创代码 MIT，第三方来源见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。许可不授权复用个人经历、肖像或其他人的成品。
+
+## v2.1 宿主兼容修复
+
+默认独立任务能看图即可进入审查；平台会话/调用 ID、签名回执、OS 只读权限是可选审计信息，不再阻断制作。原件与 packet 的前后哈希核对、美术否决、原生分层和动态验收保持不变。此前 v2 在预检退出的任务按 [恢复指引](references/resume-v2-blocked.md) 复用原工作区续跑。此修复没有部署 Reviewer 服务，也不是一张新卡已验收的声明。
