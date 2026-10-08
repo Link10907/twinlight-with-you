@@ -284,6 +284,9 @@ def _source(root: Path, entry: dict, role: str, prototype_hash: str, canvas: tup
         require(response.get("canvas") == list(im.size), "returned_canvas", "Record actual returned image dimensions, including native rounding")
     artifact = _string(response.get("artifact_id"), "artifact_id", maximum=500)
     raw = checked_ref(root, call.get("raw_response"), limit=MAX_JSON)
+    if v2:
+        from .image_dispatch import check_recorded_dispatch
+        check_recorded_dispatch(root, call, inputs)
     raw_text = raw.read_text(encoding="utf-8")
     inputs[str(raw)] = sha256(raw)
     require(artifact in raw_text, "uncaptured_response", "The recorded artifact is absent from the captured tool response")
@@ -322,7 +325,8 @@ def _review(root: Path, evidence: dict, stage: str, targets: dict, inputs: dict,
     inputs[str(path)] = sha256(path)
     require(data.get("stage") == stage and data.get("targets") == targets,
             "stale_review", "Review is not bound to the current " + stage + " artwork")
-    require(data.get("decision") in ("accept", "revise", "pending"), "review_decision", "Invalid review decision")
+    require(data.get("decision") in ("accept", "revise", "pending", "blocked"), "review_decision", "Invalid review decision")
+    require(data.get("decision") != "blocked", "reviewer_blocked", "Reviewer could not inspect actual evidence", status="reviewer_blocked")
     require(data["decision"] != "pending", "pending_review", "Review has not been performed", status="needs_art_review")
     require(data["decision"] == "accept", "review_rejected", "The observer rejected this artwork")
     _string(data.get("observer"), "observer", 2, 120)
@@ -347,6 +351,8 @@ def _review(root: Path, evidence: dict, stage: str, targets: dict, inputs: dict,
             signatures.append(pixel_digest(image(p)))
             inputs[str(p)] = sha256(p)
         require(signatures[0] != signatures[1], "duplicate_views", "Left and right views cannot be the same pixels")
+    from .independent_review import check_handoff
+    check_handoff(root, data, inputs)
     return data
 
 

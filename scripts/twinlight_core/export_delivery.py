@@ -74,6 +74,22 @@ def export(workspace: Path, destination: Path, *, link_style: str = 'local') -> 
         if _sha(source)!=receipt.get('outputs_sha256',{}).get(key):
             raise ValueError('Output changed after public validation: '+key)
         planned.append((key,source,_sha(source)))
+    from .host_contract import load_assessment
+    contract=run.get("host_contract",{})
+    current=load_assessment(Path(contract["source"]) if contract.get("source") else None,mode)
+    if not current["ok"] or current!=contract or receipt.get("host_contract")!=contract:
+        raise ValueError("Host capability contract is missing, blocked or changed; resume the public run")
+    if mode!="html":
+        from .art_quality import check_evidence
+        state=_load(workspace/"run-state.json")
+        layers=Path(state.get("layers_source",""))
+        gate=check_evidence(layers,state.get("persona_digest",""),front=Path(run["outputs"]["card_front"]),preview=Path(run["outputs"]["card_preview"]))
+        if not gate.get("ok"):
+            raise ValueError("Upstream artwork review changed or was revoked; complete export is blocked")
+    from .independent_review import check_release
+    release=check_release(workspace,run.get('outputs',{}),mode)
+    if not release['ok']:
+        raise ValueError('Independent release review missing, rejected or stale: '+json.dumps(release.get('errors',[]),ensure_ascii=False))
     requirements=run.get('delivery_requirements',{'in_chat_preview':False})
     if (not isinstance(requirements,dict) or type(requirements.get('in_chat_preview')) is not bool
             or requirements!=receipt.get('delivery_requirements',{'in_chat_preview':False})):

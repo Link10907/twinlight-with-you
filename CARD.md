@@ -1,6 +1,9 @@
 # 闪卡制作：先把一张画做对
 
-总流程与自动接入由 [AGENT.md](AGENT.md) 负责。本文件只制作当前人的卡。文案从只读 `person.json` 取用；设计写进 `art-direction-2`，不能为迁就图片改称号、经历或主人绑定。
+> 本版调用前必须完成 [宿主预检](references/host-contract.md)，每个角色先 `visual_plan.py dispatch` 再调用真实图像工具，`record` 需传对应 `--dispatch`。编译时 `--capabilities WORK/host.json` 可直接读取完整能力表。原型与各层均如此；具体可运行顺序以 AGENT 为准，不能先调用再补派发。
+
+
+总流程与自动接入由 [AGENT.md](AGENT.md) 负责。本文件只制作当前人的卡。每个 review 均由 [REVIEWER.md](REVIEWER.md) 规定的真实独立会话执行；生成者不能自签。文案从只读 `person.json` 取用；设计写进 `art-direction-2`，不能为迁就图片改称号、经历或主人绑定。
 
 ## 1. 看参考，再决定当前画面
 
@@ -27,11 +30,11 @@ PY ROOT/scripts/visual_plan.py compile CARD/art-direction.json --out CARD --canv
 原型是一幅占满指定竖幅画布的独立插画：当前选定的人物、动物或物件主角，在一个连续场景中做一件看得懂的事；无字、无框、无预烘焙镭射。真实返回立即保留原字节与实际响应：
 
 ```sh
-PY ROOT/scripts/visual_plan.py record CARD/generation-plan.json --role prototype --image RAW --raw-response RESPONSE --tool TOOL --call-id CALL --artifact-id ARTIFACT
+PY ROOT/scripts/visual_plan.py record CARD/generation-plan.json --role prototype --dispatch CARD/dispatch/prototype-1.json --image RAW --raw-response RESPONSE --tool TOOL --call-id CALL --artifact-id ARTIFACT
 PY ROOT/scripts/art_quality.py review-template --layers CARD/layers.json --persona-digest DIGEST --stage prototype --out CARD/prototype-review.json
 ```
 
-**先确认返回的是本次原型插画，再与审美参考按相同显示尺寸并排看。** 按[质量工作流](references/quality-workflow.md)逐项检查产物类型、主体、材料、焦点、空间与文字区，指出看得见的差异和主角/道具、背景、前景的归属。类型错误先核对实际发送的任务；原型粗糙、扁平、塑料化或与所选画风不符时先修绘画；近景与主体混在一起时先修可分离性。原型合格后才投入分层。review 模板只提供 pending 字段，实际观察后才能填写接受意见。
+**先确认返回的是本次原型插画，再与审美参考按相同显示尺寸并排看。** 按[质量工作流](references/quality-workflow.md)逐项检查产物类型、主体、材料、焦点、空间与文字区，指出看得见的差异和主角/道具、背景、前景的归属。类型错误先核对实际发送的任务；原型粗糙、扁平、塑料化或与所选画风不符时先修绘画；近景与主体混在一起时先修可分离性。原型合格后才投入分层。review 模板只提供 pending 字段，独立 Reviewer 实际观察后才能给出接受意见。
 
 ```sh
 PY ROOT/scripts/visual_plan.py bind-review --layers CARD/layers.json --review CARD/prototype-review.json

@@ -65,6 +65,11 @@ REQUIRED += tuple('scripts/twinlight_core/' + name + '.py' for name in
                   ('visual_contract', 'generation_plan', 'embedded_card', 'export_delivery', 'canvas_mapping'))
 
 
+REQUIRED += ('REVIEWER.md','scripts/reviewer.py','scripts/preflight.py','scripts/verify_skill.py',
+             'references/host-contract.md','references/recovery-policy.md',
+             'scripts/twinlight_core/independent_review.py','scripts/twinlight_core/host_contract.py',
+             'scripts/twinlight_core/image_dispatch.py','scripts/twinlight_core/review_exchange.py')
+
 def fetch(url: str, limit: int) -> bytes:
     request = urllib.request.Request(url, headers={'User-Agent': 'Twinlight-resource-bootstrap',
                                                   'Accept': 'application/vnd.github+json'})

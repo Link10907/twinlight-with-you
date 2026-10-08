@@ -49,7 +49,7 @@ def main(argv=None):
             criteria = review_checks(design, args.stage, REVIEW_CHECKS[args.stage])
             draft = {"stage": args.stage, "targets": targets[args.stage], "observer": None, "observed_at": None,
                      "decision": "pending", "checks": {key: {"passed": False, "observation": ""} for key in criteria},
-                     "capture": None}
+                     "capture": None, "handoff": None, "blockers": []}
             if args.stage == "final":
                 draft["views"] = {"left": None, "right": None, "mobile": None}
             args.out.parent.mkdir(parents=True, exist_ok=True)

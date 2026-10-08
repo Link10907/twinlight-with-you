@@ -35,7 +35,7 @@ def _task_instruction(design: dict, role: str, canvas: tuple[int, int]) -> str:
     else:
         lines = ['本次唯一产物：一张 ' + role + ' 原生编辑图层。只处理当前已通过原型的这一层，'
                  '保持原型完整画布与原坐标，执行下述具体保留/删除任务。']
-    lines.append('本次图像调用的职责到这张图为止。Twinlight 网页、卡框、中文排字与动态镭射由宿主程序组装；图像输出只包含当前插画或图层。')
+    lines.append('仅输出当前插画或图层。不要界面、拼图、文字、边框或预先画死的反光。')
     return '\n'.join(lines)
 
 
@@ -69,6 +69,10 @@ def check_capabilities(value: dict, canvas) -> dict:
             raise VisualContractError('capability_unavailable', 'Native card generation requires actual ' + key)
     if not isinstance(value.get('source'), str) or len(value['source'].strip())<8:
         raise VisualContractError('capability_source', 'Explain how the currently available tool capability was checked')
+    from .host_contract import image_gaps
+    gaps=image_gaps(value)
+    if gaps:
+        raise VisualContractError('image_transport_unavailable', 'Use live tool capabilities and isolated task inputs: '+', '.join(gaps))
     canvases=value.get('native_canvases')
     prompt_only = value.get('canvas_selection') == 'prompt_only'
     if not isinstance(canvases,list) or (not prompt_only and list(canvas) not in canvases):
@@ -96,8 +100,9 @@ def repair_plan(plan_path: Path, role: str, instruction: str) -> dict:
     """Append observed host feedback without changing identity or erasing attempts."""
     plan_path = Path(plan_path).resolve(); root = plan_path.parent
     plan = _json(plan_path)
-    if plan.get('version') != 'generation-plan-2' or plan.get('phase') != 'layers' or role not in ('background','subject','effects'):
-        raise VisualContractError('repair_phase', 'Repair an existing native layer job in the layers phase')
+    expected_phase='prototype' if role=='prototype' else 'layers'
+    if plan.get('version') != 'generation-plan-2' or plan.get('phase') != expected_phase or role not in IMAGE_ROLES:
+        raise VisualContractError('repair_phase', 'Repair a job in its existing phase, retaining design and attempts')
     if not isinstance(instruction, str) or not 8 <= len(instruction.strip()) <= 2500 or '\x00' in instruction:
         raise VisualContractError('repair_instruction', 'Supply 8–2500 characters of actual observed visual feedback and a concrete correction')
     instruction = instruction.strip()
@@ -111,15 +116,16 @@ def repair_plan(plan_path: Path, role: str, instruction: str) -> dict:
     design = validate_design(_json(target), plan['persona_digest'])
     if style_binding(design) != plan['style_binding'] or job['style_binding'] != plan['style_binding']:
         raise VisualContractError('style_drift', 'A repair cannot change the selected style or its references')
-    prototype = plan.get('prototype')
-    if not prototype:
-        raise VisualContractError('prototype_missing', 'Repair the layer against its approved prototype')
-    proto_path = (root / prototype['file']).resolve()
-    if not proto_path.is_relative_to(root) or not proto_path.is_file() or sha256(proto_path) != prototype['sha256']:
-        raise VisualContractError('prototype_changed', 'The approved prototype changed before the repair')
-    if (job.get('operation') != 'image_edit' or job.get('reference_images') != [{**prototype, 'purpose':'composition'}]
-            or job.get('edit_base') != prototype or job.get('coordinate_policy') != 'preserve_full_canvas'):
-        raise VisualContractError('edit_reference', 'Compile the sole-prototype native-edit plan before repairing it')
+    if role != 'prototype':
+        prototype = plan.get('prototype')
+        if not prototype:
+            raise VisualContractError('prototype_missing', 'Repair the layer against its approved prototype')
+        proto_path = (root / prototype['file']).resolve()
+        if not proto_path.is_relative_to(root) or not proto_path.is_file() or sha256(proto_path) != prototype['sha256']:
+            raise VisualContractError('prototype_changed', 'The approved prototype changed before the repair')
+        if (job.get('operation') != 'image_edit' or job.get('reference_images') != [{**prototype, 'purpose':'composition'}]
+                or job.get('edit_base') != prototype or job.get('coordinate_policy') != 'preserve_full_canvas'):
+            raise VisualContractError('edit_reference', 'Compile the sole-prototype native-edit plan before repairing it')
     prompt = (root / job['prompt']['file']).resolve()
     if not prompt.is_relative_to(root) or not prompt.is_file() or sha256(prompt) != job['prompt']['sha256']:
         raise VisualContractError('prompt_changed', 'The previous compiled prompt must remain intact before adding feedback')
@@ -133,10 +139,10 @@ def repair_plan(plan_path: Path, role: str, instruction: str) -> dict:
         raise VisualContractError('retry_limit', 'Three returns are already recorded for this role; repair must not reset the attempt limit')
     previous = job['prompt']
     text = prompt.read_text(encoding='utf-8')
-    ownership = job.get('ownership_instruction') or _ownership_instruction(design, role)
-    if ownership not in text:
+    ownership = (job.get('ownership_instruction') or _ownership_instruction(design, role)) if role!='prototype' else ''
+    if ownership and ownership not in text:
         text = ownership + '\n\n' + text
-    text = 'LATEST OBSERVED FAILURE AND REQUIRED REPAIR — highest-priority corrections to this same approved Image1, preserving its full canvas:\n' + instruction + '\n\n' + text
+    text = 'OBSERVED FAILURE — correct only the following defects; preserve the frozen design and valid composition:\n' + instruction + '\n\n' + text
     prompt.write_text(text, encoding='utf-8')
     job['prompt'] = _ref(prompt, root)
     job['ownership_instruction'] = ownership
@@ -237,7 +243,7 @@ def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(
 
 
 def register_image(plan_path: Path, role: str, image_path: Path, raw_response: Path, *,
-                   tool: str, call_id: str, artifact_id: str, _revalidate_attempt: str|None=None) -> dict:
+                   tool: str, call_id: str, artifact_id: str, dispatch_path: Path|None=None, _revalidate_attempt: str|None=None) -> dict:
     """Copy original output bytes and register an observed response. No synthetic calls."""
     plan_path=Path(plan_path).resolve();root=plan_path.parent
     plan=_json(plan_path)
@@ -311,6 +317,10 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
         for candidate,stored in ((image_path,previous_attempt['image']),(raw_response,previous_attempt['raw_response'])):
             if candidate != (root/stored['file']).resolve() or sha256(candidate) != stored['sha256']:
                 raise VisualContractError('revalidation_source','Revalidation must use the exact immutable original return and response')
+    dispatch_record = None
+    if _revalidate_attempt is None:
+        from .image_dispatch import verify_dispatch
+        dispatch_record = verify_dispatch(plan_path, role, dispatch_path, call_id=call_id)
     if _revalidate_attempt is None and sum(x['role']==role for x in evidence.get('attempts',[]))>=3:
         raise VisualContractError('retry_limit','Three returned attempts already recorded for this role; preserve the failure and stop')
     # Immutable originals preserve successful and failed attempts. Only selected roles are copied below.
@@ -320,12 +330,16 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
     prompt_copy=originals/(attempt_key+'-prompt.txt')
     if _revalidate_attempt is None:
         shutil.copyfile(raw_response,raw_copy);shutil.copyfile(image_path,native_copy);shutil.copyfile(prompt,prompt_copy)
+        from .image_dispatch import consume_dispatch
+        consume_dispatch(dispatch_path, call_id, raw_copy)
     elif not prompt_copy.is_file() or sha256(prompt_copy)!=job['prompt']['sha256']:
         raise VisualContractError('revalidation_prompt','The frozen failed request does not match the current plan; do not invent a replacement request')
     attempt={'key':attempt_key,'role':role,'image':_ref(native_copy,root),'raw_response':_ref(raw_copy,root),
              'registered_at':dt.datetime.now(dt.timezone.utc).isoformat(),'status':'rejected'}
     attempt['tool_identifiers']={'tool':tool,'call_id':call_id,'artifact_id':artifact_id}
     attempt['prompt']=_ref(prompt_copy,root)
+    if dispatch_record is not None:
+        attempt['dispatch']=_ref(Path(dispatch_path),root)
     error=None;actual_canvas=None;fmt=None
     try:
         with Image.open(native_copy) as image:
@@ -371,7 +385,8 @@ def register_image(plan_path: Path, role: str, image_path: Path, raw_response: P
                      'task_scope':job.get('task_scope'),
                      'ownership_instruction':job.get('ownership_instruction'),
                      'repair_instruction':job.get('repair_instruction'),
-                     'prompt_transport':'host_instruction_record_not_provider_authentication'},
+                     'prompt_transport':'host_instruction_record_not_provider_authentication',
+                     'dispatch':_ref(Path(dispatch_path),root) if dispatch_record else previous_attempt.get('dispatch')},
           'response':{'artifact_id':artifact_id,'sha256':sha256(target),'canvas':list(actual_canvas)},
           'raw_response':_ref(raw_copy,root)}
     if role!='prototype' and actual_canvas!=canvas:
@@ -445,6 +460,14 @@ def bind_review(manifest_path: Path, review_path: Path, *, front: Path|None=None
     manifest=read_json(manifest_path);persona=manifest['persona_digest']
     targets,evidence,design,inputs=snapshot(manifest_path,persona,stage=stage,front=front,preview=preview)
     candidate=json.loads(json.dumps(evidence));candidate.setdefault('reviews',{})[stage]=_ref(review_path,root)
+    if review.get('targets') != targets[stage]:
+        raise VisualContractError('stale_review','The response does not review current artifact bytes')
+    if review.get('decision') in ('revise','blocked'):
+        from .independent_review import check_handoff
+        check_handoff(root,review,inputs)
+        _save(root/'art-evidence.json',candidate)
+        return {'ok':False,'bound':True,'status':'art_rejected' if review['decision']=='revise' else 'reviewer_blocked',
+                'review':candidate['reviews'][stage], 'blockers':review.get('blockers',[])}
     _review(root,candidate,stage,targets[stage],inputs,required_checks=review_checks(design,stage,REVIEW_CHECKS[stage]))
     _save(root/'art-evidence.json',candidate)
     report=check_evidence(manifest_path,persona,stage=stage,front=front,preview=preview)

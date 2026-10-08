@@ -89,6 +89,7 @@ def parser():
     q.add_argument('--font',type=Path,help='Usable Chinese typography font for pending native card generation; completed layers do not require it')
     q.add_argument('--browser',help='Actual installed Chrome/Chromium executable')
     q.add_argument('--no-browser',action='store_true',help='Explicitly leave dynamic rendering unverified')
+    q.add_argument('--host-capabilities',type=Path,help='Live host capability contract; retained on resume, never auto-approved')
     q.add_argument('--require-in-chat-preview',action='store_true',help='Persist an explicit request for verified same-file in-chat interactions; file completion remains separate')
     return p
 
@@ -127,7 +128,7 @@ def main(argv=None):
             from twinlight_core.run import run
             result=run(args.input,args.workspace,mode=args.mode,layers=args.layers,
                        art_prompt_file=args.art_prompt_file,browser=args.browser,no_browser=args.no_browser,font=args.font,
-                       require_in_chat_preview=args.require_in_chat_preview)
+                       require_in_chat_preview=args.require_in_chat_preview,host_capabilities=args.host_capabilities)
             print(json.dumps(result,ensure_ascii=False,indent=2))
             return 1 if result['status'] in ('failed','partial_success','art_rejected') else 0
         elif args.cmd in ('start','next','check','status','report','confirm','art','unblock'):

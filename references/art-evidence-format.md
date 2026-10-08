@@ -48,3 +48,10 @@ final 同时绑定当前 front 和 preview，views 包含真实 left/right/mobil
 ## 报告与边界
 
 `outputs` 是通过当前关口的文件，`candidate_outputs` 是待验素材；只以本次 `complete` 判断请求是否完成。不能以文件数、art_status、ok 或旧报告替代。导出收据绑定实际文件，不携带原始聊天或凭证。技术记录、视觉观察、本人确认与公开授权始终分别记录。
+
+## 独立审查升级
+
+三个 stage review 现在均要求 `handoff`、`blockers`，绑定实际独立调用及原始裁决；规范见 [REVIEWER.md](../REVIEWER.md)。旧的 observer 字符串与自写 capture 不再单独构成通过。
+最终产物另需 `RUN/release-review.json`；pending、rejected、能力阻断或文件过期均不得完整导出。原型与独立卡审查不能替代最终内嵌页面审查。`reviewer_identity_authenticated=false` 始终保留：本地记录不是宿主权限隔离或提供商认证。
+
+本版 art-direction-2 的每份 image-call request 还须带真实调用前 `dispatch:{file,sha256}`。生成记录和最终美术证据都会检查同一 RUN 的消耗记录、原 prompt、参考和原始响应；仅提供文件/手写 call_id 不再满足结构要求。它依然不是服务商身份认证。

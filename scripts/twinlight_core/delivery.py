@@ -42,7 +42,7 @@ def _save(path: Path, value: dict):
     tmp.replace(path)
 
 
-def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview: bool = False, **kwargs) -> dict:
+def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview: bool = False, host_capabilities: Path | None = None, **kwargs) -> dict:
     """No CLI switch disables this gate. Low-level render/build commands remain diagnostics."""
     workspace = Path(workspace).resolve()
     state_path = workspace / "run-state.json"
@@ -53,6 +53,9 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
         raise ValueError('Invalid saved delivery requirements')
     require_in_chat_preview = (require_in_chat_preview is True
                                or previous_requirements.get("in_chat_preview") is True)
+    from .host_contract import load_assessment
+    host_source = host_capabilities or previous.get("host_capabilities_source")
+    host_contract = load_assessment(Path(host_source) if host_source else None, kwargs.get("mode", "both"))
     decisions = []
 
     def review_gate(content, layers, folder, persona):
@@ -167,6 +170,41 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
     primary_key = {"both": "html_with_card", "html": "html", "card": "card_preview"}[mode]
     result["primary_output"] = result["outputs"].get(primary_key)
     result["delivery_files"] = {k: result["outputs"][k] for k in required if k in result["outputs"]}
+    result["files_built"] = outputs_ready
+    release = {"ok": False, "status": "upstream_pending", "independent_review_recorded": False,
+               "reviewer_identity_authenticated": False}
+    if result["complete"]:
+        from .independent_review import check_release
+        release = check_release(workspace, result["outputs"], mode)
+        if not release["ok"]:
+            result["complete"] = False
+            result["status"] = release["status"]
+            if release["status"] == "release_rejected": result["ok"] = False
+            resume = [sys.executable, str(Path(__file__).resolve().parents[1] / "twinlight.py"), "run",
+                      str(Path(input_path).resolve()), "--workspace", str(workspace), "--mode", mode]
+            for name in ("layers", "browser", "font", "art_prompt_file"):
+                if kwargs.get(name) is not None:
+                    resume += ["--" + name.replace("_", "-"), str(kwargs[name])]
+            if kwargs.get("no_browser"): resume.append("--no-browser")
+            if require_in_chat_preview: resume.append("--require-in-chat-preview")
+            result["next_action"] = {"type": "independent_release_review", "resume": resume,
+                "read": [str(Path(__file__).resolve().parents[2] / "REVIEWER.md")],
+                "candidate": result["primary_output"], "review": str(workspace / "release-review.json"),
+                "errors": release.get("errors", []), "user_confirmation_required": False,
+                "constraints": ["Delegate to a real isolated reviewer with read-only artifacts.",
+                                "Do not self-approve or rewrite a rejected verdict. Preserve the candidate and repair only the failing stage."]}
+    result["stages"]["release_review"] = release
+    result["independent_release_review_recorded"] = release.get("independent_review_recorded") is True
+    result["reviewer_identity_authenticated"] = False
+    result["host_contract"] = host_contract
+    if not host_contract["ok"]:
+        result["complete"] = False
+        old_action = result.get("next_action")
+        result["status"] = "capability_blocked"
+        result["next_action"] = {"type":"check_host_capabilities", "gaps":host_contract["gaps"],
+            "read":[str(Path(__file__).resolve().parents[2] / "references/host-contract.md")],
+            "pending_actions":[old_action] if old_action else [], "user_confirmation_required":False,
+            "resume":(old_action or {}).get("resume", [sys.executable,str(Path(__file__).resolve().parents[1]/"twinlight.py"),"run",str(Path(input_path).resolve()),"--workspace",str(workspace),"--mode",mode])}
     result["host_preview"] = {"status": "not_tested", "html_sha256": None,
                               "note": "A file attachment and a local browser check do not establish in-chat HTML execution."}
     result["in_chat_preview_verified"] = False
@@ -209,22 +247,31 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
     result["generation_evidence_checked"] = bool(decision and decision.get("evidence_checked"))
     result["quality_verified"] = False
     result["generation_provenance_verified"] = False
-    result["completion_scope"] = "complete means requested files, versioned visual-subject evidence, actual embedded native bytes and local browser effects passed. request_satisfied additionally requires the explicitly requested in-chat interactions. Neither field proves attachments were sent, independent aesthetic quality or provider authentication."
+    result["completion_scope"] = "complete means requested files, versioned visual-subject evidence, actual embedded native bytes, local browser effects and hash-bound independent review records passed. request_satisfied additionally requires the explicitly requested in-chat interactions. Neither field proves attachments were sent, independent aesthetic quality or provider authentication."
     result["text_confirmed"] = False
     # Save the public result last; do not edit the maintained template lock or weaken asset validation.
     if state_path.is_file():
         state = read_json(state_path)
         state["delivery_requirements"] = result["delivery_requirements"]
+        if host_source: state["host_capabilities_source"] = str(Path(host_source).resolve())
+        state["stages"]["host_preflight"] = host_contract
         if decision is not None:
             state["stages"]["art_quality"] = decision
         state["stages"]["embedded_card"] = embedding
         _save(state_path, state)
+    if host_source and isinstance(result.get("next_action"),dict):
+        resume=result["next_action"].get("resume")
+        if isinstance(resume,list) and "--host-capabilities" not in resume:
+            resume.extend(["--host-capabilities",str(Path(host_source).resolve())])
     _save(workspace / "run-report.json", result)
     _save(workspace / "delivery-report.json", {
         "complete": result["complete"], "status": result["status"], "mode": mode,
+        "host_contract": host_contract,
         "input_sha256": sha256(Path(input_path)),
         "outputs_sha256": {name: sha256(Path(path)) for name, path in result["outputs"].items()},
         "art_reviewed_by_host": result["art_reviewed_by_host"],
+        "independent_release_review_recorded": result["independent_release_review_recorded"],
+        "reviewer_identity_authenticated": False,
         "generation_evidence_checked": result["generation_evidence_checked"],
         "dynamic_verified": result.get("dynamic_verified", False),
         "embedded_card_verified": result["embedded_card_verified"],

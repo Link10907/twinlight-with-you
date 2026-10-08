@@ -1,32 +1,41 @@
 ---
 name: twinlight-with-you
-description: Create a personal Twinlight galaxy HTML and an embedded illustrated SSR card, preserving the approved V10 experience, detailed fantasy artwork, native image layers, parallax and foil. Use for a new personal Twinlight or updates to its content and card.
+description: Create a personal Twinlight galaxy HTML with an embedded illustrated SSR card, preserving the approved V10 galaxy, reveal, native-layer parallax and foil. Use for personal Twinlight creation or updates. Requires actual image tools, an isolated visual reviewer and browser evidence; unavailable capabilities remain explicitly blocked.
 ---
 # Twinlight · 与你同光
 
-默认在同一次请求中制作并一起交付 **个人星系单文件 HTML + 同一张原生分层 SSR 闪卡**。用户明确只要一项时使用对应模式。执行入口只有 [AGENT.md](AGENT.md)；不让用户选择内部参数或反复发“继续”。用户要求“在聊天里直接玩/渲染”时，把真实聊天内交互也列为本次交付条件，不能自行降为下载文件。
+用户一次发起；内部制作、独立审查、有限返工；同一次交付真实成品。默认 `both`：个人星系单文件 HTML + 内嵌同一张原生分层 SSR 闪卡。只要一项时使用 `html` / `card`。不把用户变成审查员，不让用户反复发送“继续”。
 
-## 先保住作品，再替换个人内容
+## 固定不变的产品基准
 
-产品基准是用户认可的 **Twinlight V10 demo**：黑金星系、靠近才显现的行星、双星系连续交融、提问转场、完整揭卡页面、紧凑层内视差和随视角变化的镭射。页面、交互、shader、音乐由已有模板和 renderer 组装，**不交给语言模型重新设计**。构建时验证模板锁，交付时验证真实页面。
+保留 V10 星系、靠近才显示的行星、连续双星系交融、署名提问、揭卡、翻面、紧凑层内视差和视角驱动镭射。首页全景用流动光点，选中主体发光，不改成完整行星陈列；交融不超过 15 秒。模板、renderer、shader、音乐不由语言模型重新设计，也不重写模板锁。
 
-默认美术为 `twinlight-collector`：精细原创幻想收藏卡，主体有可信体积与材质、环境有空间、细节丰富但焦点清楚、精致金属卡框和固定文字。先看随包审美参考，再设计当前人的形象；只有用户明确要求换画风，才选择其他已安装风格。改变人物、动物、动作或故事，不自动改变 Twinlight 的美术语言。
+默认 `twinlight-collector`：精细原创幻想收藏卡，可信体积与材质、完整环境、明确焦点、前中后景。先实际看随包参考，再设计当前人的一个主体和一个动作。只有用户明确换画风才切换；主体简单不等于画面廉价、空白或剪纸化。原画无字无框，文字与镭射由程序产生。
 
-**可复用的是设计，不可复用的是人格。** 固定模板、品牌风格、明确标为 `style_only` 的虚构无字参考可以读取和传给图像工具；作者、demo 和其他用户的经历、称号、角色设定与成品层不能套给当前人。本人肖像需要实际照片与授权；否则画原创概念形象。
+可复用的是品牌设计，不是别人身份。仅依据当前授权资料；提问不是能力，计划不是成果，助手的夸奖不是用户事实。默认原创概念形象，不冒充本人肖像；实际肖像需本轮照片和授权。称号来自稳定行为，不机械列岗位。署名取实际总结模型，不从历史里猜。
 
-## 最短生产链
+## 执行与权责
 
-1. 核对完整资源、V10 模板和本次宿主能力，确定实际预览入口，整理当前授权资料并冻结文案。
-2. 按 [CARD.md](CARD.md) 选一个行为隐喻、一个主体和一个清楚动作；看参考，生成并审查无字原型。
-3. 用图像工具在同一原型画布上原生编辑出背景、主体、少量前景，保住尺度与坐标；程序独立排字、装层。
-4. 原图、合成、实际动态逐项验收，通过同一 public `run --layers` 嵌入固定页面；打开真实预览后，按导出的附件清单在同一最终回复中交付。
+先读 [AGENT.md](AGENT.md)；独立审查者读 [REVIEWER.md](REVIEWER.md)。按步骤再读 [CARD.md](CARD.md)、[宿主契约](references/host-contract.md)、[质量工作流](references/quality-workflow.md)，不要一开始把整个目录灌入模型。
 
-美术判据见 [质量工作流](references/quality-workflow.md)。图像工具负责插画；程序负责页面、精确文字和效果；实际看图决定美术是否达标。增加记录或检查项不能代替一张好看的原型。
+生产者做内容、独立图像任务与装配；Reviewer 看实际原件、按固定标准给出 accept / revise / blocked，有否决权；程序校验输入、图层、同版文件、动态证据和审查绑定。生产者不能替自己签字，也不能用同一会话切换角色冒充独立审查。
 
-## 完成判定
+**先检查能力再花生图成本。** 当前宿主不能隔离生图上下文、传真实参考、原生编辑透明图层、在生图后继续执行、创建独立视觉审查会话或验证 WebGL，就明确相应缺口。能力不足仍可保留文字、基础 HTML 等成功模块，不伪造完整卡片。工具的弃用或无效 prompt 参数不能靠文档“激活”；遵守实际工具接口。
 
-完整成品只认当前 `run-report.json` / `delivery-report.json` 中 `complete=true` 指向的文件。both 模式主文件必须是 `site-with-card/index.html`，通过 `scripts/deliver_artifacts.py` 导出。基础 HTML、静态海报、待验图层和效果截图不是完整双模块结果。
+## 唯一生产链
 
-`complete` 表示构建完成；`request_satisfied` 才反映本次文件与预览要求是否满足。文件完成、本地动态通过、聊天内可交互预览分别报告。生图返回是中间结果，宿主还须继续装层、验收和导出；最后按真实 `handoff.json` 展示卡图、页面、独立预览和完整下载包。遇到能力缺口或有限返工仍失败，保留成功模块并说明具体缺口，不把缺项改成通过。默认私人未确认草稿，不自动公开；不携带字体文件、原始聊天或工具凭证。
+`能力预检 → 冻结内容 → 独立无字原型 → 原型审查 → 原生分层 → 合成审查 → 排字与独立动态预览 → final 审查 → 固定 V10 集成 → release 审查 → 导出`
 
-需要逐句原话出处时读 [严格来源流程](references/workflow.md)；首次在某宿主运行、要求聊天内交互或能力不足时读 [平台适配](references/platform-adapters.md)；最终回复按 [交付协议](references/delivery-v2.md)。其他参考仅在相应步骤需要时读取。
+每次图像调用先生成单任务 dispatch，实际只传当前 prompt、对应图片及工具支持的参数。不能传完整“网站 + 闪卡”请求、个人聊天、已失败网页图或其他卡面陈列。网页效果图不是原型，不能裁出小卡继续凑成品。
+
+每图像角色在同一 RUN 最多三次调用预留；改提示或换 CARD 目录不清零。只修失败环节，保留合格素材；原型变更使依赖审查失效。具体回退见 [返工规则](references/recovery-policy.md)。没有真实返回的未知调用不自动重试或捏造回执。
+
+## 完成与交付
+
+`files_built` 仅表示文件齐备；`complete` 要求当前独立审查及全部技术关卡通过；`request_satisfied` 另核验用户明确要求的聊天内交互。三种模式均须 release；纯 HTML 不要求卡片镭射，但不能免审。
+
+只从 public `run` 的当前报告经 `deliver_artifacts.py` 导出。both 主文件必须是 `site-with-card/index.html`，其内嵌卡必须与通过审查的原生层相同。低层 render/build 仅产生候选，不能赋予交付通过状态。导出时重新核验宿主记录、原型/图层审查及 release，防止撤回或修改后继承旧批准。
+
+最终依据实际 `handoff.json` 一起给出卡图、主 HTML、独立互动预览及完整包。PNG 不证明景深，附件不等于站内运行，CSS fallback 不证明镭射；无实测不承诺换个浏览器就成功。默认私人未确认草稿，不自动 push、部署或公开，不携带原始聊天、字体文件、凭证与审查日志。
+
+严格原话追溯读 [来源流程](references/workflow.md)；站内交互读 [平台适配](references/platform-adapters.md)；完整交付读 [交付协议](references/delivery-v2.md)。本包提供协议与本地校验，不自带可调用的独立 Agent 服务，也不保证首次生图必然合格。

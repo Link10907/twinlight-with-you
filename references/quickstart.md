@@ -15,18 +15,8 @@
 
 ## 平台入口与能力
 
-以下官方入口于 2026-10-03 核对；以本次账号工具为准，不把普通 ZIP 上传描述成必然可以执行/渲染。
+平台名称不代表本轮权限。请以 [宿主契约](host-contract.md) 与 [平台适配](platform-adapters.md) 为准，检查当前工具而不是依赖历史功能说明。ZIP 不会启动子 Agent。
 
-- **Claude 网页**：自定义 Skills 支持顶层 skill 文件夹 ZIP，需代码执行与文件创建能力；依赖仍须可用。[Use skills in Claude](https://support.claude.com/en/articles/12512180-use-skills-in-claude)。
-- **ChatGPT 网页**：完整运行取决于文件读取、Python 与图像工具；HTML/Artifact 预览另需实际支持。附件不是已经发布的原生插件。[Build skills](https://learn.chatgpt.com/docs/build-skills)，[Work with files](https://learn.chatgpt.com/docs/artifacts-viewer)。
-- **Codex**：可直接读取项目 `SKILL.md`；自动发现可将完整目录放入 `.agents/skills/twinlight-with-you/`。[Build skills](https://learn.chatgpt.com/docs/build-skills)。
-- **Claude Code**：可直接读取；标准项目安装路径 `.claude/skills/twinlight-with-you/SKILL.md`，不只复制入口漏掉资源。[Extend Claude with skills](https://code.claude.com/docs/en/skills)。
-- **Cursor Agent**：可直接读取项目；支持 `.agents/skills/` 与 `.cursor/skills/`。[Agent Skills](https://cursor.com/docs/skills)。
-- **其他聊天网站**：按实际工具执行对应模块；只有聊天/生图工具时不能声称完成 HTML 构建。手动查看器导入由用户明确选择，最终仍下载个人 HTML。
-
-最稳入口是同一次消息提供启动语和完整 skill ZIP，并优先读包内同版本 SKILL/AGENT，不混读远端另一个版本。仅有 URL 时，AI 需实际下载/文件/执行能力；从 raw `PROMPT.md` 取得编排，按其 bootstrap 步骤下载完整资源，不能只读提示词就写替代网页。链接不等于工具或资源已齐全，不自动改变交付目标。
-
-仓库根 `viewer.html` 是单独下载的离线查看器，不进入默认 skill ZIP；其中示例完全虚构，只用于显式展示，不成为当前用户的输入。网页 AI 需要可读链接时可用 `https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md`；能执行代码的 Agent 对应 `AGENT.md`。GitHub Pages 只有维护者明确手动发布后才是可选线上入口，不宣称已经上线，不自动部署。
 
 ## 宿主执行原则
 
@@ -76,3 +66,5 @@ python scripts/package_skill.py --include-demo --out outputs/twinlight-with-you-
 默认包包含一个顶层 skill 文件夹与通用脚本、提示、schema、固定模板、无字品牌参考和结构清单，不含示例人物的历史与预写分析。演示包只增加白名单中的虚构 history/lite/生成图层测试；始终排除真人 showcase、标准答案、隐藏文件、缓存与私人目录。`package-manifest.json` 准确记录模式、资料范围和文件哈希。
 
 此命令只打包，不运行模型、安装技能、上传账户资料或发布插件。
+
+本版分发包的可复跑测试入口：`python scripts/verify_skill.py --tests --out /path/out/check.json`。只跑 tests/quality 合成回归，不把旧仓库测试或人工审美等同于本次结果。

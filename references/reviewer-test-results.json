@@ -1,0 +1,83 @@
+{
+  "record_scope": "historical_previous_version_only",
+  "current_version_test_evidence": false,
+  "original_record": {
+    "scope": "Targeted regression tests only; synthetic test fixtures, not real image generation or actual independent agent/browser acceptance.",
+    "passed": 154,
+    "failed": 0,
+    "full_repository_suite_run": false,
+    "real_independent_agent_invoked": false,
+    "new_card_generated": false,
+    "real_webgl_visual_test_performed": false,
+    "immutable_v10_asset_files_verified": 38,
+    "tests": [
+      {
+        "log": "reviewer_regression.log",
+        "tests": 23,
+        "seconds": 0.566,
+        "result": "passed"
+      },
+      {
+        "log": "review_stage_tests.log",
+        "tests": 53,
+        "seconds": 10.076,
+        "result": "passed"
+      },
+      {
+        "log": "review_controller_tests.log",
+        "tests": 16,
+        "seconds": 11.627,
+        "result": "passed"
+      },
+      {
+        "log": "review_rounding_tests.log",
+        "tests": 4,
+        "seconds": 3.622,
+        "result": "passed"
+      },
+      {
+        "log": "review_style_tests.log",
+        "tests": 5,
+        "seconds": 2.501,
+        "result": "passed"
+      },
+      {
+        "log": "review_delivery_final_a.log",
+        "tests": 27,
+        "seconds": 30.537,
+        "result": "passed"
+      },
+      {
+        "log": "review_delivery_final_b.log",
+        "tests": 26,
+        "seconds": 13.209,
+        "result": "passed"
+      }
+    ],
+    "modified_files": [
+      "AGENT.md",
+      "CARD.md",
+      "SKILL.md",
+      "references/art-evidence-format.md",
+      "scripts/art_quality.py",
+      "scripts/package_skill.py",
+      "scripts/twinlight_core/art_quality.py",
+      "scripts/twinlight_core/delivery.py",
+      "scripts/twinlight_core/export_delivery.py",
+      "tests/test_art_quality_gate.py",
+      "tests/test_delivery_quality_gate.py",
+      "tests/test_native_delivery_v2.py",
+      "tests/test_rounding_evidence.py",
+      "tests/test_style_reference_evidence.py",
+      "tests/visual_v2_fixtures.py"
+    ],
+    "new_files": [
+      "REVIEWER.md",
+      "tests/test_independent_reviewer.py",
+      "tests/reviewer_fixtures.py",
+      "scripts/reviewer.py",
+      "references/reviewer-upgrade-notes.md",
+      "scripts/twinlight_core/independent_review.py"
+    ]
+  }
+}
