@@ -113,7 +113,7 @@ def fill(template: str, values: dict) -> str:
     # Single pass: substituted personal text is never rescanned for tokens.
     return PERSONAL_RE.sub(lambda m:values[m.group(1)],template)
 
-def write_site(out: Path, profile: dict, layer_uris: dict, card_image_uri: str, depths: dict) -> str:
+def write_site(out: Path, profile: dict, layer_uris: dict, card_image_uri: str, depths: dict, *, navigation: bool=False) -> str:
     from .template_origin import record_site
     from .template_lock import verify_lock, sha256
     html_t,js_t=template_parts()
@@ -121,11 +121,15 @@ def write_site(out: Path, profile: dict, layer_uris: dict, card_image_uri: str, 
     locked=verify_lock(TEMPLATE,sources,assembled_sha256=sha256(html_t.encode('utf-8')),builder_version=VERSION)
     check(locked['ok'], '固定模板版本校验失败；恢复本次完整发布资源，不在个人任务中重新锁定模板：'+
           ', '.join(e['code'] for e in locked['errors']))
+    extension = None
+    if navigation:
+        from .navigation import compose
+        html_t, js_t, extension = compose(html_t, js_t)
     values=personal_values(profile,layer_uris,card_image_uri,depths)
     html=fill(html_t,values)
     out.mkdir(parents=True,exist_ok=True)
     (out/'index.html').write_bytes(html.encode('utf-8'));(out/'compiled-check.js').write_bytes(fill(js_t,values).encode('utf-8'))
-    record_site(out,profile,layer_uris,card_image_uri,depths,html_t,sources)
+    record_site(out,profile,layer_uris,card_image_uri,depths,html_t,sources,extension=extension)
     return html
 
 CARD_SIZE=(1080,1440)
@@ -258,13 +262,13 @@ def render_card_preview(data: dict, out: Path, *, layers: Path|None=None,
 
 def build_lite(data: dict, out: Path, *, generated_at: str, confirmed: bool=False,
                portrait: Path|None=None, character: Path|None=None, background: Path|None=None,
-               layers: Path|None=None, prototype: Path|None=None) -> dict:
+               layers: Path|None=None, prototype: Path|None=None, navigation: bool=False) -> dict:
     from .lite import to_profile
     provisional=to_profile(data,generated_at=generated_at)
     art=lite_layers(portrait,character,background,layers=layers,prototype=prototype,
                     expected_persona=provisional['persona']['persona_digest'])
     profile=to_profile(data,generated_at=generated_at,art_status=art['art_status'],art_mode=art['art_mode'],confirmed=confirmed)
-    html=write_site(out,profile,art['layers'],art['card_image'],art['depths'])
+    html=write_site(out,profile,art['layers'],art['card_image'],art['depths'],navigation=navigation)
     save(out/'profile.json',profile)
     report={'ok':True,'mode':'lite','stars':len(profile['chapters']),'planets':len(profile['layout']['topics']),
             'persona_digest':profile['persona']['persona_digest'],'art_status':art['art_status'],'art_mode':art['art_mode'],

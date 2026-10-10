@@ -1,3 +1,18 @@
+# 双任务审查范围补充 · v10-split-1.0
+
+A 的 final 与 card release 只审卡片，不要求已经存在星系；B 的 release 只审集成后的完整文件，不再指示生成者重画无关图层。以下原质量标准继续适用。
+
+Task B release 的 targets 含 `task=site` 及当前 offline navigation 报告指纹；除原美术/动态/剧情检查，必须实看并填写四项：
+
+- `same_card_shortcut_and_story`：快捷入口与剧情揭卡确实是同一原生分层实例。
+- `galaxy_state_restored`：返回时所选星体、镜头与阅读状态恢复，旧转场未继续跑。
+- `navigation_mobile_readable`：桌面和移动端入口、返回、后退前进均可用，标签未裁切。
+- `single_file_offline`：实际主文件单独离线打开，不依赖同目录卡包；注入 DOM 的测试不满足此项。
+
+程序把这四项放入独立任务模板，但只有实际 Reviewer 能填写观察与裁决。没有真实图片/动态证据时返回 blocked，不能把模板或测试报告当成审查者自己的观察。
+
+---
+
 # Twinlight 独立审查 Agent · 审作品，不把平台认证当成产品门槛
 
 > v2.2 实际执行入口：[可执行接入](references/execution-adapters.md)。生图用 `execution.py image`，独立看图用 `execution.py review`；旧 dispatch/packet 仍只准备材料，不能代替调用。

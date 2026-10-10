@@ -39,10 +39,13 @@ def main(argv=None):
                 if not a.workspace:p.error('--workspace is required for release')
                 run=read_json(a.workspace/'run-report.json');mode=run['mode'];targets=release_targets(a.workspace,run['outputs'],mode)
                 r={'stage':'release','targets':targets,'decision':'pending','handoff':None,'blockers':[],
-                   'checks':{k:{'passed':False,'observation':''} for k in release_checks(mode)},
+                   'checks':{k:{'passed':False,'observation':''} for k in release_checks(mode,targets.get('task'))},
                    'captures':{'desktop':None,'mobile':None},'runtime':None}
                 if mode!='html':r['effect_frames']={k:None for k in ('foil_off','foil_on','depth_off','depth_on')}
                 sources={str((a.workspace/ref['file']).resolve()):ref['sha256'] for ref in targets['outputs'].values()}
+                if targets.get('navigation'):
+                    nav=targets['navigation']
+                    sources[str((a.workspace/nav['file']).resolve())]=nav['sha256']
                 if a.command=='packet' and mode!='html':
                     state=read_json(a.workspace/'run-state.json')
                     layers=Path(state['layers_source'])

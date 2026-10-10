@@ -112,7 +112,7 @@ def _source_assets(manifest_path):
     return manifest,assets,images
 
 
-def audit_embedding(html_path: Path, manifest_path: Path, expected_persona: str) -> dict:
+def audit_embedding(html_path: Path, manifest_path: Path, expected_persona: str, *, strict_renderer: bool = False) -> dict:
     report={'ok':False,'status':'embedding_failed','errors':[],
             'scope':'Actual embedded bytes and identity bindings only; not a browser or aesthetic certificate.',
             'native_layers_embedded':False,'dynamic_verified':False}
@@ -146,9 +146,37 @@ def audit_embedding(html_path: Path, manifest_path: Path, expected_persona: str)
         buffer=io.BytesIO();image.convert('RGB').save(buffer,format='JPEG',quality=92)
         require(hashlib.sha256(flat).digest()==hashlib.sha256(buffer.getvalue()).digest(),
                 'flat_preview_mismatch','Flattened preview is not this exact assembled native card')
+        if strict_renderer:
+            rendering = audit_renderer(html_path, manifest_path)
+            require(rendering.get('ok'), 'shared_renderer_mismatch', 'Embedded renderer or depth configuration differs')
+            report['rendering'] = rendering
         report.update(ok=True,status='native_card_embedded',native_layers_embedded=True,
                       html_sha256=hashlib.sha256(raw).hexdigest(),persona_digest=expected_persona,
                       canvas=list(image.size),layers_sha256=fingerprints,flat_preview_verified=True)
     except (EmbeddingError,OSError,ValueError,TypeError,KeyError,AttributeError,Image.DecompressionBombError) as exc:
         report['errors']=[{'code':getattr(exc,'code','invalid_embedding'),'message':str(exc)[:1000]}]
     return report
+
+
+def audit_renderer(html_path: Path, manifest_path: Path) -> dict:
+    """Exact shared renderer bytes after token expansion, including native depths.
+
+    This is reproducibility, not a WebGL or aesthetic certificate.
+    """
+    from .common import ROOT, load, local_asset, safe_script_json
+    from .site import fill, uri
+    from .card_handoff import renderer_contract
+    try:
+        manifest = load(manifest_path)
+        values = {'CARD_LAYERS': safe_script_json({k: uri(local_asset(manifest_path.parent, v))
+                  for k, v in manifest['assets'].items()}),
+                  **{'DEPTH_' + token: str(manifest['depths'][role]) for role, token in
+                     [('background', 'BG'), ('subject', 'SUBJECT'), ('effects', 'EFFECTS')]}}
+        expected = fill((ROOT / 'assets/template/src/holo-card.js').read_text(), values)
+        text = Path(html_path).read_text(encoding='utf-8')
+        require(text.count(expected) == 1, 'shared_renderer_mismatch',
+                'HTML must contain exactly the current shared renderer with the same native depths and layer bytes')
+        return {'ok': True, 'renderer': renderer_contract(), 'depths': manifest['depths'],
+                'scope': 'Shared rendering bytes/configuration only, not runtime or aesthetic review.'}
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        return {'ok': False, 'errors': [{'code': getattr(exc, 'code', 'renderer_invalid'), 'message': str(exc)}]}

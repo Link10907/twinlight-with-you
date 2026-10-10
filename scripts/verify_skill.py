@@ -14,7 +14,7 @@ def verify(root: Path, tests: bool=False) -> tuple[dict,str]:
         try:ast.parse(p.read_text(encoding='utf-8'),filename=str(p))
         except (SyntaxError,UnicodeError) as exc:syntax_errors.append({'file':str(p.relative_to(root)),'error':str(exc)})
     broken=[]
-    for name in ('SKILL.md','AGENT.md','CARD.md','REVIEWER.md','README.md'):
+    for name in ('SKILL.md','AGENT.md','CARD.md','HTML.md','REVIEWER.md','README.md'):
         source=root/name
         if not source.is_file():continue
         for dest in re.findall(r'\]\(([^)]+)\)',source.read_text(encoding='utf-8')):
@@ -22,10 +22,12 @@ def verify(root: Path, tests: bool=False) -> tuple[dict,str]:
             if not dest or '://' in dest or dest.startswith('mailto:'):continue
             if not (source.parent/dest).exists():broken.append({'file':name,'target':dest})
     files=resource_files(root)
+    from twinlight_core.navigation import manifest
+    navigation_lock=manifest(root/'assets/navigation')
     forbidden=[str(p.relative_to(root)) for p in files if p.suffix.lower() in ('.ttf','.ttc','.otf','.woff','.woff2')]
     report={'version':'skill-verification-2','verified_at':dt.datetime.now(dt.timezone.utc).isoformat(),
             'resource_complete':resources['resource_complete'],'package_manifest_verified':resources['package_manifest_verified'],
-            'template_lock':resources['template_lock'],'runtime':resources['runtime'],
+            'template_lock':resources['template_lock'],'navigation_lock':navigation_lock,'runtime':resources['runtime'],
             'missing_resources':resources['missing_resources'],'syntax_errors':syntax_errors,'broken_entry_links':broken,
             'forbidden_distributed_fonts':forbidden,'resource_file_count':len(files),
             'tests':{'executed':False},'real_image_generation_performed':False,

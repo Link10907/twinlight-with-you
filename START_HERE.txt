@@ -1,12 +1,14 @@
-Twinlight V10 · v2.2 完整执行补丁
+Twinlight V10 · v10-split-1.0 双任务版
 
-请先读 SKILL.md、AGENT.md 与 references/execution-adapters.md。
-保留用户已有 outputs、person.json、run-state 与 V10 候选，从未完成阶段继续。
-本版新增 execution.py 真正执行独立图像请求和独立视觉审查，不只是生成提示文件。
+先读 SKILL.md 与 AGENT.md。
+任务 A：CARD.md → task-card → 真实独立 card release → 私人 card-handoff.json。
+任务 B：HTML.md → task-site --card-handoff → 固定 V10 内嵌同卡 → 双向导航 → 独立整页 release。
 
-先查实际已授权服务、已安装 Codex 或视觉 API；复制相应 references/execution-*.example.json 到私人 WORK/execution.json。
-只运行 doctor 不产生模型请求。已获授权后再调用探针/图像/审查，带 --allow-provider-calls；缺少 credentials/model 是一次性接入配置，不要编造已有服务。没有内置 spawn_agent 不等于不能用外部独立视觉请求。
+一个工具包，两项制作任务，最终一个主 index.html。card-preview.html 是额外入口，不是主页面依赖。
+B 不要求生图服务、不触发生图。配置可用 execution.py doctor/host --mode integrate；仅 reviewer 配置即可。
+A 仍需要真实隔离生图与独立视觉审查；包内适配代码不代表已经拥有账号、凭证或调用能力。
 
-审查者必须收到实际图片，驳回只修失败环节。缺平台 ID/强制只读不是阻断条件；缺真正视觉能力、真实效果失败仍不批准。
-浏览器先用实际本机正常配置；WebGL 回退检查手动揭卡，不算镭射和全自动交融通过。
-同一最终回复交付真正验收的卡、HTML 与包；局部测试数量不能代替真实模型和最终效果验收。
+旧 run --mode html/card/both 仍兼容，不擅自转换旧工作区或伪造完成。
+V10 核心及原锁未改；新增导航有独立 extension-lock。
+正式导出仍必须真实 WebGL、完整交融、离线主文件与独立审查通过。
+注入页面测试、合成单测、静态截图、CSS fallback 都不能代替这些验收。

@@ -51,6 +51,11 @@ def export(workspace: Path, destination: Path, *, link_style: str = 'local') -> 
         raise ValueError('Sandbox links require actual exported files under /mnt/data; do not invent attachment paths')
     run=_load(workspace/'run-report.json');receipt=_load(workspace/'delivery-report.json')
     mode=run.get('mode');required=REQUIRED.get(mode)
+    site_task=run.get('task') == 'site'
+    names=dict(NAMES)
+    if site_task:
+        names['html_with_card']='index.html'
+    readme_name='README.txt' if site_task else 'READ-ME.txt'
     if required is None or receipt.get('mode')!=mode: raise ValueError('Invalid or inconsistent requested mode')
     if not (run.get('complete') is True and receipt.get('complete') is True
             and run.get('status')==receipt.get('status')=='files_ready'
@@ -76,14 +81,26 @@ def export(workspace: Path, destination: Path, *, link_style: str = 'local') -> 
         planned.append((key,source,_sha(source)))
     from .host_contract import load_assessment
     contract=run.get("host_contract",{})
-    current=load_assessment(Path(contract["source"]) if contract.get("source") else None,mode)
+    current=load_assessment(Path(contract["source"]) if contract.get("source") else None,"integrate" if site_task else mode)
     if not current["ok"] or current!=contract or receipt.get("host_contract")!=contract:
         raise ValueError("Host capability contract is missing, blocked or changed; resume the public run")
     if mode!="html":
         from .art_quality import check_evidence
         state=_load(workspace/"run-state.json")
         layers=Path(state.get("layers_source",""))
-        gate=check_evidence(layers,state.get("persona_digest",""),front=Path(run["outputs"]["card_front"]),preview=Path(run["outputs"]["card_preview"]))
+        if site_task:
+            from .card_handoff import validate as validate_handoff
+            if state.get('card_handoff_source') != run.get('card_handoff_source') or receipt.get('card_handoff_source') != run.get('card_handoff_source'):
+                raise ValueError('Task B handoff binding changed; resume the public task')
+            gate=validate_handoff(Path(state['card_handoff_source']),state.get('persona_digest',''))
+            for key, source in gate['outputs'].items():
+                if _sha(Path(source)) != _sha(Path(run['outputs'][key])):
+                    raise ValueError('Integrated task changed an accepted card artifact: '+key)
+            from .embedded_card import audit_embedding
+            if not audit_embedding(Path(run['outputs']['html_with_card']),layers,state.get('persona_digest',''),strict_renderer=True).get('ok'):
+                raise ValueError('Integrated HTML no longer embeds the approved card')
+        else:
+            gate=check_evidence(layers,state.get("persona_digest",""),front=Path(run["outputs"]["card_front"]),preview=Path(run["outputs"]["card_preview"]))
         if not gate.get("ok"):
             raise ValueError("Upstream artwork review changed or was revoked; complete export is blocked")
     from .independent_review import check_release
@@ -112,11 +129,11 @@ def export(workspace: Path, destination: Path, *, link_style: str = 'local') -> 
     created=[]
     try:
         for key,source,fingerprint in planned:
-            target=destination/NAMES[key];shutil.copyfile(source,target);created.append(target)
+            target=destination/names[key];shutil.copyfile(source,target);created.append(target)
             if _sha(target)!=fingerprint or _sha(source)!=fingerprint:
                 raise ValueError('Output changed during export: '+key)
         status=host.get('status','not_tested')
-        contents=('Twinlight.html 是已内嵌本次闪卡的单文件。\n' if mode=='both' else
+        contents=(('index.html 是主入口：我的星系 / 我的闪卡可同页切换；保留完整 V10 终章。\n' if site_task else 'Twinlight.html 是已内嵌本次闪卡的单文件。\n') if mode=='both' else
                   'Twinlight.html 是本次个人星系单文件。\n' if mode=='html' else '')
         if mode!='html':
             contents+='card-preview.html 是同一张原生分层卡的独立预览；card-front.png 为正面卡图，card-pack.json 为便携卡包。\n'
@@ -125,7 +142,7 @@ def export(workspace: Path, destination: Path, *, link_style: str = 'local') -> 
               f'聊天宿主的直接预览状态：{status}。本地浏览器检查不能证明聊天窗口允许执行脚本。\n'
               f'本次明确交付要求的验证状态：{request_status}。文件完成不表示附件已发送到聊天。\n'
               '本包不含字体文件、原始聊天、原型评审或工具响应。不要未经本人审阅自动公开。\n')
-        (destination/'READ-ME.txt').write_text(note,encoding='utf-8');created.append(destination/'READ-ME.txt')
+        (destination/readme_name).write_text(note,encoding='utf-8');created.append(destination/readme_name)
         # The portable receipt excludes private tool observations and host-specific entry-point paths.
         host_summary={key:host[key] for key in ('version','status','html_sha256','surface') if key in host}
         result={'version':'delivery-export-2','mode':mode,'complete':True,'draft':True,'share_allowed':False,
@@ -133,8 +150,8 @@ def export(workspace: Path, destination: Path, *, link_style: str = 'local') -> 
                 'request_satisfied':satisfied,'request_status':request_status,
                 'in_chat_preview_verified':run.get('in_chat_preview_verified') is True,
                 'in_chat_interaction_verified':interaction_verified,
-                'files':{key:{'file':NAMES[key],'sha256':fingerprint} for key,_,fingerprint in planned},
-                'primary_file':NAMES[{'html':'html','card':'card_preview','both':'html_with_card'}[mode]],
+                'files':{key:{'file':names[key],'sha256':fingerprint} for key,_,fingerprint in planned},
+                'primary_file':names[{'html':'html','card':'card_preview','both':'html_with_card'}[mode]],
                 'scope':'Export of existing current public-run outputs; not new image generation or new browser validation.'}
         (destination/'delivery.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
         created.append(destination/'delivery.json')
@@ -145,7 +162,7 @@ def export(workspace: Path, destination: Path, *, link_style: str = 'local') -> 
         # Local handoff files deliberately stay outside the portable ZIP: they contain host-specific paths.
         primary_key={'html':'html','card':'card_preview','both':'html_with_card'}[mode]
         ordered=[primary_key]+[key for key in required if key!=primary_key]
-        attachments=[_attachment(key,destination/NAMES[key],link_style) for key in ordered]
+        attachments=[_attachment(key,destination/names[key],link_style) for key in ordered]
         attachments.append(_attachment('archive',pack,link_style))
         preview_label=('已在聊天内观察所需交互' if interaction_verified else
                        {'unsupported':'当前宿主不支持','blocked':'当前宿主入口受阻'}.get(status,'尚未验证'))

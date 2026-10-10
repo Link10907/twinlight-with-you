@@ -84,6 +84,7 @@ def parser():
     q=sub.add_parser('run',help='Controlled independent HTML/card drafts, real gates and resumable one-request delivery')
     q.add_argument('input',type=Path);q.add_argument('--workspace',type=Path,required=True)
     q.add_argument('--mode',choices=['html','card','both'],default='both')
+    q.add_argument('--card-handoff',type=Path,help='Import an independently released task A card; both-mode site integration only')
     q.add_argument('--layers',type=Path,help='Actually generated native manifest; a missing card is returned as next_action')
     q.add_argument('--art-prompt-file',type=Path,help='Independent current-person art brief; does not modify content')
     q.add_argument('--font',type=Path,help='Usable Chinese typography font for pending native card generation; completed layers do not require it')
@@ -91,6 +92,22 @@ def parser():
     q.add_argument('--no-browser',action='store_true',help='Explicitly leave dynamic rendering unverified')
     q.add_argument('--host-capabilities',type=Path,help='Live host capability contract; retained on resume, never auto-approved')
     q.add_argument('--require-in-chat-preview',action='store_true',help='Persist an explicit request for verified same-file in-chat interactions; file completion remains separate')
+    for task in ('task-card', 'task-site'):
+        q=sub.add_parser(task,help='Task A: independent card production' if task=='task-card' else 'Task B: integrate an accepted card into V10 without image calls')
+        q.add_argument('input',type=Path);q.add_argument('--workspace',type=Path,required=True)
+        q.add_argument('--browser');q.add_argument('--no-browser',action='store_true')
+        q.add_argument('--host-capabilities',type=Path)
+        q.add_argument('--require-in-chat-preview',action='store_true')
+        if task=='task-card':
+            q.add_argument('--layers',type=Path);q.add_argument('--art-prompt-file',type=Path);q.add_argument('--font',type=Path)
+        else:
+            q.add_argument('--card-handoff',type=Path,help='Task A/card-handoff.json; retained on resume')
+    q=sub.add_parser('seal-card',help='Revalidate standalone card release and write its private handoff')
+    q.add_argument('--workspace',type=Path,required=True)
+    q=sub.add_parser('check-handoff',help='Read-only check of current card assets, rendering and independent review evidence')
+    q.add_argument('handoff',type=Path);q.add_argument('--input',type=Path)
+    q=sub.add_parser('card-input',help='Freeze minimal card input from the same authorized person JSON')
+    q.add_argument('input',type=Path);q.add_argument('--out',type=Path,required=True)
     return p
 
 
@@ -124,11 +141,30 @@ def main(argv=None):
             from twinlight_core.template_origin import verify_site
             result=verify_site(args.site)
             print(json.dumps(result,ensure_ascii=False,indent=2));return 0 if result['ok'] else 1
+        elif args.cmd in ('task-card','task-site','seal-card','check-handoff','card-input'):
+            from twinlight_core import tasks
+            if args.cmd=='card-input':
+                result=tasks.freeze_card_input(args.input,args.out)
+            elif args.cmd=='seal-card':
+                from twinlight_core.card_handoff import seal
+                result=seal(args.workspace)
+            elif args.cmd=='check-handoff':
+                from twinlight_core.card_handoff import validate
+                from twinlight_core.cardgen import read_card_data
+                from twinlight_core.lite import persona_digest
+                result=validate(args.handoff,persona_digest(read_card_data(args.input)) if args.input else None)
+            else:
+                options=dict(browser=args.browser,no_browser=args.no_browser,host_capabilities=args.host_capabilities,
+                             require_in_chat_preview=args.require_in_chat_preview)
+                result=(tasks.card(args.input,args.workspace,layers=args.layers,art_prompt_file=args.art_prompt_file,font=args.font,**options)
+                        if args.cmd=='task-card' else tasks.site(args.input,args.workspace,card_handoff=args.card_handoff,**options))
+            print(json.dumps(result,ensure_ascii=False,indent=2))
+            return 0 if result.get('ok') else 1
         elif args.cmd=='run':
             from twinlight_core.run import run
             result=run(args.input,args.workspace,mode=args.mode,layers=args.layers,
                        art_prompt_file=args.art_prompt_file,browser=args.browser,no_browser=args.no_browser,font=args.font,
-                       require_in_chat_preview=args.require_in_chat_preview,host_capabilities=args.host_capabilities)
+                       require_in_chat_preview=args.require_in_chat_preview,host_capabilities=args.host_capabilities,card_handoff=args.card_handoff)
             print(json.dumps(result,ensure_ascii=False,indent=2))
             return 1 if result['status'] in ('failed','partial_success','art_rejected') else 0
         elif args.cmd in ('start','next','check','status','report','confirm','art','unblock'):

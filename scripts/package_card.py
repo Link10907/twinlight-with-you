@@ -22,8 +22,12 @@ def package(layers: Path, out: Path, data: Path | None = None) -> dict:
     card = {'twinlight_card': 'layers-1', 'persona_digest': manifest['persona_digest'],
             'canvas': report['size'], 'art_status': manifest['art_status'], 'depths': manifest['depths'],
             'layers': {role: uri(local_asset(layers.parent, path)) for role, path in manifest['assets'].items()}}
+    if 'canvas_mapping' in manifest:
+        card['canvas_mapping'] = manifest['canvas_mapping']
     if 'composition' in manifest:
         card['composition'] = manifest['composition']
+    from twinlight_core.card_handoff import renderer_contract
+    card['renderer'] = renderer_contract()
     save(out, card)
     return {'ok': True, 'out': str(out), 'canvas': report['size'], 'bytes': out.stat().st_size,
             'persona_digest': manifest['persona_digest'],

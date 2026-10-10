@@ -131,7 +131,16 @@ def release_targets(workspace: Path, outputs: dict, mode: str) -> dict:
         path = Path(value).resolve()
         _require(path.is_relative_to(root) and path.is_file(), "review_output_path", "Review only existing files inside this run workspace.")
         result[key] = {"file": path.relative_to(root).as_posix(), "sha256": sha256(path)}
-    return {"mode": mode, "outputs": result}
+    target={"mode": mode, "outputs": result}
+    state_path=root/'run-state.json'
+    if state_path.is_file():
+        from .art_quality import read_json
+        if read_json(state_path).get('task')=='site':
+            _require(mode=='both', 'site_review_mode', 'Task B reviews the integrated site and card together')
+            from .navigation import audit_runtime
+            target['task']='site'
+            target['navigation']=audit_runtime(root,Path(outputs['html_with_card']))
+    return target
 
 
 def _frame(root: Path, value: dict, inputs: dict):
@@ -185,7 +194,9 @@ def check_release(workspace: Path, outputs: dict, mode: str) -> dict:
                  "release_rejected" if decision == "revise" else "reviewer_blocked" if decision == "blocked" else "needs_release_review")
         inputs = {str(report_path): sha256(report_path)}
         check_handoff(root, review, inputs)
-        criteria = release_checks(mode)
+        if targets.get('task')=='site':
+            nav=targets['navigation'];inputs[str(root/nav['file'])]=nav['sha256']
+        criteria = release_checks(mode, targets.get("task"))
         checks = review.get("checks", {})
         for key in criteria:
             item = checks.get(key, {})
@@ -225,7 +236,8 @@ def check_release(workspace: Path, outputs: dict, mode: str) -> dict:
     return result
 
 
-def release_checks(mode: str) -> tuple:
+def release_checks(mode: str, task: str | None = None) -> tuple:
     if mode == "html": return tuple(k for k in SITE_CHECKS if k != "card_reveal") + ("mobile_readable",)
     if mode not in ("both","card"): raise ValueError("Unknown release mode")
-    return CARD_CHECKS + (SITE_CHECKS if mode == "both" else ())
+    extra=('same_card_shortcut_and_story','galaxy_state_restored','navigation_mobile_readable','single_file_offline') if task=='site' else ()
+    return CARD_CHECKS + (SITE_CHECKS if mode == "both" else ()) + extra

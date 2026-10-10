@@ -1,3 +1,15 @@
+# Twinlight 双任务版 · v10-split-1.0
+
+**一个包、两个任务、一个内嵌闪卡的 V10 主 HTML。** 新入口见 [SKILL.md](SKILL.md) 和 [AGENT.md](AGENT.md)。
+
+A：`task-card` 独立制作与验收卡片，结束时封存私人交接。B：`task-site --card-handoff` 只导入已验收卡片，完成星系、同页跳转与整页放行。B 不再需要图像生成配置，`execution.py doctor/host --mode integrate` 支持 reviewer-only。
+
+实际入口与命令：[CARD.md](CARD.md)、[HTML.md](HTML.md)；[交接协议](references/card-handoff.md)；可复制给模型的两条任务说明：[PROMPT.md](PROMPT.md)。
+
+本版本是执行流程与工程代码改造，不包含任何新的个人卡片作品，也不声称模型服务已经配置。真实生图、独立 Reviewer、WebGL 和完整剧情仍需在可用环境验证；合成回归只验证代码。旧 `run --mode html/card/both` 保留兼容，以下旧说明仅供旧流程维护，不能覆盖上述双任务边界。
+
+---
+
 # Twinlight · 与你同光
 
 > v2.2 实际执行入口：[可执行接入](references/execution-adapters.md)。生图用 `execution.py image`，独立看图用 `execution.py review`；旧 dispatch/packet 仍只准备材料，不能代替调用。

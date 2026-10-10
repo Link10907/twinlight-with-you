@@ -1,0 +1,8 @@
+.twinlight-view-link {white-space:nowrap;}
+.twinlight-view-link[aria-current="page"] {color:var(--gold,#ead8ad);}
+.twinlight-view-link .nav-short {display:none;}
+@media(max-width:680px) {
+  .twinlight-view-link .nav-full {display:none;}
+  .twinlight-view-link .nav-short {display:inline;}
+  .header nav .twinlight-view-link {font-size:11px;padding-left:5px;padding-right:5px;}
+}

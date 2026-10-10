@@ -14,6 +14,7 @@ def main(argv=None):
         q=sub.add_parser(name);q.add_argument('--config',type=Path,required=True)
         if name!='doctor': q.add_argument('--out',type=Path,required=True)
         else: q.add_argument('--out',type=Path)
+        if name in ('doctor','host'):q.add_argument('--mode',choices=('html','card','both','integrate'),default='both')
         if name in ('probe-reviewer','image','review'):q.add_argument('--allow-provider-calls',action='store_true')
         if name=='probe-reviewer':q.add_argument('--image',type=Path,required=True)
         if name=='host':
@@ -29,12 +30,12 @@ def main(argv=None):
     a=p.parse_args(argv)
     try:
         if a.command=='doctor':
-            r=doctor(a.config)
+            r=doctor(a.config,a.mode)
             if a.out:
                 from twinlight_core.provider_runtime import save_new
                 save_new(a.out,r)
         elif a.command=='probe-reviewer':r=probe_reviewer(a.config,a.image,a.out,allowed=a.allow_provider_calls)
-        elif a.command=='host':r=write_host(a.config,a.probe,a.browser_probe,a.out)
+        elif a.command=='host':r=write_host(a.config,a.probe,a.browser_probe,a.out,a.mode)
         elif a.command=='image':r=invoke_image(a.config,a.plan,a.role,a.workspace,a.host_capabilities,a.out,allowed=a.allow_provider_calls)
         else:r=invoke_review(a.config,a.packet,a.root,a.host_capabilities,a.out,allowed=a.allow_provider_calls,layers=a.layers,front=a.front,preview=a.preview,activate=a.activate)
         print(json.dumps(r,ensure_ascii=False,indent=2));return 0 if r.get('ok') else 2

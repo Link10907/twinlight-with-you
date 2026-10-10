@@ -53,7 +53,7 @@ def image_gaps(value: dict) -> list[str]:
 
 
 def assess(value: dict, mode: str = 'both') -> dict:
-    if mode not in ('html', 'card', 'both'): raise ValueError('Unknown production mode')
+    if mode not in ('html', 'card', 'both', 'integrate'): raise ValueError('Unknown production mode')
     value = value if isinstance(value, dict) else {}
     gaps = []
     if value.get('version') != VERSION: gaps.append('host.version')
@@ -76,14 +76,15 @@ def assess(value: dict, mode: str = 'both') -> dict:
     if reviewer.get('runtime_evidence') is not True:
         deferred.append('review.actual_runtime_evidence')
     if mode != 'html':
-        gaps.extend(image_gaps(value.get('image')))
+        if mode != 'integrate':
+            gaps.extend(image_gaps(value.get('image')))
         if runtime.get('webgl') is False: gaps.append('runtime.webgl')
         elif runtime.get('webgl') is not True: deferred.append('runtime.webgl_probe_at_preview')
     ok = not gaps
     return {'version': 'host-preflight-2', 'ok': ok, 'status': 'ready' if ok else 'capability_blocked',
             'mode': mode, 'gaps': gaps, 'warnings': warnings, 'deferred_checks': deferred,
             'review_policy': 'artifact_bound_independent_task',
-            'release_authorized': False, 'may_start_image_calls': ok and mode != 'html',
+            'release_authorized': False, 'may_start_image_calls': ok and mode in ('card', 'both'),
             'may_build_local_candidates': True, 'agent_invoked': False,
             'host_identity_authenticated': False,
             'scope': 'Production capability routing only. Platform IDs and enforced read-only access are optional audit metadata. Real independent visual review and runtime checks still gate release; this assessment does not authenticate a provider or authorize delivery.'}

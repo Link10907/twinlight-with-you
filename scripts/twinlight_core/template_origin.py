@@ -21,7 +21,7 @@ def sha256(data: bytes) -> str:
 
 
 def record_site(out: Path, profile: dict, layer_uris: dict, card_image_uri: str,
-                depths: dict, template: str, sources: dict[str,str]) -> None:
+                depths: dict, template: str, sources: dict[str,str], *, extension: dict|None=None) -> None:
     """Record actual saved inputs, without modifying the rendered HTML or JS."""
     save(out/'profile.json',profile)
     inputs={'schema_version':INPUT_SCHEMA,'layer_uris':layer_uris,
@@ -29,6 +29,7 @@ def record_site(out: Path, profile: dict, layer_uris: dict, card_image_uri: str,
     save(out/RENDER_INPUTS,inputs)
     save(out/RECEIPT,{
         'schema_version':RECEIPT_SCHEMA,'coverage':'fixed_cli_site',
+        **({'extension': extension} if extension is not None else {}),
         'builder_version':VERSION,'template_name':'Twinlight V10-derived',
         'template_sha256':sha256(template.encode('utf-8')),
         'template_source_files_sha256':sources,
@@ -100,6 +101,15 @@ def verify_site(target: Path) -> dict:
     for path,sha in sources.items():
         record('Template source unchanged: '+path,isinstance(recorded_sources,dict) and
                recorded_sources.get(path)==sha,path,'template_source_changed')
+    if receipt.get('extension') is not None:
+        try:
+            from .navigation import compose
+            html_template, js_template, extension = compose(html_template, js_template)
+            record('Navigation extension matches release', receipt['extension'] == extension,
+                   'assets/navigation', 'navigation_extension_changed')
+        except (OSError, ValueError, TypeError):
+            record('Navigation extension matches release', False, 'assets/navigation', 'navigation_extension_invalid')
+            return result
     record('Assembled template unchanged',receipt.get('template_sha256')==sha256(html_template.encode('utf-8')),
            'assets/template','template_changed')
     profile=read('profile.json')

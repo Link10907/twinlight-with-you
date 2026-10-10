@@ -70,6 +70,11 @@ REQUIRED += ('REVIEWER.md','scripts/reviewer.py','scripts/preflight.py','scripts
              'scripts/twinlight_core/independent_review.py','scripts/twinlight_core/host_contract.py',
              'scripts/twinlight_core/image_dispatch.py','scripts/twinlight_core/review_exchange.py')
 
+REQUIRED += ('HTML.md','references/card-handoff.md','scripts/verify_navigation.py',
+             'scripts/twinlight_core/card_handoff.py','scripts/twinlight_core/tasks.py',
+             'scripts/twinlight_core/navigation.py','assets/navigation/extension-lock.json',
+             'assets/navigation/before-core.js','assets/navigation/after-core.js','assets/navigation/style.css')
+
 def fetch(url: str, limit: int) -> bytes:
     request = urllib.request.Request(url, headers={'User-Agent': 'Twinlight-resource-bootstrap',
                                                   'Accept': 'application/vnd.github+json'})

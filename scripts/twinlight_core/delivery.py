@@ -55,10 +55,26 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
                                or previous_requirements.get("in_chat_preview") is True)
     from .host_contract import load_assessment
     host_source = host_capabilities or previous.get("host_capabilities_source")
-    host_contract = load_assessment(Path(host_source) if host_source else None, kwargs.get("mode", "both"))
+    handoff_source = kwargs.get('card_handoff') or previous.get('card_handoff_source')
+    if handoff_source:
+        kwargs['card_handoff'] = Path(handoff_source)
+        from .common import check
+        check(kwargs.get('mode', 'both') == 'both' and not any(kwargs.get(k) for k in ('layers', 'art_prompt_file', 'font')),
+              'Task B accepts only a card handoff; no art-generation options')
+    effective_mode = 'integrate' if handoff_source else kwargs.get('mode', 'both')
+    host_contract = load_assessment(Path(host_source) if host_source else None, effective_mode)
     decisions = []
 
     def review_gate(content, layers, folder, persona):
+        if handoff_source:
+            from .card_handoff import validate as validate_handoff
+            from .common import check
+            decision = validate_handoff(Path(handoff_source), persona)
+            for key, relative in (('card_front', 'card/front.png'), ('card_preview', 'card/preview.html'), ('card_pack', 'card/card-pack.json')):
+                check(sha256(folder / relative) == sha256(Path(decision['outputs'][key])),
+                      'Task B altered an approved task A card artifact: ' + key)
+            decisions.append((layers, persona, decision))
+            return decision
         decision = check_evidence(layers, persona, front=folder / "card/front.png", preview=folder / "card/preview.html")
         if decision.get("ok"):
             evidence = read_json(layers.parent / "art-evidence.json")
@@ -71,6 +87,10 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
         return decision
 
     result = core(input_path, workspace, _review_gate=review_gate, **kwargs)
+    if handoff_source:
+        result['task'] = 'site'
+        result['card_handoff_source'] = str(Path(handoff_source).resolve())
+        result['image_calls_performed'] = 0
     decision = None
     if decisions:
         manifest, persona, initial = decisions[-1]
@@ -137,7 +157,7 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
     card_ok = mode == "html" or bool(decision and decision["ok"])
     embedding = {"ok": mode != "both", "status": "not_required" if mode != "both" else "not_run"}
     if mode == "both" and card_ok and result["outputs"].get("html_with_card"):
-        embedding = audit_embedding(Path(result["outputs"]["html_with_card"]), manifest, persona)
+        embedding = audit_embedding(Path(result["outputs"]["html_with_card"]), manifest, persona, strict_renderer=True)
         if not embedding["ok"]:
             result.setdefault("candidate_outputs", {})["html_with_card"] = result["outputs"].pop("html_with_card")
             result["status"] = "partial_success" if result["outputs"] else "failed"
@@ -263,9 +283,30 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
         resume=result["next_action"].get("resume")
         if isinstance(resume,list) and "--host-capabilities" not in resume:
             resume.extend(["--host-capabilities",str(Path(host_source).resolve())])
+    if handoff_source:
+        def keep_handoff(action):
+            if not isinstance(action, dict):
+                return
+            resume = action.get('resume')
+            if isinstance(resume, list):
+                cleaned = []
+                skip = False
+                for arg in resume:
+                    if skip:
+                        skip = False
+                        continue
+                    if arg in ('--layers', '--font', '--art-prompt-file', '--card-handoff'):
+                        skip = True
+                        continue
+                    cleaned.append(arg)
+                action['resume'] = cleaned + ['--card-handoff', str(Path(handoff_source).resolve())]
+            for nested in action.get('pending_actions', []):
+                keep_handoff(nested)
+        keep_handoff(result.get('next_action'))
     _save(workspace / "run-report.json", result)
     _save(workspace / "delivery-report.json", {
         "complete": result["complete"], "status": result["status"], "mode": mode,
+        "task": result.get("task"), "card_handoff_source": result.get("card_handoff_source"),
         "host_contract": host_contract,
         "input_sha256": sha256(Path(input_path)),
         "outputs_sha256": {name: sha256(Path(path)) for name, path in result["outputs"].items()},

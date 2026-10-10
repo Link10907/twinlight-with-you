@@ -197,6 +197,7 @@ try:
   if not a.skip_continuous:
    report['stage']='finale_runtime_route';save_report()
    q.locator('#identityClose').click();q.bring_to_front()
+   return_view=q.evaluate('()=>window.twinlightNavigation?{mode:state.mode,active:state.active,topic:state.topic}:null')
    q.evaluate('()=>{v10.musicChosen=true;galaxyDebug.resume()}')
    before=runtime_snapshot(q);report['finale']={'before':before,**finale_route(before)};save_report()
    if report['finale']['route']=='autoplay':
@@ -234,7 +235,15 @@ try:
     unverified.append('real-time full galaxy merger: '+report['finale']['reason']);save_report()
    if q.evaluate('()=>v8.cardOpen'):
     q.locator('#identityClose').click();q.evaluate(SETTLE)
-    record('Return button restores interactive personal galaxy',q.evaluate('()=>!v8.cardOpen&&!state.encounterCinematic&&state.mode==="personal"&&!document.querySelector("[inert]")') and q.locator('#v10HomeFinale').is_visible())
+    if return_view is not None:
+     # Split-task navigation restores the saved view, not an unrelated overview.
+     # The dedicated navigation verifier separately compares exact camera/reader state.
+     restored=q.evaluate('()=>({mode:state.mode,active:state.active,topic:state.topic})')
+     record('Return button restores the previously selected interactive galaxy',
+       restored==return_view and q.evaluate('()=>!v8.cardOpen&&!state.encounterCinematic&&!document.querySelector("[inert]")&&twinlightNavigation.getState().view==="galaxy"')
+       and q.locator('#v10HomeFinale').is_visible(),{'before':return_view,'after':restored})
+    else:
+     record('Return button restores interactive personal galaxy',q.evaluate('()=>!v8.cardOpen&&!state.encounterCinematic&&state.mode==="personal"&&!document.querySelector("[inert]")') and q.locator('#v10HomeFinale').is_visible())
    report['finale']['after']=runtime_snapshot(q);save_report()
    q.evaluate('()=>galaxyDebug.freeze()')
   else:

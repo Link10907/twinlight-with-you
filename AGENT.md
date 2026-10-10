@@ -1,88 +1,80 @@
-# 一次请求执行入口 · v10-quality-2.2-executable-bridge
+# 双任务执行入口 · v10-split-1.0
 
-同一生产工作区内续跑，不要求用户发送第二条生成指令。`PY` 是宿主实际 Python 3.10+；`ROOT` 为完整包；`WORK` 为本次私人目录；`RUN=WORK/run`，`CARD=RUN/card`。命令由执行宿主完成，不让用户填写工具问卷。
+一个工具包、两个独立工作区。`PY` 表示宿主 Python 3.10+；`ROOT` 为本包；`WORK` 为本次私人目录；`A=WORK/card-task`，`B=WORK/site-task`，`CARD=A/card`。A 与 B 不得互相嵌套。命令由执行宿主运行，不要求用户手工填审查表。
 
-## 0. 先接通真实执行，不重复填写能力问卷
-
-读 [可执行接入](references/execution-adapters.md)。先运行 bootstrap；从原 run-state 定位 WORK/RUN/CARD，不新建替代人格。选用户已有授权的图片服务和独立视觉路线，把示例复制到 WORK/execution.json。运行 `execution.py doctor`（不调用），然后浏览器探针和一次实际 Reviewer 看图探针，`execution.py host` 写 WORK/host-execution.json。下面 WORK/host.json 均指这个实际新来源，沿 run 命令显式传入；不覆盖旧证据。
-
-默认实际调用使用 `execution.py image/review`，精确命令见可执行接入。后文手动 dispatch/record/packet/import 是已具备原生窄任务的宿主兼容路线；**二选一，不给同一次 image 重复 dispatch，不手写 Reviewer 响应**。配置不足先指出缺失的具体账户环境变量、可执行文件或模型；不把“没有平台 session ID/不能 chmod/没有内置子 Agent”当作无解。也不自动购买 API 或读取私人凭证。
-
-## 1. 冻结当前资料，先构建页面候选
-
-读 [Lite 内容](references/lite-content.md)，写当前人的 `WORK/person.json`。只用本次授权资料；默认未确认草稿。依据足够就完成，不为凑星编经历，不把他人宠物、职业或参考图角色套给用户。实际模型负责署名；未知具体版本留空。
+## 0. 确认实际运行资源
 
 ```sh
-PY ROOT/scripts/twinlight.py run WORK/person.json --workspace RUN --mode both --host-capabilities WORK/host.json
+PY ROOT/scripts/bootstrap.py --root ROOT
 ```
 
-用户明确要站内可操作时首次加 `--require-in-chat-preview`；需求和能力表来源随续跑保留。保存 `persona_digest`、字体状态、`next_action`。后续沿真实 `next_action.resume` 执行。基础 `site/index.html` 是候选，不是 both 成品。
+已有上传完整包优先使用本包，不从网上重新拉旧 main 覆盖。先选择本次任务，只加载对应入口。A 读 CARD；B 读 HTML 和交接契约，不把生图配方、完整聊天或网页截图送入图像任务。
 
-## 2. 独立图像任务与原型审查
+真正生图/视觉调用走 [可执行接入](references/execution-adapters.md)，或宿主已经存在的真实窄任务。`doctor` 只查配置；探针才有实际调用。没有服务/凭证/工具时指出准确缺口，不自动购买、不编造调用、不代签。付费/远程调用按实际授权执行，不因为准备了 dispatch 就声称已经画图。
 
-按 [CARD.md](CARD.md) 写具体 `art-direction-2`。画风固定、身份冻结，只确定一个主体、一个可理解动作、至多一个接触道具；材料与环境保持精绘质量。
+- A：`execution.py doctor --config WORK/execution-A.json --mode card`；实际 Reviewer、浏览器探针后用 `execution.py host ... --mode card` 写 `WORK/host-A.json`。
+- B：`execution.py doctor --config WORK/execution-B.json --mode integrate`；配置只含 reviewer 即可，实际探针后 `execution.py host ... --mode integrate` 写 `WORK/host-B.json`。这个 host 明确禁止 image 调用。
+- 已有真实宿主能力表可直接传给任务入口；B 使用 `preflight.py check --mode integrate`，不得用 `both` 的生图要求阻断 B。
+
+## 1. 共用资料，冻结卡面投影
+
+依据当前授权资料写 `WORK/person.json`，格式见 [Lite 内容](references/lite-content.md)。然后：
 
 ```sh
-PY ROOT/scripts/visual_plan.py compile CARD/art-direction.json --out CARD --phase prototype --capabilities WORK/host.json
-PY ROOT/scripts/visual_plan.py dispatch CARD/generation-plan.json --role prototype --workspace RUN --host-capabilities WORK/host.json --out CARD/dispatch/prototype-1.json
+PY ROOT/scripts/twinlight.py card-input WORK/person.json --out WORK/card-input.json
 ```
 
-手动路线的 `dispatch` 冻结当前图像任务并消耗一个调用预留；**不会调用模型**。默认 `execution.py image` 内部完成派发、真实调用和登记，不再单独执行这条 dispatch。宿主实际只发送 dispatch 的 `prompt_text`、列出的真实图片和工具支持的图像参数，不发送完整 JSON、历史对话、网页需求或本手册。无法这样发送就停止图像环节。返回后保留原字节与真实响应：
+只提取姓名、实际总结模型和卡面内容，保留同一 `persona_digest`；不带星系内容进入 A。已冻结文件不覆盖不同版本。资料不足不编故事，未知模型版本留空。准备资料不是第三个创作任务。
+
+## 2. 任务 A：只把一张卡做成
 
 ```sh
-PY ROOT/scripts/visual_plan.py record CARD/generation-plan.json --role prototype --dispatch CARD/dispatch/prototype-1.json --image RAW_IMAGE --raw-response RAW_RESPONSE --tool ACTUAL_TOOL
-PY ROOT/scripts/reviewer.py packet --stage prototype --layers CARD/layers.json --out CARD/reviewer-input/prototype-1
+PY ROOT/scripts/twinlight.py task-card WORK/card-input.json --workspace A --host-capabilities WORK/host-A.json
 ```
 
-平台给出实际 call/artifact ID 时可附加 --call-id/--artifact-id；没有则省略，脚本仅生成明确的本地字节绑定，不伪造平台记录。
+按返回的真实 `next_action` 与 [CARD.md](CARD.md) 执行：原型任务 → 实际生图 → 独立原型 review → 原生编辑各层 → 独立合成 review → 程序排字/预览 → 实际动态验证 → 独立 final。所有原件和实际证据保存在 A 内，不使用临时目录之外的审查依赖。
 
-默认用 `execution.py review --packet ... --root CARD --layers CARD/layers.json ... --allow-provider-calls` 实际调用、导入并绑定。原生宿主路线把 packet 的独立任务交给真实 Reviewer；实际读图，比较随包参考，不只看 JSON。原型错误类型、粗糙、偏画风、不可分层就 revise。按 REVIEWER 导入并 bind 裁决；accept 前禁止请求图层。同一模型可以，生产与审查必须是实际独立任务，不要求平台提供会话编号。原型返回后用以下默认路径导入（没有 trace 也可执行）：
+默认 `execution.py image` 内部会派发、调用并登记，同一次调用不再单独 dispatch。原生宿主路线则 dispatch → 真工具 → record，二选一。返回的原图、响应和每次失败保留原字节。每角色有限返工不清零，不重画已合格层。
 
 ```sh
-PY ROOT/scripts/reviewer.py import --root CARD --response CARD/reviewer-results/prototype-1.json --packet CARD/reviewer-input/prototype-1 --host-capabilities WORK/host.json --out CARD/review-history/prototype-1.json
-PY ROOT/scripts/visual_plan.py bind-review --layers CARD/layers.json --review CARD/review-history/prototype-1.json
+PY ROOT/scripts/twinlight.py task-card WORK/card-input.json --workspace A --host-capabilities WORK/host-A.json --layers CARD/layers.json
 ```
 
-response 文件必须来自刚执行的独立任务；主执行者不得代写观察。composite/final 同样使用各自 packet 与返回。
-
-## 3. 原生分层、排字与独立预览
-
-原型通过后 `visual_plan.py compile ... --phase layers --capabilities WORK/host.json`。每个 background / subject / effects 单独 dispatch → 实际 image_edit → record；编辑唯一参考为当前原型，不再传不同角色的品牌参考。全部保留同画布、尺度、原位坐标；不以抠图、裁剪、去底、拉伸或复制海报替代。
-
-按 CARD 用程序排字、生成空 spirit 与 lineart、合成，做 composite 审查。通过后：
+final 通过后仍需要 card release，而不是转去生成网站。使用真实当前 `A/card/preview.html` 的动态截图与观察：
 
 ```sh
-PY ROOT/scripts/twinlight.py run WORK/person.json --workspace RUN --mode both --host-capabilities WORK/host.json --layers CARD/layers.json
+PY ROOT/scripts/reviewer.py packet --workspace A --stage release --evidence ACTUAL_EVIDENCE --out A/reviewer-input/release-1
 ```
 
-首次写出真实 `RUN/card/front.png` 与 `preview.html` 候选。由独立 Reviewer 做 final；实际拖动、翻面、关闭 foil、depth=0、手机与减动效。程序截图证据不是审美裁决，截图变化也不自动证明正确景深。只修失败层或渲染问题，不重生合格原型。
-
-## 4. 最终集成与独立放行
-
-沿同一 `run` 续跑到 `needs_release_review`。both 只审最终 `site-with-card/index.html`；html 审实际基础星图；card 审独立卡。
+ACTUAL_EVIDENCE 由实际 `capture_review.py` 或受支持的真实浏览器观测产生，不手工写通过字段。独立任务依据 [REVIEWER.md](REVIEWER.md) 返回原始 JSON；用 `execution.py review --root A ... --activate` 或实际宿主的 `reviewer.py import` / `activate` 导入。随后沿同一 `task-card` 续跑重验。`task-card` 真正 complete 后自动封存；也可显式：
 
 ```sh
-PY ROOT/scripts/reviewer.py packet --workspace RUN --stage release --out RUN/reviewer-input/release-1
+PY ROOT/scripts/twinlight.py seal-card --workspace A
+PY ROOT/scripts/twinlight.py check-handoff A/card-handoff.json --input WORK/person.json
 ```
 
-先用 `capture_review.py` 采集同一目标的真实多视角/A-B 证据，`reviewer.py packet --evidence ...` 绑定，再让 Reviewer 读取这些实际画面与运行状态并检查同一 HTML，桌面/手机、星系/交融/提问/揭卡/返回与同张卡的受控 foil/depth 对照。原型/图层看过，不等于集成已通过。宿主原样保存实际 JSON 响应，用调用前 packet 核对原件与输入副本未变，在 RUN 内导入，再选择当前裁决。无需手写平台 trace：
+A 的终点是合格卡和有效私人交接，不需要星系页面。只请求 A 时在此结束。`seal-card` 不是放行开关，它会重新读取当前所有门禁。
+
+## 3. 任务 B：导入同一张卡，完成整站
+
+此阶段按 [HTML.md](HTML.md) 执行，不再读取图像配方或调用生图。
 
 ```sh
-PY ROOT/scripts/reviewer.py import --root RUN --response RUN/reviewer-results/raw-1.json --packet RUN/reviewer-input/release-1 --host-capabilities WORK/host.json --out RUN/review-history/imported-1.json
-PY ROOT/scripts/reviewer.py activate --workspace RUN --response RUN/review-history/imported-1.json
-PY ROOT/scripts/reviewer.py check --workspace RUN
+PY ROOT/scripts/twinlight.py task-site WORK/person.json --workspace B --card-handoff A/card-handoff.json --host-capabilities WORK/host-B.json
 ```
 
-pending/blocked/revise 都不放行；新裁决不覆盖旧原始响应。`activate` 不把 complete 改为 true；继续 public run 才重新核验全部依赖。没有平台认证如实保留 false，不作为作品未通过理由。真正独立任务仍须发生，本地绑定不是身份认证或 OS 权限隔离。
+B 不接受 `--layers` / `--art-prompt-file` / `--font`，不会重新排版或编辑 A。来源缺失、旧批准失效时只报告 `card_handoff_blocked`，不得使用占位卡补齐。
 
-## 5. 一次交付，精确说明完成范围
+B 自己验证完整 V10 剧情、内嵌字节、同版 renderer、双向导航和独立本地文件运行；整页独立 release 只能针对 `B/site-with-card/index.html`。页面问题在 B 修复，不要求 A 重新生图。最终导出见 HTML。
 
-站内交互要求用真实最终文件接入当前入口，实测后记录 `host-preview-2`。下载按钮和本地浏览器不能证明站内交互。按 `next_action` 刷新报告后导出：
+## 4. 续跑与旧工作区
 
-```sh
-PY ROOT/scripts/deliver_artifacts.py --workspace RUN --out WORK/delivery
-```
+同一任务沿返回的 `next_action.resume` 续跑，不为绕过失败更换目录。A/B 输入内容不可在已冻结工作区里偷偷替换；需要新版本时保留旧版本。只改主题星而卡面字段不变，A 的 persona 绑定仍有效；卡面文字变化需要对应新排字/审查，未受影响的插画不强制重画。
 
-只有确实在 `/mnt/data` 提供附件的宿主才加 `--link-style sandbox`。读取真实 `handoff.json` 和 `delivery-reply.md`，同一回复展示卡图、主 HTML、独立预览和完整包。文件存在、动态通过、独立审查和站内入口分别说清；不自动公开或 push。
+旧 `run --mode html/card/both` 保持原语义。旧 both 的卡尚未独立通过 A 门禁时，不能直接封存为已验收 A；可保留原图，用独立 A 工作区完成当前预览和必要审查，不必凭空重生同版原画。旧卡包没有 renderer 绑定时需由当前工具重新预览/打包并复验，再 seal。
 
-状态路线与返工边界只维护在 [返工规则](references/recovery-policy.md)。不要手填 `complete`，不要用低层命令绕过缺项，达到上限就交付明确标记的成功模块/候选，而不是坏卡凑成功。
+本版私人交接使用 A 工作区实际路径。跨会话只要同一工作区仍存在即可；跨主机移动整份私人工作区需要重绑定实际路径并重验、再封存，不提供自动路径迁移。不把私人交接清单塞进公开成品 ZIP。
+
+## 5. 交付状态
+
+A 完成不能称“整站已完成”；B 完成也不表示附件已经发送、聊天平台支持交互或本人同意公开。读取真实报告，指出未通过/未验证的具体阶段。缺必需真实能力时保留真实已完成模块，别把候选当成品；不用更多提示文档冒充执行器已经接通。

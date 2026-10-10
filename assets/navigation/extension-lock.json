@@ -1,0 +1,9 @@
+{
+  "version": "navigation-1.0.0",
+  "files_sha256": {
+    "before-core.js": "4891262a48dfebc5304d69e35661e2fcddc55470eac291d7b87bcd4358860ca0",
+    "after-core.js": "bf730f99dc4108adcbd4af58e4a77fa3873c66bbe7ad9d85d67a55fb6afd8794",
+    "style.css": "8f834d5fab96b5dd989f4ca0613552084e19b062aebed42208f5f9b727c9f88b"
+  },
+  "note": "Development release lock for the additive adapter only; does not replace original V10 template lock."
+}

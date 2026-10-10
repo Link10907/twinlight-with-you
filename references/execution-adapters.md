@@ -1,3 +1,5 @@
+> 双任务版：A 使用 `doctor/host --mode card`；B 使用 `doctor/host --mode integrate`，配置允许不含 image。B 只允许 review，不允许 image。以下原接口与手动接入方式继续兼容，出现旧 both 示例时以当前 AGENT/HTML 的独立工作区为准。
+
 # 可执行接入 · 不是再写一份能力声明
 
 本版将 v2.1 的产物绑定审查、运行诊断热修和实际执行器合并。`visual_plan.py dispatch` 与 `reviewer.py packet` 仍只准备材料；新增 **`execution.py image` 真正调用图像服务并登记原字节**，**`execution.py review` 真正发起独立视觉调用、原样导入裁决并可绑定**。不需要主会话拥有 `spawn_agent`。

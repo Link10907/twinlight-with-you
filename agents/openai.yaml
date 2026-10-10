@@ -1,4 +1,4 @@
 interface:
   display_name: "Twinlight · 与你同光"
-  short_description: "一次生成专属闪卡与星系页面，独立审查、保留 V10"
-  default_prompt: "请用 $twinlight-with-you 根据你实际了解的我，生成我的专属定义闪卡和 Twinlight 星系 HTML，先核验任务隔离与独立审查能力，完成后一起给我看。"
+  short_description: "双任务制作与独立验收，内嵌同卡的 V10 星系页面"
+  default_prompt: "请用 $twinlight-with-you 先执行任务 A：根据你实际了解的我制作并独立验收原生分层定义闪卡，保留精细幻想收藏卡风格。A 通过后封存私人交接，供任务 B 嵌入完整 V10 HTML；不以候选冒充成品。"

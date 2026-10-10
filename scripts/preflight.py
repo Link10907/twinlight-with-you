@@ -10,7 +10,7 @@ def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('command', choices=('template','check'))
     p.add_argument('--capabilities', type=Path)
-    p.add_argument('--mode', choices=('html','card','both'), default='both')
+    p.add_argument('--mode', choices=('html','card','both','integrate'), default='both')
     p.add_argument('--out',type=Path)
     a=p.parse_args(argv)
     try:

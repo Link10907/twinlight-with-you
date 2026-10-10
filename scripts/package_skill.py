@@ -8,7 +8,7 @@ from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
-ROOT_FILES = ('SKILL.md', 'AGENT.md', 'REVIEWER.md', 'PROMPT.md', 'CARD.md', 'README.md', 'START_HERE.txt', 'LICENSE',
+ROOT_FILES = ('SKILL.md', 'AGENT.md', 'REVIEWER.md', 'PROMPT.md', 'CARD.md', 'HTML.md', 'README.md', 'START_HERE.txt', 'LICENSE',
               'THIRD-PARTY-NOTICES.md', 'CHANGELOG.md', 'requirements.txt', 'requirements-dev.txt', '.gitignore')
 RESOURCE_DIRS = ('scripts', 'references', 'prompts', 'schemas', 'assets', 'agents', 'tests/quality')
 # The Pages viewer is built and tested from the repository (needs examples and test fixtures).
@@ -82,7 +82,7 @@ def package(root: Path, out: Path, include_demo: bool = False) -> dict:
         for path in files:
             archive.write(path, 'twinlight-with-you/' + path.relative_to(root).as_posix())
         archive.writestr('twinlight-with-you/package-manifest.json', json.dumps({
-            'schema_version': '1.0', 'skill_revision': 'v10-quality-2.2-executable-bridge', 'renderer_baseline': 'V10', 'files_sha256': hashes,
+            'schema_version': '1.0', 'skill_revision': 'v10-split-1.0', 'renderer_baseline': 'V10', 'files_sha256': hashes,
             'mode': 'fictional_demo' if include_demo else 'personal_use',
             'contains_fictional_history': include_demo,
             'contains_author_showcase': False,

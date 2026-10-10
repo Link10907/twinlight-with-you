@@ -12,10 +12,12 @@ from .provider_runtime import (ExecutionError, fail, save_new, generate, vision,
                                IMAGE_KINDS, REVIEW_KINDS, authorize, image_input, endpoint)
 
 
-def config(path: Path) -> dict:
+def config(path: Path, *, require_image: bool = True) -> dict:
     value=read_json(path)
     if value.get('version')!='twinlight-execution-1': fail('execution_config','Use a twinlight-execution-1 config.')
     for section, kinds in (('image',IMAGE_KINDS),('reviewer',REVIEW_KINDS)):
+        if section == 'image' and not require_image and not value.get('image'):
+            continue
         cfg=value.get(section,{})
         if cfg.get('kind') not in kinds: fail('execution_config',f'{section}.kind must be one of '+', '.join(sorted(kinds)))
         # Credentials stay outside checked-in configuration files.
@@ -26,9 +28,11 @@ def config(path: Path) -> dict:
     return value
 
 
-def doctor(path: Path) -> dict:
-    cfg=config(path);results={}
-    for role in ('image','reviewer'):
+def doctor(path: Path, mode: str = 'both') -> dict:
+    if mode not in ('html','card','both','integrate'): fail('execution_mode','Unknown execution scope.')
+    needs_image=mode in ('card','both')
+    cfg=config(path,require_image=needs_image);results={}
+    for role in (('image','reviewer') if needs_image else ('reviewer',)):
         c=cfg[role];gaps=[];kind=c['kind']
         if kind in ('openai_images','openai_responses','anthropic_messages'):
             try: model_name(c)
@@ -44,14 +48,14 @@ def doctor(path: Path) -> dict:
             if not isinstance(canvas,list) or len(canvas)!=2 or any(type(n)is not int or n<256 for n in canvas) or abs(canvas[0]/canvas[1]-.75)>.01:
                 gaps.append('native_3_by_4_canvas_required')
         results[role]={'kind':kind,'configured':not gaps,'gaps':gaps,'live_verified':False}
-    return {'version':'execution-doctor-1','ok':all(x['configured'] for x in results.values()),
+    return {'version':'execution-doctor-1','mode':mode,'image_required':needs_image,'ok':all(x['configured'] for x in results.values()),
             'routes':results,'playwright_installed':importlib.util.find_spec('playwright') is not None,
             'provider_calls':0,'release_authorized':False,
             'note':'Local configuration discovery only; no provider, model, image or artistic approval has been verified.'}
 
 
 def probe_reviewer(cfg_path: Path, image: Path, out: Path, *, allowed: bool) -> dict:
-    authorize(allowed);cfg=config(cfg_path)
+    authorize(allowed);cfg=config(cfg_path,require_image=False)
     if out.exists(): fail('output_exists','Keep earlier probe evidence; choose a new output directory.')
     out.mkdir(parents=True,mode=0o700)
     before=sha256(image)
@@ -72,10 +76,12 @@ def probe_reviewer(cfg_path: Path, image: Path, out: Path, *, allowed: bool) -> 
     return result
 
 
-def write_host(cfg_path: Path, probe_path: Path, browser_path: Path, out: Path) -> dict:
+def write_host(cfg_path: Path, probe_path: Path, browser_path: Path, out: Path, mode: str = 'both') -> dict:
     """Capabilities reference observed reviewer/browser calls, not invented platform IDs."""
     from .host_contract import template, assess
-    cfg=config(cfg_path);probe=read_json(probe_path);browser=read_json(browser_path)
+    if mode not in ('html','card','both','integrate'): fail('execution_mode','Unknown execution scope.')
+    needs_image=mode in ('card','both')
+    cfg=config(cfg_path,require_image=needs_image);probe=read_json(probe_path);browser=read_json(browser_path)
     if not probe.get('ok') or not probe.get('independent_call_performed') or probe.get('reviewer_config')!=cfg['reviewer']:
         fail('probe_required','Run a real independent vision probe for the currently configured reviewer first.')
     for key in ('raw_answer','provider_response'):
@@ -83,32 +89,37 @@ def write_host(cfg_path: Path, probe_path: Path, browser_path: Path, out: Path) 
         if not Path(ref['path']).is_file() or sha256(Path(ref['path']))!=ref['sha256']: fail('probe_changed','Probe evidence changed.')
     if browser.get('version')!='browser-probe-1' or browser.get('browser_started') is not True:
         fail('browser_probe_required','Supply an actual browser-probe-1 report, not a hand-edited capability boolean.')
-    if not doctor(cfg_path)['ok']: fail('execution_not_configured','Resolve the local provider configuration before generating host.json.')
+    if not doctor(cfg_path,mode)['ok']: fail('execution_not_configured','Resolve the local provider configuration before generating host.json.')
     h=template();h['host']='Twinlight executable bridge';h['producer_session_id']=None
-    c=cfg['image'];canvas=c['native_canvas']
-    if c['kind']=='command':
-        needed=('native_image_editing','native_transparency','reference_images')
-        if not all(c.get('declared_capabilities',{}).get(k) is True for k in needed):
-            fail('command_capability_unknown','The existing image command must explicitly declare native edit/alpha/reference support; it is validated on every result.')
-    h['image'].update(tool=c['kind'],source='Implemented explicit image transport in execution_bridge; configured model: '+(c.get('model') or c.get('model_env') or 'command')+'. Service access and actual image bytes are checked per invocation.',
-        image_generation=True,reference_images=True,native_transparency=True,native_image_editing=True,
-        post_image_continuation=True,prompt_transport='explicit_prompt',reference_transport='explicit_attachments',
-        native_canvases=[canvas],canvas_selection='explicit_size')
+    if needs_image:
+        c=cfg['image'];canvas=c['native_canvas']
+        if c['kind']=='command':
+            needed=('native_image_editing','native_transparency','reference_images')
+            if not all(c.get('declared_capabilities',{}).get(k) is True for k in needed):
+                fail('command_capability_unknown','The existing image command must explicitly declare native edit/alpha/reference support; it is validated on every result.')
+        h['image'].update(tool=c['kind'],source='Implemented explicit image transport in execution_bridge; configured model: '+(c.get('model') or c.get('model_env') or 'command')+'. Service access and actual image bytes are checked per invocation.',
+            image_generation=True,reference_images=True,native_transparency=True,native_image_editing=True,
+            post_image_continuation=True,prompt_transport='explicit_prompt',reference_transport='explicit_attachments',
+            native_canvases=[canvas],canvas_selection='explicit_size')
     h['reviewer'].update(tool=cfg['reviewer']['kind'],source=str(probe_path.resolve())+' sha256:'+sha256(probe_path),
         isolated_session=True,visual_inputs=True,read_only_inputs=False,runtime_evidence=None)
     h['runtime'].update(browser=True,webgl=browser.get('webgl'),source=str(browser_path.resolve())+' sha256:'+sha256(browser_path))
     h['execution_config_sha256']=sha256(cfg_path)
+    h['execution_scope']=mode
     h['capability_scope']='Reviewer/browser probes are real. Image service reachability/native editing remain per-call checks; no artwork approved.'
     save_new(out,h)
-    return {**assess(h),'host_capabilities':str(out),'image_service_live_verified':False}
+    return {**assess(h,mode),'host_capabilities':str(out),'image_service_live_verified':False}
 
 
 def invoke_image(cfg_path: Path, plan: Path, role: str, workspace: Path, host: Path,
                  out: Path, *, allowed: bool) -> dict:
     from .image_dispatch import dispatch, verify_dispatch
     from .generation_plan import register_image
-    authorize(allowed);cfg=config(cfg_path)
+    authorize(allowed)
     hc=read_json(host)
+    if hc.get('execution_scope') in ('integrate','html'):
+        fail('image_forbidden_in_site_task','This host is scoped to integration/review; image generation and editing are forbidden.')
+    cfg=config(cfg_path)
     if hc.get('execution_config_sha256') and hc['execution_config_sha256']!=sha256(cfg_path): fail('execution_config_changed','Re-probe/rebind the selected provider config; do not reuse another route approval.')
     root=plan.resolve().parent;out=out.resolve()
     if not out.is_relative_to(root) or out.exists(): fail('output_path','Use a new call directory inside CARD.')
@@ -144,7 +155,10 @@ def _review_inputs(packet_dir: Path) -> tuple[dict,dict,list[Path],list[str]]:
         p=packet_dir/entry['file'];source=Path(entry['source'])
         if p.suffix.lower() in ('.png','.jpg','.jpeg','.webp'):
             images.append(p)
-        elif source.name in allowed_names or source.name.endswith('-evidence.json'):
+        elif (source.name in allowed_names or source.name.endswith('-evidence.json')
+              or (draft.get('stage') == 'release'
+                  and draft.get('targets',{}).get('task') == 'site'
+                  and entry['sha256'] == draft['targets'].get('navigation',{}).get('sha256'))):
             data=p.read_text(encoding='utf-8')
             if len(data)>150000: fail('review_text_limit','Review input is too large; split its actual task rather than truncating silently.')
             texts.append('FILE '+entry['file']+'\n'+data)
@@ -186,7 +200,7 @@ def invoke_review(cfg_path: Path, packet_dir: Path, root: Path, host: Path, out:
                   preview: Path | None=None, activate: bool=False) -> dict:
     from .review_exchange import validate_packet, import_response, activate_release
     from .generation_plan import bind_review
-    authorize(allowed);cfg=config(cfg_path)
+    authorize(allowed);cfg=config(cfg_path,require_image=False)
     root,packet_dir,out=(Path(p).resolve() for p in (root,packet_dir,out))
     if not out.is_relative_to(root) or out.exists(): fail('output_path','Use a new reviewer invocation directory inside the stage root.')
     hc=read_json(host)

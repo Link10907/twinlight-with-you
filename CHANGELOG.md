@@ -1,3 +1,15 @@
+# v10-split-1.0 — 双任务、合格工件交接与同页导航
+
+- 新增 task-card / task-site / card-input / seal-card / check-handoff，保留 run 原模式。
+- 私人 A 交接重查当前艺术/动态/独立 release、原生字节、深度和共享渲染器，B 逐字节复制卡片。
+- reviewer-only integrate 配置与 image 调用拒绝；B 不要求重新生图。
+- 原 V10 核心/原锁保持不变，额外导航独立版本化；深链接、后退前进、快速切换、状态恢复、同一卡片实例。
+- 新增实际 navigation 浏览器脚本，file 默认与 injected 诊断严格区分；四项独立整页审查要求和对应证据绑定。
+- B 成品主文件名 index.html，附加独立预览/卡图/卡包；私人交接和审查不进入分享 ZIP。
+- 新增合成回归与包资源校验。工程测试不等同于真实图像生产或独立审美验收。
+
+---
+
 # v2.2 · Executable bridge + runtime diagnosis
 
 - 实际 Images API 单项提示/图片调用，原图无处理登记，已有三次预算与失败原件保留。

@@ -31,10 +31,10 @@ def _resources() -> str:
     """Invalidate outputs when a renderer, contract, gate or its approval changes."""
     paths = []
     for directory in (ROOT / "assets/template", ROOT / "assets/card-preview", ROOT / "assets/art-styles", ROOT / "assets/art-references",
-                      ROOT / "schemas", ROOT / "scripts/twinlight_core"):
+                      ROOT / "assets/navigation", ROOT / "schemas", ROOT / "scripts/twinlight_core"):
         paths.extend(p for p in directory.rglob("*") if p.is_file() and "__pycache__" not in p.parts)
     paths.extend(ROOT / "scripts" / name for name in
-                 ("verify_browser.py", "verify_card_browser.py", "package_card.py", "preview_card.py", "prepare_card_layers.py", "lock_template.py"))
+                 ("verify_browser.py", "verify_card_browser.py", "verify_navigation.py", "package_card.py", "preview_card.py", "prepare_card_layers.py", "lock_template.py"))
     paths.append(ROOT / "assets/ai-history.json")
     return digest({str(p.relative_to(ROOT)): _sha(p) for p in sorted(set(paths)) if p.is_file()})
 
@@ -162,7 +162,7 @@ def _execute_browser(command: list[str], *, timeout: int = 180):
 
 
 def _browser(state: dict, workspace: Path, key: str, html: Path, *, browser: str | None,
-             disabled: bool, card_only: bool = False) -> dict:
+             disabled: bool, card_only: bool = False, navigation_only: bool = False) -> dict:
     binary = _browser_binary(browser)
     html_before = _sha(html)
     dependency = digest({"html": html_before, "resources": _resources(),
@@ -191,6 +191,8 @@ def _browser(state: dict, workspace: Path, key: str, html: Path, *, browser: str
             command = ([sys.executable, str(ROOT / "scripts/verify_card_browser.py"), "--html", str(html), "--out", str(out)] + (["--browser", binary] if binary else []) if card_only else
                        [sys.executable, str(ROOT / "scripts/verify_browser.py"), "--html", str(html), "--out", str(out)] +
                        (["--browser", binary] if binary else []))
+            if navigation_only:
+                command = [sys.executable,str(ROOT/"scripts/verify_navigation.py"),"--html",str(html),"--out",str(out)] + (["--browser",binary] if binary else [])
             try:
                 process = _execute_browser(command)
                 report = load(report_path) if report_path.is_file() else {}
@@ -199,6 +201,8 @@ def _browser(state: dict, workspace: Path, key: str, html: Path, *, browser: str
                 report_input_bound = report.get("html_sha256") == html_before
                 passed = input_unchanged and report_input_bound and process.returncode == 0 and report.get("ok") is True and bool(checks) and all(
                     isinstance(item, dict) and item.get("passed") is True for item in checks)
+                if navigation_only:
+                    passed = passed and report.get("load_mode")=="file" and report.get("offline_self_contained_verified") is True and report.get("delivery_eligible") is True
                 if card_only:
                     passed = passed and all(report.get(k) is True for k in ("foil_verified", "fixed_text_verified", "touch_verified", "reduced_motion_verified"))
                 failure = str(report.get("failure", "") or process.stderr[-1800:] or process.stdout[-1800:])
@@ -221,6 +225,8 @@ def _browser(state: dict, workspace: Path, key: str, html: Path, *, browser: str
                           "fixed_text_verified": passed and report.get("fixed_text_verified") is True,
                           "touch_verified": passed and report.get("touch_verified") is True,
                           "reduced_motion_verified": passed and report.get("reduced_motion_verified") is True,
+                          "navigation_verified": passed and navigation_only,
+                          "offline_self_contained_verified": passed and report.get("offline_self_contained_verified") is True,
                           "scope": report.get("scope", "Fixed HTML browser script; desktop and emulated mobile only."),
                           "limits": report.get("not_tested", ["Visual art quality", "generation provenance", "real-device performance"])}
                 if not passed:
@@ -237,7 +243,7 @@ def _browser(state: dict, workspace: Path, key: str, html: Path, *, browser: str
 
 def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", layers: Path | None = None,
         art_prompt_file: Path | None = None, browser: str | None = None, no_browser: bool = False,
-        font: Path | None = None, _review_gate=None) -> dict:
+        font: Path | None = None, _review_gate=None, card_handoff: Path | None = None) -> dict:
     """Internal mechanical checks only; use run() for production delivery. Build/verify independent modules, then integrate only current-person native art."""
     from . import lite, site
     from .art import validate_layers
@@ -245,6 +251,13 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
     from .template_origin import verify_site
 
     check(mode in ("html", "card", "both"), "Unsupported run mode")
+    imported = None
+    if card_handoff is not None:
+        check(mode == 'both' and layers is None and art_prompt_file is None and font is None,
+              'Task B imports a released card; do not pass layers, an art brief or typography options')
+        from .card_handoff import validate as validate_handoff
+        imported = validate_handoff(card_handoff, lite.persona_digest(read_card_data(input_path)))
+        layers = Path(imported['layers'])
     input_path, workspace = input_path.resolve(), workspace.resolve()
     check(input_path.is_file(), "Current-person input file is missing")
     raw = input_path.read_bytes()
@@ -269,6 +282,15 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
     data = read_card_data(content)
     if mode != "card":
         check(data.get("twinlight") == "lite-1", "HTML mode requires Lite content with current-person themes")
+    check(bool(state.get('card_handoff_source')) == bool(card_handoff) or not state.get('stages'),
+          'Do not switch a workspace between legacy production and task B')
+    if card_handoff is not None:
+        previous_handoff = state.get('card_handoff_source')
+        check(previous_handoff is None or Path(previous_handoff).resolve() == Path(card_handoff).resolve(),
+              'This task B workspace is bound to another task A; use a new task B workspace')
+        state['card_handoff_source'] = str(Path(card_handoff).resolve())
+        state['task'] = 'site'
+        state['stages']['card_import'] = imported
     state["mode"] = mode
     state["version"] = VERSION
     state["persona_digest"] = lite.persona_digest(data)
@@ -277,6 +299,8 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
     outputs, selected, dynamic = {}, [], []
     resume = [sys.executable, str(ROOT / "scripts/twinlight.py"), "run", str(input_path),
               "--workspace", str(workspace), "--mode", mode]
+    if card_handoff is not None:
+        resume += ["--card-handoff", str(Path(card_handoff).resolve())]
     if browser:
         resume += ["--browser", browser]
     if no_browser:
@@ -290,7 +314,7 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
     def build_html(folder: str, native: Path | None = None):
         if native is not None:
             require_sources()
-        report = site.build_lite(data, workspace / folder, generated_at=state["created_at"], layers=native, confirmed=False)
+        report = site.build_lite(data, workspace / folder, generated_at=state["created_at"], layers=native, confirmed=False, navigation=card_handoff is not None)
         if native is not None:
             require_sources()
         return report
@@ -317,7 +341,7 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
             layers = layers.resolve()
             state["layers_source"] = str(layers)
             art_source = _art_dependency(layers) if layers.is_file() else "missing"
-            art_dep = digest({"run": dep, "art": art_source})
+            art_dep = digest({"run": dep, "art": art_source, "handoff": imported.get("handoff_sha256") if imported else None})
 
             def sources_unchanged():
                 try:
@@ -330,6 +354,12 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
 
             def source_gate():
                 unchanged = sources_unchanged()
+                if imported is not None:
+                    fresh = validate_handoff(card_handoff, state['persona_digest'])
+                    unchanged = unchanged and fresh['handoff_sha256'] == imported['handoff_sha256']
+                    for key, source in fresh['outputs'].items():
+                        target = workspace / {'card_front':'card/front.png', 'card_preview':'card/preview.html', 'card_pack':'card/card-pack.json'}[key]
+                        unchanged = unchanged and target.is_file() and _sha(target) == _sha(Path(source))
                 return {"ok": unchanged, "errors": [] if unchanged else [{"code": "native_source_changed"}]}
 
             def make_card():
@@ -338,6 +368,17 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
                 require_sources()
                 report = validate_layers(layers, state["persona_digest"])
                 check(report["art_status"] in ("generated", "approved"), "Placeholder or static art cannot complete a native card")
+                if imported is not None:
+                    import shutil
+                    fresh = validate_handoff(card_handoff, state['persona_digest'])
+                    check(fresh['handoff_sha256'] == imported['handoff_sha256'], 'Task A changed before copy')
+                    for key, source in fresh['outputs'].items():
+                        target = workspace / {'card_front':'card/front.png', 'card_preview':'card/preview.html', 'card_pack':'card/card-pack.json'}[key]
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        check(Path(source).resolve() != target.resolve(), 'Task B must not overwrite task A')
+                        shutil.copyfile(source, target)
+                    require_sources()
+                    return {'import': fresh, 'copied_byte_for_byte': True, 'image_calls_performed': 0}
                 rendered = site.render_card_preview(data, workspace / "card/front.png", layers=layers)
                 viewed = preview(layers, workspace / "card/preview.html", content)
                 packed = package(layers, workspace / "card/card-pack.json", content)
@@ -352,8 +393,9 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
                 native = layers
                 outputs.update(card_preview=str(workspace / "card/preview.html"), card_front=str(workspace / "card/front.png"),
                                card_pack=str(workspace / "card/card-pack.json"))
-                dynamic.append(_browser(state, workspace, "card_browser", workspace / "card/preview.html", browser=browser,
-                                        disabled=no_browser, card_only=True))
+                if imported is None:
+                    dynamic.append(_browser(state, workspace, "card_browser", workspace / "card/preview.html", browser=browser,
+                                            disabled=no_browser, card_only=True))
                 if _review_gate is not None:
                     art_review = _review_gate(content, layers, workspace, state["persona_digest"])
                     state["stages"]["art_quality"] = art_review
@@ -457,6 +499,9 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
             outputs["html_with_card"] = str(workspace / "site-with-card/index.html")
             dynamic.append(_browser(state, workspace, "integration_browser", workspace / "site-with-card/index.html",
                                     browser=browser, disabled=no_browser))
+            if imported is not None:
+                dynamic.append(_browser(state, workspace, "navigation_browser", workspace / "site-with-card/index.html",
+                                        browser=browser, disabled=no_browser, navigation_only=True))
     if mode == "both" and "html" in outputs and "html_with_card" not in outputs:
         dynamic.append(_browser(state, workspace, "html_browser", workspace / "site/index.html",
                                 browser=browser, disabled=no_browser))
@@ -512,9 +557,10 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
 
 def run(input_path: Path, workspace: Path, *, mode: str = "both", layers: Path | None = None,
         art_prompt_file: Path | None = None, browser: str | None = None, no_browser: bool = False,
-        font: Path | None = None, require_in_chat_preview: bool = False, host_capabilities: Path | None = None) -> dict:
+        font: Path | None = None, require_in_chat_preview: bool = False, host_capabilities: Path | None = None,
+        card_handoff: Path | None = None) -> dict:
     """Default production route: mechanical files, source evidence and visual review gates."""
     from .delivery import deliver
     return deliver(_run_mechanical, input_path, workspace, mode=mode, layers=layers,
                    art_prompt_file=art_prompt_file, browser=browser, no_browser=no_browser, font=font,
-                   require_in_chat_preview=require_in_chat_preview, host_capabilities=host_capabilities)
+                   require_in_chat_preview=require_in_chat_preview, host_capabilities=host_capabilities, card_handoff=card_handoff)

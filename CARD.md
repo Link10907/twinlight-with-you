@@ -1,11 +1,11 @@
-# 闪卡制作：先把一张画做对
+# 任务 A：闪卡制作与独立验收
 
 > v2.2 实际执行入口：[可执行接入](references/execution-adapters.md)。生图用 `execution.py image`，独立看图用 `execution.py review`；旧 dispatch/packet 仍只准备材料，不能代替调用。
 
 > 本版调用前必须完成 [宿主预检](references/host-contract.md)，每个角色先 `visual_plan.py dispatch` 再调用真实图像工具，`record` 需传对应 `--dispatch`。编译时 `--capabilities WORK/host.json` 可直接读取完整能力表。原型与各层均如此；具体可运行顺序以 AGENT 为准，不能先调用再补派发。
 
 
-总流程与自动接入由 [AGENT.md](AGENT.md) 负责。本文件只制作当前人的卡。每个 review 均由 [REVIEWER.md](REVIEWER.md) 的真实独立任务执行，默认不需要平台 ID/回执或 OS 只读权限；生成者不能自签。文案从只读 `person.json` 取用；设计写进 `art-direction-2`，不能为迁就图片改称号、经历或主人绑定。
+任务选择与交接由 [AGENT.md](AGENT.md) 负责。本任务入口为 `task-card`，完成后封存 A 交接并结束，不构建星系。本文件只制作当前人的卡。每个 review 均由 [REVIEWER.md](REVIEWER.md) 的真实独立任务执行，默认不需要平台 ID/回执或 OS 只读权限；生成者不能自签。文案从冻结的 `card-input.json`（与 person.json 同一 persona_digest）取用；设计写进 `art-direction-2`，不能为迁就图片改称号、经历或主人绑定。
 
 ## 1. 看参考，再决定当前画面
 
@@ -73,7 +73,7 @@ PY ROOT/scripts/art_quality.py review-template --layers CARD/layers.json --perso
 
 ## 4. 看排字、动态和实际揭卡
 
-回到 AGENT 的 public `run --layers` 生成当前 `RUN/card/front.png` / `preview.html`。打开正面和真实预览，逐字核对文案；SSR、主称号、英文副标题、关键词与署名层级清楚，底部不能像贴上不透明信息框。
+回到 AGENT 的 public `task-card --layers` 生成当前 `RUN/card/front.png` / `preview.html`。打开正面和真实预览，逐字核对文案；SSR、主称号、英文副标题、关键词与署名层级清楚，底部不能像贴上不透明信息框。
 
 ```sh
 PY ROOT/scripts/art_quality.py review-template --layers CARD/layers.json --persona-digest DIGEST --stage final --front RUN/card/front.png --preview RUN/card/preview.html --out CARD/final-review.json
@@ -85,7 +85,7 @@ PY ROOT/scripts/art_quality.py review-template --layers CARD/layers.json --perso
 PY ROOT/scripts/visual_plan.py bind-review --layers CARD/layers.json --review CARD/final-review.json --front RUN/card/front.png --preview RUN/card/preview.html
 ```
 
-将实际截图与检查记录填写进 final review，绑定后回同一 public run 自动完成页面接入。最终揭卡必须显示同一张合格卡。
+将真实独立观察绑定进 final review，再回同一 `task-card` 续跑。按 AGENT 对独立卡片执行 card release；全部通过后 `task-card` 自动生成 A/card-handoff.json。此处不接入网站。任务 B 只消费这个已验收工件。
 
 ## 返工保持局部
 
@@ -99,6 +99,6 @@ PY ROOT/scripts/visual_plan.py repair CARD/generation-plan.json --role subject -
 
 每角色最多三次真实返回，保留全部尝试与失败原因。一次反馈只修造成失败的主问题，例如“保持原型脸部与衣料细节，当前主体变成平涂且光源反了”；不要每次同时换题材、画风和构图。已合格层不重画。设计确需改变则保留原版本，新版本重过受影响审查，不靠换目录重置预算。文件存在、美术通过、本人确认分别记录。
 
-原图与评审机制详见 `references/art-evidence-format.md`。没有图像能力或达到有限返工上限时，保留真实原型和成功 HTML，清楚标明未完成项；不以代码插画、静态图或待验卡冒充 V10 成品。
+原图与评审机制详见 `references/art-evidence-format.md`。没有图像能力或达到有限返工上限时，保留真实原型、已合格图层和独立预览候选，清楚标明未完成项；不以代码插画、静态图或待验卡冒充 V10 成品。
 
 平台未提供图像 call/artifact ID 时省略这些可选参数；脚本使用明确标记的 local 字节绑定，保留真实原图与返回消息/附件记录。不要编平台 ID。独立审查默认使用 reviewer import --packet --host-capabilities，不因缺 trace 阻断；完整美术与动态标准不变。
