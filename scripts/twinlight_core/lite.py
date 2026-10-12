@@ -237,7 +237,7 @@ def persona_digest(data: dict) -> str:
 
 
 def to_profile(data: dict, *, generated_at: str, art_status: str = "placeholder", confirmed: bool = False,
-               ai_history: list | None = None, art_mode: str | None = None) -> dict:
+               ai_history: list | None = None, art_mode: str | None = None, include_card: bool = True) -> dict:
     """Map a VALID lite JSON to the fixed template's profile contract."""
     oid = owner_id(data["name"])
     art_mode = art_mode or ("static" if art_status == "static" else "placeholder" if art_status == "placeholder" else "layered")
@@ -260,17 +260,19 @@ def to_profile(data: dict, *, generated_at: str, art_status: str = "placeholder"
     provider, display = provider_of(data["summarizer"])
     meta = {"provider": provider, "display_name": display, "model": None, "generated_at": generated_at,
             "attribution_source": "ai_self_reported"}
-    card = data["card"]
-    persona = {"version": "1.0", "name": data["name"], "rarity": "SSR", "title": card["title"],
-               "english_title": card["english_title"], "edition": generated_at[:7].replace("-", "."),
-               "keywords": list(card["keywords"]), "line": card["tagline"], "reflection": card["reflection"],
-               "evidence": [{"title": t["label"], "text": t["headline"][:60]} for t in data["themes"][:3]],
-               "art_type": ("静态原型插画：尚未完成独立分层" if art_status == "static" else
-                            "原生独立分层插画" if art_status != "placeholder" else "占位卡面：还没有放入你的插画"),
-               "disclaimer": "本卡是 AI 对你的创作性印象，不是人格诊断或能力排名。每张卡都是 SSR。",
-               "summarizer": meta, "content_ready": True, "art_status": art_status, "art_mode": art_mode}
-    # Binding describes the actual person/card, independent of build timestamps.
-    persona["persona_digest"] = persona_digest(data)
+    persona = None
+    if include_card:
+        card = data["card"]
+        persona = {"version": "1.0", "name": data["name"], "rarity": "SSR", "title": card["title"],
+                   "english_title": card["english_title"], "edition": generated_at[:7].replace("-", "."),
+                   "keywords": list(card["keywords"]), "line": card["tagline"], "reflection": card["reflection"],
+                   "evidence": [{"title": t["label"], "text": t["headline"][:60]} for t in data["themes"][:3]],
+                   "art_type": ("静态原型插画：尚未完成独立分层" if art_status == "static" else
+                                "原生独立分层插画" if art_status != "placeholder" else "占位卡面：还没有放入你的插画"),
+                   "disclaimer": "本卡是 AI 对你的创作性印象，不是人格诊断或能力排名。每张卡都是 SSR。",
+                   "summarizer": meta, "content_ready": True, "art_status": art_status, "art_mode": art_mode}
+        # Binding describes the actual person/card, independent of build timestamps.
+        persona["persona_digest"] = persona_digest(data)
     layout = layout_from_spec(oid, spec)
     profile = {"version": "1.0", "mode": "lite", "name": data["name"], "owner_id": oid,
                "intro": data.get("intro") or "每一颗微光，都有来处。", "chapters": chapters, "summary_meta": meta,
@@ -280,7 +282,7 @@ def to_profile(data: dict, *, generated_at: str, art_status: str = "placeholder"
                             "description": "基于你的 AI 对你的印象（记忆与对话），不是逐条核对的聊天记录。"},
                "release": {"draft": not confirmed, "share_allowed": bool(confirmed)}}
     profile["content_digest"] = digest({"owner_id": oid, "chapters": chapters, "summary_meta": meta,
-                                        "persona_digest": persona["persona_digest"]})
+                                        "persona_digest": persona["persona_digest"] if persona else None})
     return profile
 
 

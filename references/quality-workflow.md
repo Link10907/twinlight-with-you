@@ -1,3 +1,5 @@
+> **适用范围：旧 strict/API 高级路径。默认 portable 不以本文独立 Agent/API 门禁启动；当前入口见 SKILL.md、AGENT.md 和 references/portable-contract.md。**
+
 # V10 品质标准与实际验收
 
 当前第一基准是用户指定的 `twinlight-v10` demo。维护时可对照该目录的真实首页、交融、揭卡和左右倾斜截图；生成新用户作品时使用随包固定模板和通用审美参考。旧 demo 的作者资料、卡面文字与人物设定不是新用户输入。

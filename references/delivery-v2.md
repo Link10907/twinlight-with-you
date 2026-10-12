@@ -1,3 +1,5 @@
+> **适用范围：旧 strict/API 高级路径。默认 portable 不以本文独立 Agent/API 门禁启动；当前入口见 SKILL.md、AGENT.md 和 references/portable-contract.md。**
+
 # 文件完成与本次请求满足
 
 `complete` 指本次请求文件、v2具体形象美术记录、原生卡内嵌、实际本地浏览器关口全部通过；不代表外部生成来源认证、不代表本人批准，也不证明聊天宿主能运行 HTML。`request_satisfied` 进一步检查本次明确的预览要求；二者都不能证明宿主已经把附件发给用户。

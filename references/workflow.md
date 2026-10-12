@@ -1,3 +1,5 @@
+> **适用范围：旧 strict/API 高级路径。默认 portable 不以本文独立 Agent/API 门禁启动；当前入口见 SKILL.md、AGENT.md 和 references/portable-contract.md。**
+
 # 工作流与工件边界
 
 Lite 的默认 `run` 执行见 `AGENT.md`；这里保存严格模式的内部内容步骤，不能用 Lite 控制器绕过逐句来源和本人审阅。HTML 同样可以不带图片独立构建。用户请求默认“定义卡和页面”已包含闪卡制作与自动接入意图；明确只要 HTML 时不生成卡片。闪卡走 `CARD.md`，不作为内容提取或基础 HTML 的前置任务。命令由宿主执行，不要求用户操作 JSON 或证据偏移。

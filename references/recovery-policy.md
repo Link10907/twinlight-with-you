@@ -1,3 +1,5 @@
+> **适用范围：旧 strict/API 高级路径。默认 portable 不以本文独立 Agent/API 门禁启动；当前入口见 SKILL.md、AGENT.md 和 references/portable-contract.md。**
+
 # 状态、局部返工与终止规则
 
 原则：用户一次请求，内部有限闭环；失败定位到一个对象，不扩大重做范围。完整状态从当前 public run 读取，不能只看进程退出码或文件存在。

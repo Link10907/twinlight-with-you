@@ -80,6 +80,10 @@ REQUIRED += ('schemas/card-image-input.schema.json','references/card-input-contr
              'assets/art-styles/image-presets.json','scripts/twinlight_core/card_context.py',
              'scripts/twinlight_core/review_context.py')
 
+REQUIRED += ('scripts/portable.py','scripts/twinlight_core/portable.py','scripts/twinlight_core/galaxy_only.py',
+             'references/portable-contract.md','assets/galaxy-only/before-finale.js',
+             'assets/galaxy-only/after-finale.js','assets/galaxy-only/adapter.js','assets/galaxy-only/style.css')
+
 def fetch(url: str, limit: int) -> bytes:
     request = urllib.request.Request(url, headers={'User-Agent': 'Twinlight-resource-bootstrap',
                                                   'Accept': 'application/vnd.github+json'})
@@ -137,7 +141,7 @@ def unpack(payload: bytes, out: Path, revision: str) -> None:
         target.write_bytes(content)
 
 
-def check_root(root: Path) -> dict:
+def check_root(root: Path, profile: str = "strict") -> dict:
     root = root.resolve()
     missing, hashes = [], {}
     for relative in REQUIRED:
@@ -147,7 +151,7 @@ def check_root(root: Path) -> dict:
         else:
             hashes[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
     dependencies, unavailable = {}, []
-    for module_name in ('jsonschema', 'PIL', 'playwright'):
+    for module_name in (('jsonschema', 'PIL', 'playwright') if profile == 'strict' else ('jsonschema', 'PIL')):
         try:
             importlib.import_module(module_name)
             try:
@@ -187,6 +191,7 @@ def check_root(root: Path) -> dict:
                         'dependencies': dependencies, 'missing_dependencies': unavailable, 'ok': runtime_ok},
             'browser': browser,
             'ready_for_local_browser_checks': runtime_ok and browser['executable_available'],
+            'profile': profile,
             'scope': 'Resource/runtime and release-local template lock only; no HTML build, model analysis, image generation or visual verification.'}
 
 
@@ -221,18 +226,19 @@ def main() -> int:
     choice = parser.add_mutually_exclusive_group(required=True)
     choice.add_argument('--root', type=Path, help='Read-only check of an existing resource tree')
     choice.add_argument('--out', type=Path, help='Acquire into a new or empty resource directory')
+    parser.add_argument('--profile', choices=['portable','strict'], default='portable')
     parser.add_argument('--revision', help='Immutable commit SHA; default resolves main once')
     args = parser.parse_args()
     try:
         if args.root:
             if args.revision:
                 raise ValueError('--revision is only used with --out')
-            report = check_root(args.root)
+            report = check_root(args.root, args.profile)
         else:
             revision = resolve_revision(args.revision)
             payload = fetch('https://codeload.github.com/' + REPOSITORY + '/zip/' + revision, MAX_ARCHIVE)
             unpack(payload, args.out, revision)
-            report = check_root(args.out)
+            report = check_root(args.out, args.profile)
             report.update(repository=REPOSITORY, revision=revision,
                           archive_sha256=hashlib.sha256(payload).hexdigest())
             (args.out / 'resource-receipt.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')

@@ -9,7 +9,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 
 ROOT = Path(__file__).resolve().parents[1]
 ROOT_FILES = ('SKILL.md', 'AGENT.md', 'REVIEWER.md', 'PROMPT.md', 'CARD.md', 'HTML.md', 'README.md', 'START_HERE.txt', 'LICENSE',
-              'THIRD-PARTY-NOTICES.md', 'CHANGELOG.md', 'requirements.txt', 'requirements-dev.txt', '.gitignore')
+              'THIRD-PARTY-NOTICES.md', 'CHANGELOG.md', 'requirements.txt', 'requirements-dev.txt', 'requirements-portable.txt', '.gitignore')
 RESOURCE_DIRS = ('scripts', 'references', 'prompts', 'schemas', 'assets', 'agents', 'tests/quality')
 # The Pages viewer is built and tested from the repository (needs examples and test fixtures).
 MAINTAINER_ONLY = {'scripts/build_viewer.py', 'scripts/verify_viewer.py'}
@@ -82,12 +82,16 @@ def package(root: Path, out: Path, include_demo: bool = False) -> dict:
         for path in files:
             archive.write(path, 'twinlight-with-you/' + path.relative_to(root).as_posix())
         archive.writestr('twinlight-with-you/package-manifest.json', json.dumps({
-            'schema_version': '1.0', 'skill_revision': 'v10-split-1.1', 'renderer_baseline': 'V10', 'files_sha256': hashes,
+            'schema_version': '1.0', 'skill_revision': 'v10-portable-1.0', 'renderer_baseline': 'V10', 'files_sha256': hashes,
             'mode': 'fictional_demo' if include_demo else 'personal_use',
             'contains_fictional_history': include_demo,
             'contains_author_showcase': False,
             'contains_synthetic_quality_tests': True,
-            'requires_real_independent_reviewer': True,
+            'requires_real_independent_reviewer': False,
+            'default_execution_policy': 'portable',
+            'strict_mode_retained': True,
+            'native_image_tools_preferred': True,
+            'html_only_without_placeholders': True,
             'contains_style_reference_artwork': any(
                 p.relative_to(root).parts[:2] == ('assets', 'art-references') and
                 p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'} for p in files),

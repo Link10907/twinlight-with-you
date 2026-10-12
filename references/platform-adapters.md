@@ -1,3 +1,5 @@
+> **适用范围：旧 strict/API 高级路径。默认 portable 不以本文独立 Agent/API 门禁启动；当前入口见 SKILL.md、AGENT.md 和 references/portable-contract.md。**
+
 # 按能力接入不同 AI 平台
 
 共用同一内容契约、固定模板、`run` 控制器与独立美术契约。平台适配只负责输入文件、执行工具、图像返回与预览入口，不另写一套页面或改变人物分析。ChatGPT 网页、Claude 网页、Codex、Cursor 及其他宿主均先检查本次真实能力；平台名称、模型自述或能读取 GitHub URL 不等于有完整执行环境。

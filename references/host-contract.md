@@ -1,3 +1,5 @@
+> **适用范围：旧 strict/API 高级路径。默认 portable 不以本文独立 Agent/API 门禁启动；当前入口见 SKILL.md、AGENT.md 和 references/portable-contract.md。**
+
 # 宿主能力：先确认可执行任务，认证信息不作生产门槛
 
 `preflight.py template` 创建 `host-capabilities-2` 的待填写表。表名保留兼容旧工作区，v2.1 改变的是判定语义。宿主从当前工具接口与实际观察填写事实，不要求用户填问卷，不虚构能力。

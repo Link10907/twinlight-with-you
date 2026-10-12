@@ -1,35 +1,52 @@
-# Twinlight 双任务版 · v10-split-1.1
+# Twinlight · 与你同光 · v10-portable-1.0
 
-**一个工具包，两个制作任务，一个内嵌动态闪卡的 V10 主 HTML。**
+**一句话启动；使用当前 AI 自带的能力；能生图做完整作品，不能生图做完整无卡星系。**
 
-先读 [SKILL.md](SKILL.md) 和 [AGENT.md](AGENT.md)，再只加载当前任务入口。
+## 复制这一句话
 
-| 任务 | 入口 | 完成条件 |
-|---|---|---|
-| A：闪卡 | [CARD.md](CARD.md) | 原型、原生图层、程序排字、互动卡；真实独立审查后封存私人交接 |
-| B：整站 | [HTML.md](HTML.md) | 导入已验收同卡，保留 V10；页内切换、完整剧情和独立整页验收 |
+> 请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md，根据你对我的了解，自动完成并交付我的 Twinlight。
 
-## 本次修复
+已经上传完整包时说：
 
-`card-input.json` 是称号、文字和归属，不是绘画提示。绘画只使用 [card-image-input-1](references/card-input-contract.md)：主体类别、物种/性别呈现、2–5个外观特征、服装表情、一个动作和主要道具，另加选定画风与简短场景。程序拼装实际短提示，不追加上层履历、选型理由、偏好长文或整站需求。
+> 请使用本次上传的 Twinlight 完整包，根据你对我的了解，自动完成并交付我的 Twinlight。
 
-原型一次单图；原生图层每次只参照同一已审查原型。实际请求与附件在 dispatch 复核，改写提示后重算哈希仍不能绕过白名单。返工只发当前一句缺陷，历史留在私人记录。
+以上远程入口使用的是仓库实际版本；只有本版已合并到仓库时才能拉取本版。上传包优先，不用远程旧 main 覆盖。
 
-审查按阶段投影形象、画风和实际图片；仅动态阶段加冻结文字与运行证据。卡片审查不读网页手册，集成审查不重新设计角色。错误主体、无关场景、网页拼贴、占位图、错层和缺动态证据不得放行。
+## 默认行为
 
-A 失败不输出占位整站。旧 `both` 缺卡不再构建 HTML；`lite-build` 缺少图像默认阻断，只有明确调试时使用 `--debug-placeholder`。所有正式卡片导出再次核对实际卡包、渲染器和内嵌字节。
+| 当前会话实际能力 | 作品 |
+|---|---|
+| 原生生图工具可调用 | A 制卡、检查和返工 → B 内嵌同一卡片 → 一次交付 |
+| 确实没有生图工具 | 跳过 A，生成有完整结束与返回路径的 V10 星系；不制作闪卡、不留空卡位 |
+| 额度耗尽、临时故障、权限异常、尚未检查工具 | 如实区分；不是“没有生图”，不偷偷改成无卡版 |
 
-## 使用与验收
+默认不要求 API key、不要求独立 Agent 账号，不按 ChatGPT、Gemini、DeepSeek 等品牌硬编码能力。独立审查任务可用时优先使用；不可用时由当前 AI 执行有实际视觉观察的自检，并明确记为自检。原生分层和美术标准不因此变为静态海报或代码绘图。
 
-[两条可复制任务指令](PROMPT.md) · [执行接入](references/execution-adapters.md) · [审查规范](REVIEWER.md) · [工件交接](references/card-handoff.md)
+**内容最小化和真实隔离分开记录**：支持窄任务时只传具体形象、单一画风和当前参考；工具自动继承上下文时不谎称隔离，不把“独立会话”写成普通用户的前置条件。
+
+## 入口与工程文件
+
+[SKILL](SKILL.md) · [执行流程](AGENT.md) · [制卡](CARD.md) · [星系](HTML.md) · [审查](REVIEWER.md) · [能力与产物边界](references/portable-contract.md)
+
+AI 宿主执行 `scripts/portable.py plan → run → deliver`，并在 run 返回需要真实图像/观察时调用自己的工具继续；Python 不会凭空获得 ChatGPT 或其他服务的生图权限。命令和内部 JSON 由 AI 完成，不要求用户手填。
+
+严格独立审查保留为显式选择的 [strict 模式](references/strict/SKILL.md)，旧 `task-card` / `task-site` 门禁不放宽。默认 portable 不调用这些强制门禁。
+
+默认依赖见 `requirements-portable.txt`，不强制安装浏览器；浏览器验证或 strict 使用原 `requirements.txt`。依赖安装也由宿主在实际授权范围内执行。
 
 ```sh
-python scripts/verify_skill.py --tests --out /path/out/skill-verification.json
-python scripts/package_skill.py --out /path/out/twinlight-with-you.zip
+python scripts/bootstrap.py --root . --profile portable
+# 下面是维护者完整回归检查，不是原生生图的启动前置条件
+python scripts/verify_skill.py --tests --out /path/to/verification.json
+python scripts/package_skill.py --out /path/to/twinlight-with-you.zip
 ```
 
-原 V10 核心、导航、shader、音乐与已有美术参考不变。本包不含新个人作品、字体、原始聊天、账号、凭证或已启动的模型服务。
+原 V10 源码和锁保持不变；无卡版使用单独版本化的装配投影移除卡片模块，保留原星系、行星、交融和音乐代码。无卡版不是 placeholder/debug 输出。技能包不包含本次个人作品，也不把合成测试当成真实生图验收。
 
-真实图像调用、独立视觉任务和 WebGL 浏览器能力需要实际环境提供。项目外临时目录不是 OS 沙箱，文件哈希不是供应商认证，短提示不能保证模型每次遵循形象。合成回归只验证程序行为，不作为艺术验收或独立 Reviewer 的替代。
+## 实际平台边界
 
-默认私人草稿，不自动公开、部署或 push。任务 B 的主 HTML 自包含；聊天附件预览、本地离线打开与动态效果分别实测，不能相互冒充。
+“一句话启动”是交互目标，不是越过平台权限的承诺。完整执行还需要读取完整资源、取得图片文件字节并创建 HTML 的实际能力。平台强制授权、肖像参考、安全规则或生图后强制结束当前回合时必须遵守；禁止用提示词要求绕过。只有联网搜索而不能下载或读取资源时，不宣称已取得完整包；完全不能创建文件时，不冒充有下载产物。
+
+浏览器或 WebGL 不可用不会阻止先生成原画。产物构建、视觉审查、真实动态运行、离线文件打开分别记录；未测不写通过，已知代码故障必须修复。公开分享仍须用户决定，默认私人作品，不自动 push、部署或公开，不导出字体、原始聊天、账号、密钥或内部审查记录。
+
+无卡分支也兼容没有视觉查看能力的文本服务：允许真实的源码/结构审查（`source_review_only`），完成 HTML 后如实说明没有视觉验收；这项例外不适用于完整闪卡分支，详见 REVIEWER.md。

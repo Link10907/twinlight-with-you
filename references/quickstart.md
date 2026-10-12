@@ -1,3 +1,5 @@
+> **适用范围：旧 strict/API 高级路径。默认 portable 不以本文独立 Agent/API 门禁启动；当前入口见 SKILL.md、AGENT.md 和 references/portable-contract.md。**
+
 # 使用、效果实验与分发
 
 一句话入口见 `README.md`：默认由 `PROMPT.md` / `AGENT.md` 在同一次请求中使用通用 `run` 控制器调用独立 HTML 与闪卡模块，AI 自动处理 `next_action` 并续跑，各自修复，完成匹配卡包后接入最终 HTML。用户明确只要其中一个时选择对应 mode。旧串行状态机保留为兼容入口；默认导入只消费完成且绑定匹配的卡包。

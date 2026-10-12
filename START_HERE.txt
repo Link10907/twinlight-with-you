@@ -1,13 +1,6 @@
-Twinlight V10 · v10-split-1.1 闪卡窄输入修复版
+Twinlight v10-portable-1.0
 
-先读 SKILL.md、AGENT.md，再只读当前任务入口。
-A：CARD.md → 可见形象+选定画风 → 真实独立原型/原生图层/动态审查 → 私人交接。
-B：HTML.md → 已验收同一卡包 → 内嵌主HTML → 导航/完整剧情/独立整页审查。
+请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md，根据你对我的了解，自动完成并交付我的 Twinlight。
 
-card-input.json只排字；card-image-input.json才定义绘画形象。
-图像任务不接收整段用户请求、手册、履历或网站资料。
-审查按阶段取最小证据；返工只传当前一个具体缺陷。
-A失败不另外构建占位HTML或阶段ZIP。调试页必须明确请求。
-
-实际工具和独立审查必须可用；说明文件和合成测试不等于生产闭环通过。
-原V10核心、原锁与导航不变，不自动push、不公开、不包含字体文件。
+本次上传包优先；先读 SKILL.md 和 AGENT.md。默认原生生图和自动 A→B；确实无生图时交付完整无卡 V10 HTML。无需手工选任务或注册外部 API。
+独立审查可用则用，不可用如实自检；严格独立审查为显式 strict。
