@@ -1,4 +1,4 @@
-# Twinlight · 与你同光 · v10-portable-1.2
+# Twinlight · 与你同光 · v10-portable-1.2.1
 
 **一句话启动；使用当前 AI 自带的能力；能生图做完整作品，不能生图做完整无卡星系。**
 

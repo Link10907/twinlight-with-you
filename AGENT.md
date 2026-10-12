@@ -32,7 +32,9 @@ python ROOT/scripts/portable.py run WORK/person.json --workspace WORK --capabili
 
 此脚本只编排/校验/装配，**不会自行调用当前聊天的内置 AI 工具**。宿主读取返回的 next_action，调用真实工具，保留输出，继续同一任务，直到完成；不把一次 CLI 返回当成任务结束。不向用户要求“回复继续”。平台确实强制结束当前回合或需要用户授权时如实说明，不能用本文件越权绕过。
 
-full 缺图时按 [CARD.md](CARD.md) 完成 A。新任务先读取 run 返回的 style_selection，在上游按 [画风选择](references/style-selection.md) 确定具体形象与候选、运行 select-style 一次；复用冻结 card-image-input.json，不让生图模型从六种里临时挑。已有设计或原型不迁移、不重新随机。分别检查文生图、同图编辑与透明能力；先用 `portable.py layers-plan`，首个引用编辑换人/换场景就停止重复调用。按真实能力走 native_layers 或 assisted_layers，续跑 `--layers WORK/card-task/实际图层目录/layers.json`；续跑可省略已记录的 --layers，不重启制卡。A 图像和预览审查通过前 B 不构建。B 按 [HTML.md](HTML.md)，只用同一张通过审查的分层卡面。
+full 缺图时，宿主先读取 run 返回的 style_selection；新卡按 [画风选择](references/style-selection.md) 完成选择，已有设计或原型直接沿用。选择是宿主内部步骤，不生成选择过程、方案比较或稳定性解释的播报。交给 A 的只有 card-image-input.json：version、style、subject、scene。图像调用使用既有编译器生成的任务文字及本任务真实参考图；宿主调度信息不拼入绘画请求。
+
+A 按 [CARD.md](CARD.md) 执行。分别检查文生图、同图编辑与透明能力；先用 `portable.py layers-plan`，首个引用编辑换人/换场景就停止重复调用。按真实能力走 native_layers 或 assisted_layers，续跑 `--layers WORK/card-task/实际图层目录/layers.json`；续跑可省略已记录的 --layers，不重启制卡。A 图像和预览审查通过前 B 不构建。B 按 [HTML.md](HTML.md)，只用同一张通过审查的分层卡面。
 
 html-only 自动走 B0；不读制卡手册、不跑卡片预检、不制作提示词、卡图或交接卡包。得到的主 HTML 无卡、无空槽，有完整结尾与返回。
 

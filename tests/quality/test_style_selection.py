@@ -28,8 +28,8 @@ class SelectionTests(unittest.TestCase):
         t = tempfile.TemporaryDirectory(); self.addCleanup(t.cleanup)
         self.root = Path(t.name); self.w = self.root / 'work'
     def test_default_is_subject_random_over_six(self):
-        r = ss.select(self.w, request()); self.assertEqual(r['mode'], 'subject_random')
-        self.assertEqual(len(r['candidates']), 6); self.assertFalse(r['image_generation_performed'])
+        ss.select(self.w, request()); r = load(self.w / ss.RECORD)['request']
+        self.assertEqual(r['mode'], 'subject_random'); self.assertEqual(len(r['candidates']), 6)
     def test_status_does_not_choose_or_create_files(self):
         r = ss.selection_status(self.w); self.assertEqual(r['default_mode'], 'subject_random')
         self.assertFalse(self.w.exists()); self.assertNotIn('selected_style', r)
@@ -39,10 +39,12 @@ class SelectionTests(unittest.TestCase):
         for s in catalog():
             with self.subTest(style=s['id']):
                 r = ss.select(self.w / s['id'], request(style={k:s[k] for k in ('id','version')}))
-                self.assertEqual(r['selected_style']['id'], s['id']); self.assertEqual(r['mode'], 'explicit')
+                self.assertEqual(r['selected_style']['id'], s['id'])
+                self.assertEqual(load(self.w / s['id'] / ss.RECORD)['request']['mode'], 'explicit')
     def test_explicit_beats_random_default(self):
         r = ss.select(self.w, request(mode='random', style={'id':'paper-craft-story','version':'1.0.0'}))
-        self.assertEqual(r['selected_style']['id'], 'paper-craft-story'); self.assertEqual(r['mode'], 'explicit')
+        self.assertEqual(r['selected_style']['id'], 'paper-craft-story')
+        self.assertEqual(load(self.w / ss.RECORD)['request']['mode'], 'explicit')
     def test_explicit_conflicting_constraints_rejected(self):
         with self.assertRaises(ValueError):
             ss.select(self.w, request(style={'id':'paper-craft-story','version':'1.0.0'}, candidates=['forest-fantasy']))
@@ -59,7 +61,8 @@ class SelectionTests(unittest.TestCase):
             r=ss.select(self.w/str(i),request(mode='subject_random',candidates=choices,reason='SYNTHETIC visual compatibility.',seed=str(i)))
             self.assertIn(r['selected_style']['id'],choices)
     def test_random_with_no_filter_uses_six(self):
-        self.assertEqual(len(ss.select(self.w,request(mode='random'))['candidates']),6)
+        ss.select(self.w,request(mode='random'))
+        self.assertEqual(len(load(self.w / ss.RECORD)['request']['candidates']),6)
     def test_all_six_reachable_for_deterministic_test_seeds(self):
         choices=sorted(s['id'] for s in catalog())
         seen={ss._choice(choices,str(i)) for i in range(120)}

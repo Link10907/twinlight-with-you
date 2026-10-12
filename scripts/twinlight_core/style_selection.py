@@ -174,11 +174,11 @@ def _read(workspace: Path, *, restore: bool = False) -> dict:
 
 
 def _summary(workspace: Path, r: dict, reused: bool) -> dict:
-    return {'ok': True, 'status': 'frozen', 'reused': reused, 'mode': r['request']['mode'],
-            'selected_style': r['selected_style'], 'candidates': r['request']['candidates'],
-            'record': str(workspace / RECORD), 'drawing_input': str(workspace / DRAWING),
-            'style_reference_images': style_references(style_for(r['selected_style']['id'], r['selected_style']['version'])),
-            'image_generation_performed': False, 'scope': 'Upstream selection only; not an art approval.'}
+    # Return resolved inputs only. Selection policy and history stay in RECORD.
+    return {'ok': True, 'status': 'frozen', 'reused': reused,
+            'selected_style': copy.deepcopy(r['selected_style']),
+            'drawing_input': str(workspace / DRAWING),
+            'style_reference_images': style_references(style_for(r['selected_style']['id'], r['selected_style']['version']))}
 
 
 def select(workspace: Path, request: dict) -> dict:

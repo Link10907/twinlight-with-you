@@ -16,7 +16,7 @@ from . import galaxy_only, lite
 from .art import validate_layers, asset_digest
 from .site import build_lite, render_card_preview
 
-VERSION='v10-portable-1.2'
+VERSION='v10-portable-1.2.1'
 STATUSES={'available','unavailable','unknown','temporarily_blocked'}
 CHECKS={
  'card':('subject_and_style','prototype_consistency','native_layers_and_alpha','typography_and_attribution','composition_and_depth'),
@@ -129,7 +129,10 @@ def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=
             from .portable_layers import layer_plan
             history=load(workspace/'image-attempts.json') if (workspace/'image-attempts.json').exists() else None
             result.update(status='native_image_generation_required',layer_plan=layer_plan(capabilities,history),
-                          next_action='Read CARD.md. Resolve the upstream style_selection once for a new card; reuse frozen or already-started artwork. Freeze one native prototype; follow layer_plan for reference-bound native layers or truthful assisted extraction. Resume with --layers. PNG is a texture, never the final interactive card. No external API is required.')
+                          next_action=('Complete the host-only style_selection, then hand drawing_input to CARD.md. '
+                                       if result['style_selection']['status']=='selection_required' else
+                                       'Use drawing_input or the existing design with CARD.md. ')
+                                      + 'Follow layer_plan for the prototype and layers; resume with --layers.')
             save(workspace/'portable-report.json',result);return result
         check(layers.resolve().is_relative_to(workspace.resolve()),'Keep A assets inside this private workspace')
         validation=validate_layers(layers,lite.persona_digest(data))

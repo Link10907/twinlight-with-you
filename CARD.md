@@ -4,7 +4,7 @@
 
 ## 具体形象 → 一个画风 → 一张冻结原型
 
-根据真实授权资料凝练为一个主体、2—5 个可见特征、一个动作、一个主要道具和简短场景。新卡先按 [上游画风选择](references/style-selection.md) 调用 portable.py select-style，冻结一个画风并得到原格式 card-image-input.json：明确指定优先，否则按形象筛选后随机；无更窄限制时六种均可。已有设计/原型沿用原画风，不为引入选择记录重做。下游仍使用 assets/art-styles/image-presets.json 的原有画法，不重新抽签。参考素材只作风格，不当当前人物卡层。
+读取本次 card-image-input.json 中的 style、subject、scene；已有设计直接沿用。按 style.id/version 加载 assets/art-styles/image-presets.json 中对应的原有画法及该画风的参考图。主体、动作、道具和场景使用输入中的具体描述。
 
 绘画输入不含姓名、履历、职业列表、称号、总结模型、星系、HTML 或审查表；仅可见形象、所选画风和当前图层要求。严格使用宿主支持的接口；不虚构 prompt 参数、文件引用或清除历史能力，平台继承上下文时如实记 contextual_native_tool。
 

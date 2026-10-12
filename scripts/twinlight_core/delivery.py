@@ -136,13 +136,14 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
         action["type"] = "prepare_and_review_prototype"
         action["read"] = [str(Path(__file__).resolve().parents[2] / "references/quality-workflow.md")]
         action["schema"] = str(Path(__file__).resolve().parents[2] / "schemas/art-direction-v2.schema.json")
-        action["style_catalog"] = str(Path(__file__).resolve().parents[2] / "assets/art-styles/catalog.json")
         from .style_selection import selection_status
         selection = selection_status(workspace)
-        action["style_selection"] = selection
+        # The scheduler owns selection. The art action receives only its result.
+        result["style_selection"] = selection
         action["selected_style"] = selection.get("selected_style")
+        action["drawing_input"] = selection.get("drawing_input")
         action["style_reference_images"] = selection.get("style_reference_images", [])
-        action["steps"] = ["Reuse the existing design or frozen upstream style. For a new card follow references/style-selection.md: explicit style first, otherwise subject-compatible random selection. Inspect only the selected style's own references; never borrow another style's default images or copy their subject.",
+        action["steps"] = ["Use the provided drawing_input or existing design and its selected style references.",
                            "Check actual image-generation, reference-image and native-alpha capabilities.",
                            "Generate and inspect a wordless prototype; do not generate layers before prototype review passes.",
                            "Create native independent layers, inspect the unlettered composite, then inspect final typography and foil.",

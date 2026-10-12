@@ -4,7 +4,7 @@
 
 ## 画风与主体分开
 
-`assets/art-styles/catalog.json` 记录六种已安装风格。新卡由上游按 [画风选择](style-selection.md) 在明确指定、纯随机、按形象筛选后随机之间解析；默认按形象筛选后随机，没有更窄限制时保留六种。一次选定并冻结 id/version，后续生成与返工不再改选。`default_style=twinlight-collector` 仅保留给旧调用兼容，不是自动生成策略。主体仍单独写入 subject，森系不等于鹿、程序员不等于未来风；不为迁就画风改变主体。
+`style.id/version` 指定本次画风，`assets/art-styles/catalog.json` 用于解析已安装资源。style 管画法；subject 管具体角色；scene 管空间与动作构图。根据指定 id 加载对应预设与参考图。
 
 `style` 管线条、材质、光线、细节组织和排字默认值；`subject` 管当前的具体角色；`scene` 管当前空间与动作构图；任务 role 管本次实际图层。清楚的一位主角仍可以处在有组织的丰富环境中。
 
