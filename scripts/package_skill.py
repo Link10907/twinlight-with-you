@@ -82,7 +82,7 @@ def package(root: Path, out: Path, include_demo: bool = False) -> dict:
         for path in files:
             archive.write(path, 'twinlight-with-you/' + path.relative_to(root).as_posix())
         archive.writestr('twinlight-with-you/package-manifest.json', json.dumps({
-            'schema_version': '1.0', 'skill_revision': 'v10-portable-1.0', 'renderer_baseline': 'V10', 'files_sha256': hashes,
+            'schema_version': '1.0', 'skill_revision': 'v10-portable-1.1', 'renderer_baseline': 'V10', 'files_sha256': hashes,
             'mode': 'fictional_demo' if include_demo else 'personal_use',
             'contains_fictional_history': include_demo,
             'contains_author_showcase': False,
@@ -92,6 +92,9 @@ def package(root: Path, out: Path, include_demo: bool = False) -> dict:
             'strict_mode_retained': True,
             'native_image_tools_preferred': True,
             'html_only_without_placeholders': True,
+            'interactive_html_card_required': True,
+            'portable_layer_methods': ['native_layers', 'assisted_layers'],
+            'png_is_snapshot_only': True,
             'contains_style_reference_artwork': any(
                 p.relative_to(root).parts[:2] == ('assets', 'art-references') and
                 p.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp'} for p in files),

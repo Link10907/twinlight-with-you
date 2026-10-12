@@ -30,7 +30,7 @@ holo.auto=!state.reduced;
 holoSync();
 holoCard.setAttribute('aria-label', 'SSR ' + PERSONA.title + '；按住拖动旋转，方向键调整角度，回车翻面');
 initHolo().then(() => {
-  $('renderStatus').textContent = holo.failed ? '当前使用分层降级预览，镭射未验证。' : (PERSONA.art_status === 'placeholder' ? '这是占位素材，闪卡尚未完成。' : '原生分层卡 · 拖动或用方向键观察景深与闪光。');
+  $('renderStatus').textContent = holo.failed ? '当前使用分层降级预览，镭射未验证。' : (PERSONA.art_status === 'placeholder' ? '这是占位素材，闪卡尚未完成。' : '交互分层卡 · 拖动或用方向键观察景深与闪光。');
 });
 </script>
 </body>

@@ -1,4 +1,4 @@
-Twinlight v10-portable-1.0
+Twinlight v10-portable-1.1
 
 请读取 https://raw.githubusercontent.com/Link10907/twinlight-with-you/main/PROMPT.md，根据你对我的了解，自动完成并交付我的 Twinlight。
 

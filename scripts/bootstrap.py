@@ -84,6 +84,10 @@ REQUIRED += ('scripts/portable.py','scripts/twinlight_core/portable.py','scripts
              'references/portable-contract.md','assets/galaxy-only/before-finale.js',
              'assets/galaxy-only/after-finale.js','assets/galaxy-only/adapter.js','assets/galaxy-only/style.css')
 
+REQUIRED += ('references/interactive-card.md', 'scripts/prepare_assisted_layers.py',
+             'scripts/verify_portable_card_browser.py', 'scripts/twinlight_core/portable_layers.py',
+             'scripts/twinlight_core/portable_motion.py')
+
 def fetch(url: str, limit: int) -> bytes:
     request = urllib.request.Request(url, headers={'User-Agent': 'Twinlight-resource-bootstrap',
                                                   'Accept': 'application/vnd.github+json'})

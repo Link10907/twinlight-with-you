@@ -1,4 +1,4 @@
-# Portable 能力与工件契约 · 1
+# Portable 能力与工件契约 · 1.1
 
 ## 当前会话能力，非品牌能力表
 
@@ -31,18 +31,22 @@ reviewer mode：independent / self / unavailable。自检需要实际观察能�
 
 ## 真实生成记录
 
+完整方法与动态交付遵循 [交互闪卡契约](interactive-card.md)，仅改变 portable 分层制作路径，原六层接口与 strict 门禁不变。
+
 full 的 generation.json 是宿主实际生图后的本地记录，不是图像输入，也不是可手填的供应商凭证。字段：
 
 - origin 固定 native_image_tool；tool 填真实工具名称。
 - prototype_file 为相对此记录的实际原型文件；prototype_sha256 对应该文件。
 - prototype_review 为 self/independent，prototype_verdict 为真实 accept，prototype_observations 为实际观察。
-- layers_sha256 包含 background/subject/effects 的真实原生文件哈希；不是程序草绘。
+- layers_sha256 包含 background/subject/effects 的实际文件哈希；不是程序草绘。layer_method 缺省为 native_layers；assisted_layers 须有 assembly_record_file，并校验原型、实际蒙版、源像素及输出，不冒充原生透明生成。
 - context_isolation 为 explicit_narrow_task/contextual_native_tool，记录实际能力。
 - verdict 为图层比对的真实结论；layer_observations 写原型一致性与透明边缘的观察。
 
 程序检验字节一致，不认证供应商来源。宿主不能伪造真实调用，也不能把合成测试记录带入生产。
 
 ## 运行验证记录
+
+A 使用 verify_portable_card_browser.py 生成 card-runtime.json，绑定当前 preview.html 和对比帧；不能用 PNG 当成动态验收。缺浏览器记 unavailable，不阻断已构建的交互 HTML，但不能称已验证；实际动态失败阻断。辅助与原生方法均使用相同 renderer 和测试，CSS 回退不得标记 WebGL 镭射通过。
 
 WORK/runtime-check.json 针对当前 HTML 写 html_sha256，status 为 passed / limited / unavailable / failed。webgl 与 offline_file_open 分别写 passed / unverified / unavailable / failed；checks 保留真实检查结果。file:// 被策略阻断时可以做注入页面诊断，但它只算 limited，绝不算离线打开通过。语法/JS/导航功能失败须 failed。
 

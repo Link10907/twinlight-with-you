@@ -16,10 +16,11 @@ from . import galaxy_only, lite
 from .art import validate_layers, asset_digest
 from .site import build_lite, render_card_preview
 
-VERSION='v10-portable-1.0'
+VERSION='v10-portable-1.1'
 STATUSES={'available','unavailable','unknown','temporarily_blocked'}
 CHECKS={
  'card':('subject_and_style','prototype_consistency','native_layers_and_alpha','typography_and_attribution','composition_and_depth'),
+ 'card-assisted':('subject_and_style','prototype_consistency','assisted_layers_and_alpha','typography_and_attribution','composition_and_depth'),
  'site':('content_and_privacy','galaxy_navigation','ending_and_return','same_card_or_no_card','layout_and_readability'),
  'site-source':('content_and_privacy','template_and_assets','navigation_code','ending_code','card_feature_absent')}
 
@@ -49,7 +50,7 @@ def route(capabilities: dict) -> dict:
         return base|{'mode':'html-only','status':'ready','card_enabled':False,'next_action':'Build the card-free V10 galaxy; do not load CARD.md or create any card assets.'}
     return base|{'mode':'full','status':'ready','card_enabled':True,'next_action':'Host runs native image generation and review for task A, then embeds the same card in task B without per-step confirmation.'}
 
-def review_check(path: Path, stage: str, target: str, preferred: str, *, allow_source: bool=False) -> dict:
+def review_check(path: Path, stage: str, target: str, preferred: str, *, allow_source: bool=False, layer_method: str='native_layers') -> dict:
     if not path.is_file():return {'ok':False,'status':'review_required','stage':stage,'target_sha256':target}
     r=load(path)
     check(r.get('stage')==stage and r.get('target_sha256')==target,'Review is stale or targets another artifact')
@@ -58,7 +59,7 @@ def review_check(path: Path, stage: str, target: str, preferred: str, *, allow_s
     if preferred=='unavailable' and not source_only:check(False,'No visual review capability was available; do not fabricate an assessment')
     if method=='independent':check(bool(r.get('execution_ref')),'Independent review needs an actual task reference; unavailable platform IDs may be described truthfully')
     check(isinstance(r.get('observations'),str) and len(r['observations'].strip())>=12,'Review needs actual visual observations')
-    keys=CHECKS['site-source'] if source_only else CHECKS[stage]
+    keys=CHECKS['site-source'] if source_only else CHECKS['card-assisted' if stage=='card' and layer_method=='assisted_layers' else stage]
     checks=r.get('checks',{});check(all(k in checks for k in keys),'Incomplete review checklist')
     check(r.get('verdict') in ('accept','revise','blocked'),'Invalid review verdict')
     accepted=r['verdict']=='accept' and all(checks[k] is True for k in keys)
@@ -69,21 +70,30 @@ def review_check(path: Path, stage: str, target: str, preferred: str, *, allow_s
 
 def generation_check(path: Path, layers: Path) -> dict:
     check(path.is_file(),'Native generation record is missing; no generated image call can be inferred from files alone')
-    r=load(path);check(r.get('origin')=='native_image_tool','Only actual native image-tool outputs are accepted')
+    r=load(path);check(r.get('origin')=='native_image_tool','The original illustration must come from an actual native image tool')
     check(isinstance(r.get('tool'),str) and r['tool'].strip(),'Record the actually used tool')
     check(r.get('prototype_review') in ('independent','self'),'The original prototype must actually have been visually reviewed')
     check(r.get('prototype_verdict')=='accept','Prototype has not passed visual review')
     check(bool(r.get('prototype_observations')),'Missing observations of the original prototype')
     prototype=local_asset(path.parent,r.get('prototype_file',''))
     check(prototype.is_file() and fingerprint(prototype)==r.get('prototype_sha256'),'Original prototype bytes missing or changed')
+    from .portable_layers import METHODS, verify_process
+    method=r.get('layer_method','native_layers')
+    check(method in METHODS,'Invalid layer production method')
+    process=None
+    if method=='assisted_layers':
+        process=verify_process(local_asset(path.parent,r.get('assembly_record_file','')),layers,fingerprint(prototype))
+    else:
+        check(not (layers.parent/'layer-process.json').exists(),'Assisted assembly must not claim native transparent generation')
     m=load(layers);actual={role:fingerprint(local_asset(layers.parent,m['assets'][role])) for role in ('background','subject','effects')}
-    check(r.get('layers_sha256')==actual,'Generated layers differ from native tool record')
+    check(r.get('layers_sha256')==actual,'Layer bytes differ from the recorded production result')
     check(r.get('context_isolation') in ('explicit_narrow_task','contextual_native_tool'),'Record the real image context boundary')
-    check(r.get('verdict')=='accept','Native layers have not passed visual comparison with the prototype')
-    check(bool(r.get('layer_observations')),'Missing native-layer visual observations')
+    check(r.get('verdict')=='accept','Layers have not passed visual comparison with the frozen prototype')
+    check(bool(r.get('layer_observations')),'Missing layer visual observations')
     return {'ok':True,'record_sha256':fingerprint(path),'prototype_sha256':fingerprint(prototype),
-            'layers_sha256':actual,'context_isolation':r['context_isolation'],
-            'scope':'Host-recorded native calls and byte consistency; no synthetic provider IDs or cryptographic origin claim.'}
+            'layers_sha256':actual,'context_isolation':r['context_isolation'],'layer_method':method,
+            'process':process,'native_transparency_claimed':method=='native_layers',
+            'scope':'Host-recorded native illustration, actual layer production and byte consistency; no synthetic provider IDs or cryptographic origin claim.'}
 
 def _state(workspace: Path, source: Path, chosen: dict) -> dict:
     workspace.mkdir(parents=True,exist_ok=True);path=workspace/'portable-state.json';input_hash=fingerprint(source)
@@ -100,6 +110,8 @@ def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=
     if chosen['status']!='ready':return chosen|{'complete':False}
     state=_state(workspace,source,chosen);mode=chosen['mode'];data=load(source)
     save(workspace/'capabilities.json',capabilities)
+    if layers is None and state.get('layers_path'):
+        layers=Path(state['layers_path'])  # Resume accepted assets rather than restarting generation.
     state['layers_path']=str(layers.resolve()) if layers else None
     save(workspace/'portable-state.json',state)
     result={'version':VERSION,'mode':mode,'card_enabled':mode=='full','complete':False,
@@ -112,7 +124,10 @@ def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=
         checked=lite.check_text(json.dumps(data,ensure_ascii=False));check(checked['ok'],'Full mode needs valid lite content including card text')
         data=checked['data']
         if layers is None:
-            result.update(status='native_image_generation_required',next_action='Read CARD.md. The host must call its native image tool, inspect the prototype and native layers, then resume with --layers. Do not call execution.py doctor or require an API key in portable mode.')
+            from .portable_layers import layer_plan
+            history=load(workspace/'image-attempts.json') if (workspace/'image-attempts.json').exists() else None
+            result.update(status='native_image_generation_required',layer_plan=layer_plan(capabilities,history),
+                          next_action='Read CARD.md. Freeze one native prototype; follow layer_plan for reference-bound native layers or truthful assisted extraction. Resume with --layers. PNG is a texture, never the final interactive card. No external API is required.')
             save(workspace/'portable-report.json',result);return result
         check(layers.resolve().is_relative_to(workspace.resolve()),'Keep A assets inside this private workspace')
         validation=validate_layers(layers,lite.persona_digest(data))
@@ -121,11 +136,11 @@ def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=
         from preview_card import preview
         from package_card import package
         card=workspace/'card-task/card';card.mkdir(parents=True,exist_ok=True)
-        # Deterministic packaging preserves the native image bytes.
+        # Deterministic packaging preserves the accepted six-layer bytes in either method.
         render_card_preview(data,card/'front.png',layers=layers)
         preview(layers,card/'preview.html',source);package(layers,card/'card-pack.json',source)
         card_target=digest({'art':asset_digest(layers),'preview':fingerprint(card/'preview.html'),'front':fingerprint(card/'front.png'),'pack':fingerprint(card/'card-pack.json'),'generation':generation})
-        reviewed=review_check(workspace/'review-card.json','card',card_target,chosen['review_mode'])
+        reviewed=review_check(workspace/'review-card.json','card',card_target,chosen['review_mode'],layer_method=generation.get('layer_method','native_layers'))
         result['card_review']=reviewed
         if not reviewed['ok']:
             result.update(status=reviewed['status'],next_action='Visually inspect A front/layers and available interactive preview; write the real review-card.json for the displayed target. Revise failed assets, not the acceptance rules.')
@@ -141,7 +156,12 @@ def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=
         pack=load(card/'card-pack.json')
         check(audit_embedding(html,layers,lite.persona_digest(data))['ok'],'Embedded card bytes changed')
         check(audit_renderer(html,layers)['ok'],'Embedded card renderer changed')
+        from .portable_motion import motion_check
+        result['card_motion']=motion_check(workspace/'card-runtime.json',card/'preview.html')
         result['card_digest']=card_target
+        result['layer_method']=generation.get('layer_method','native_layers')
+        result['card_artifact']='interactive_html'
+        result['png_role']='optional_static_snapshot'
     site_target=fingerprint(html);reviewed=review_check(workspace/'review-site.json','site',site_target,chosen['review_mode'],allow_source=mode=='html-only')
     result.update(site_review=reviewed,html_sha256=site_target,files_built=True)
     if not reviewed['ok']:
@@ -154,7 +174,7 @@ def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=
     check(not any(c.get('passed') is False for c in runtime.get('checks',[]) if isinstance(c,dict)), 'Known functional check failure blocks release')
     if runtime.get('status')!='unavailable':check(runtime.get('html_sha256')==site_target,'Runtime check targets stale HTML')
     result.update(runtime=runtime,status='ready_for_delivery',complete=True,
-                  all_checks_passed=(reviewed['method']!='source' and runtime.get('status')=='passed' and runtime.get('webgl')=='passed' and runtime.get('offline_file_open')=='passed'),
+                  all_checks_passed=(reviewed['method']!='source' and runtime.get('status')=='passed' and runtime.get('webgl')=='passed' and runtime.get('offline_file_open')=='passed' and (mode=='html-only' or result['card_motion'].get('status')=='passed')),
                   validation_level='independent_visual' if reviewed['method']=='independent' else ('source_review_only' if reviewed['method']=='source' else 'host_self_review'),
                   next_action='Use portable.py deliver to export only this released HTML and its same-card artifacts. State any unverified browser/WebGL capability accurately.')
     state['status']='ready_for_delivery';save(workspace/'portable-state.json',state);save(workspace/'portable-report.json',result)
@@ -177,9 +197,12 @@ def deliver(workspace: Path, out: Path) -> dict:
     summary={'version':VERSION,'mode':r['mode'],'card_enabled':r['card_enabled'],'validation_level':r['validation_level'],
              'all_checks_passed':r['all_checks_passed'],'webgl':r['runtime'].get('webgl','unverified'),
              'offline_file_open':r['runtime'].get('offline_file_open','unverified'),
-             'files_sha256':{name:fingerprint(out/name) for name in files},'share_authorized':False}
+             'files_sha256':{name:fingerprint(out/name) for name in files},'share_authorized':False,
+             **({'card_artifact':'interactive_html','primary_files':['index.html','card-preview.html'],
+                 'png_role':'optional_static_snapshot','layer_method':r['layer_method'],
+                 'card_motion':{k:r['card_motion'].get(k) for k in ('status','backend','interaction_verified','parallax_verified','foil_verified','offline_file_open')}} if r['mode']=='full' else {})}
     save(out/'delivery.json',summary)
-    (out/'README.txt').write_text('Twinlight 私人作品\n打开 index.html。主文件不依赖旁边资源。\n'+('本次是完整无卡星系版，没有闪卡，也没有待生成卡位。\n' if r['mode']=='html-only' else '主 HTML 内嵌本次已审查同一卡片。\n')+'审查范围和未验证项见 delivery.json；分享前请检查个人内容。\n',encoding='utf-8')
+    (out/'README.txt').write_text('Twinlight 私人作品\n打开 index.html。主文件不依赖旁边资源。\n'+('本次是完整无卡星系版，没有闪卡，也没有待生成卡位。\n' if r['mode']=='html-only' else '主 HTML 内嵌本次同一张可交互分层闪卡；card-preview.html 是独立交互页面。\n拖转、翻面、自动轻摇、景深与闪光均由 HTML 渲染；PNG 仅为附赠静态截图，不是闪卡成品。\n')+'审查范围和未验证项见 delivery.json；分享前请检查个人内容。\n',encoding='utf-8')
     files+=['delivery.json','README.txt'];zip_path=out.parent/(out.name+'.zip')
     with zipfile.ZipFile(zip_path,'w',zipfile.ZIP_DEFLATED) as z:
         for name in files:z.write(out/name,name)

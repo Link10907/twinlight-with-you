@@ -6,13 +6,15 @@
 
 原型检查：主体类别、性别呈现/物种和可见特征符合短设定；单一所选画风；画面完整、主体可辨、有材料与空间层次，无网页截图、图表、标题卡框或无关场景。
 
-图层检查：同一原型、同画布、真实透明主体与前景、完整背景、没有重复人影、穿帮裁边或海报多贴层。真实透视时应呈现前后差；未观察动态就不写已验证。
+图层检查：同一原型、同画布、真实透明主体与前景、完整背景、没有重复人影、穿帮裁边或海报多贴层。native_layers 检查原生编辑；assisted_layers 另查真实轮廓、补背景、RGB 保真和 layer-process.json，不将辅助处理写成原生透明生成。真实透视时应呈现前后差；未观察动态就不写已验证。
 
-card 最终检查键：`subject_and_style`、`prototype_consistency`、`native_layers_and_alpha`、`typography_and_attribution`、`composition_and_depth`。须逐项符合并写实际观察；不能只输出通过五次。静态原型不替代原生层成品。
+card 最终检查键：`subject_and_style`、`prototype_consistency`、`native_layers_and_alpha`、`typography_and_attribution`、`composition_and_depth`。须逐项符合并写实际观察；不能只输出通过五次。辅助路径只将 native_layers_and_alpha 换为 assisted_layers_and_alpha，其余检查相同。静态原型不替代分层交互成品。
 
 ## B：整站
 
 site 检查键：`content_and_privacy`、`galaxy_navigation`、`ending_and_return`、`same_card_or_no_card`、`layout_and_readability`。无卡版最后两项指没有残留卡位/卡按钮、终章正常结束和页面布局正确，而不是强行检验不存在的卡。
+
+动态检查按 [交互闪卡契约](references/interactive-card.md) 运行当前 HTML，验证拖转/翻面/自动轻摇、触摸、内部视差、文字固定与实际 WebGL 镭射，不以 PNG 或“存在 canvas”代替。无 WebGL 的 CSS 运动只记 limited；无浏览器记未实测；实际失败禁止交付。
 
 浏览器检查与视觉审查分开：资源完整、JS 语法、真实交互、GPU 渲染、离线 file:// 各自记录。可运行的功能检查失败必须修复；无法启动浏览器等记录 unavailable/limited，不伪填 passed。
 
