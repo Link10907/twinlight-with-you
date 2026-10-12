@@ -1,3 +1,11 @@
+# v10-portable-1.2 · 上游画风选择
+
+- 新卡支持 explicit / random / subject_random；默认由宿主根据具体形象筛选后随机，无更窄偏好时六种均可。
+- 新增 select-style / style-status；保存候选、种子和绑定，输出原有 card-image-input-1；同工作区续跑不重抽、不覆盖已开工卡。
+- 清理上游入口和 schema 描述中的固定 collector 指令；legacy default_style 及 strict 审查门禁保留。
+- 六套 image-presets、风格素材、窄提示编译器、分层/辅助分层、排字、六层接口、renderer、星系/导航及动态检查代码未修改。
+- 测试为合成工程回归；没有新增真实图像生成或美术验收。
+
 # v10-portable-1.1 · 稳定分层与交互交付
 
 - 保留 V10 源码、模板锁、六层 manifest/depths、旧 strict CLI 和无卡分支。

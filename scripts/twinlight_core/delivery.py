@@ -137,11 +137,12 @@ def deliver(core, input_path: Path, workspace: Path, *, require_in_chat_preview:
         action["read"] = [str(Path(__file__).resolve().parents[2] / "references/quality-workflow.md")]
         action["schema"] = str(Path(__file__).resolve().parents[2] / "schemas/art-direction-v2.schema.json")
         action["style_catalog"] = str(Path(__file__).resolve().parents[2] / "assets/art-styles/catalog.json")
-        from .visual_contract import default_style, style_references
-        default = default_style()
-        action["default_style"] = {"id": default["id"], "version": default["version"]}
-        action["style_reference_images"] = style_references(default)
-        action["steps"] = ["Keep the installed twinlight-collector style unless this user explicitly requested a different art style. Inspect its bundled style_only images; use their visual finish, never their subject or identity. Describe one concrete human/animal/object and one action.",
+        from .style_selection import selection_status
+        selection = selection_status(workspace)
+        action["style_selection"] = selection
+        action["selected_style"] = selection.get("selected_style")
+        action["style_reference_images"] = selection.get("style_reference_images", [])
+        action["steps"] = ["Reuse the existing design or frozen upstream style. For a new card follow references/style-selection.md: explicit style first, otherwise subject-compatible random selection. Inspect only the selected style's own references; never borrow another style's default images or copy their subject.",
                            "Check actual image-generation, reference-image and native-alpha capabilities.",
                            "Generate and inspect a wordless prototype; do not generate layers before prototype review passes.",
                            "Create native independent layers, inspect the unlettered composite, then inspect final typography and foil.",

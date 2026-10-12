@@ -88,6 +88,8 @@ REQUIRED += ('references/interactive-card.md', 'scripts/prepare_assisted_layers.
              'scripts/verify_portable_card_browser.py', 'scripts/twinlight_core/portable_layers.py',
              'scripts/twinlight_core/portable_motion.py')
 
+REQUIRED += ('references/style-selection.md', 'scripts/twinlight_core/style_selection.py')
+
 def fetch(url: str, limit: int) -> bytes:
     request = urllib.request.Request(url, headers={'User-Agent': 'Twinlight-resource-bootstrap',
                                                   'Accept': 'application/vnd.github+json'})

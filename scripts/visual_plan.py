@@ -33,7 +33,7 @@ def main(argv=None):
     q.add_argument('--front',type=Path);q.add_argument('--preview',type=Path)
     a=p.parse_args(argv)
     try:
-        if a.cmd=='styles':result={'styles':[{k:x[k] for k in ('id','name','version','sha256')} for x in catalog()],'default_style':default_style()['id'],'default_subject':None,'default_typography':default_style()['typography_default']}
+        if a.cmd=='styles':result={'styles':[{k:x[k] for k in ('id','name','version','sha256')} for x in catalog()],'default_style':default_style()['id'],'default_subject':None,'default_typography':default_style()['typography_default'],'default_style_scope':'legacy compatibility only, not automatic choice','upstream_default_mode':'subject_random','selection_guide':'references/style-selection.md'}
         elif a.cmd=='init':
             from twinlight_core.card_context import expand_input
             from twinlight_core.generation_plan import _save

@@ -27,5 +27,6 @@
     }
   ],
   "default_style": "twinlight-collector",
-  "selection_policy": "Use the Twinlight collector visual family unless the current user explicitly requests an alternative style. The style never determines subject, gender, species or occupation."
+  "selection_policy": "Upstream owns selection. Honor explicit style first; otherwise choose once at random from host-selected subject-compatible candidates, or all styles when no narrower preference exists. Freeze id/version per work; reuse on resume and repair. default_style is a legacy compatibility value only. Never change the subject to fit a style.",
+  "upstream_default_mode": "subject_random"
 }

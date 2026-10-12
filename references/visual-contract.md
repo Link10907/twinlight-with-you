@@ -4,7 +4,7 @@
 
 ## 画风与主体分开
 
-`assets/art-styles/catalog.json` 记录已安装风格及默认值。默认 `twinlight-collector` 保留用户认可的 V10 精细幻想收藏卡完成度；森系选 `forest-fantasy`，国风/工笔青绿选 `eastern-fantasy-scroll`，另有 `real-life-cinematic`、`futuristic-clean`、`paper-craft-story`。这些是用户明确换画风时的选项，不是每轮随机选择菜单。小鹿等具体主体单独写入 subject，不能把选择森系等同于选择鹿。版本以实际文件为准。
+`assets/art-styles/catalog.json` 记录六种已安装风格。新卡由上游按 [画风选择](style-selection.md) 在明确指定、纯随机、按形象筛选后随机之间解析；默认按形象筛选后随机，没有更窄限制时保留六种。一次选定并冻结 id/version，后续生成与返工不再改选。`default_style=twinlight-collector` 仅保留给旧调用兼容，不是自动生成策略。主体仍单独写入 subject，森系不等于鹿、程序员不等于未来风；不为迁就画风改变主体。
 
 `style` 管线条、材质、光线、细节组织和排字默认值；`subject` 管当前的具体角色；`scene` 管当前空间与动作构图；任务 role 管本次实际图层。清楚的一位主角仍可以处在有组织的丰富环境中。
 
