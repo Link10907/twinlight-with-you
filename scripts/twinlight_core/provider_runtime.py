@@ -179,16 +179,45 @@ def _run(argv: list[str], payload: str, cwd: Path, timeout: float) -> tuple[str,
 
 def command_call(cfg: dict, task: dict, out: Path, allowed: bool) -> dict:
     authorize(allowed)
-    argv = cfg.get('argv')
-    if not isinstance(argv, list) or not argv: fail('command_config', 'Provide the argv of an actual existing JSON-stdin provider.')
-    save_new(out/'request.json', task)
-    # This is a fresh process in a fresh directory. Never --resume or inherited chat history.
-    stdout, stderr = _run(argv, json.dumps(task,ensure_ascii=False)+'\n', out, float(cfg.get('timeout_seconds',180)))
-    (out/'provider-response.raw.json').write_text(stdout, encoding='utf-8')
-    save_new(out/'transport.json', {'transport':'fresh-command','argv':argv,'stderr_sha256':hashlib.sha256(stderr.encode()).hexdigest(),
-             'request_sha256':sha256(out/'request.json'),'response_sha256':sha256(out/'provider-response.raw.json'),
-             'provider_identity_authenticated':False,'automatic_retry':False})
-    return extract_json_text(stdout)
+    argv=cfg.get('argv')
+    if not isinstance(argv,list) or not argv or not all(isinstance(v,str) for v in argv):
+        fail('command_config','Provide the argv of an actual JSON-stdin provider')
+    if any(re.match(r'^(?:--)?(?:resume|continue|conversation(?:-id)?|session-id|previous-response-id)(?:=|$)',v,re.I) for v in argv):
+        fail('inherited_context','Do not resume a chat/session in a card task')
+    permitted={'version','task','prompt','images','canvas','transparent','output_directory','conversation_history_included'}
+    if set(task)-permitted or task.get('conversation_history_included') not in (None,False):
+        fail('task_context_fields','Provider task contains non-allowlisted or inherited context')
+    # A different cwd alone is not an OS sandbox. It does avoid auto-loading the
+    # production project's parent AGENTS.md, artifacts or Git context by default.
+    with tempfile.TemporaryDirectory(prefix='twinlight-narrow-task-') as temporary:
+        isolated=Path(temporary).resolve()
+        staged=[]
+        for i,im in enumerate(task.get('images',[])):
+            suffix={'image/png':'.png','image/jpeg':'.jpg','image/webp':'.webp'}[im['mime_type']]
+            target=isolated/f'input-{i+1:02d}{suffix}'
+            shutil.copyfile(im['path'],target)
+            if sha256(target)!=im['sha256']:fail('reference_changed','An input image changed during staging')
+            staged.append({**im,'path':str(target)})
+        clean={**task,'images':staged,'output_directory':str(isolated),'conversation_history_included':False}
+        save_new(out/'request.json',clean)
+        stdout,stderr=_run(argv,json.dumps(clean,ensure_ascii=False)+'\n',isolated,float(cfg.get('timeout_seconds',180)))
+        (out/'provider-response.raw.json').write_text(stdout,encoding='utf-8')
+        save_new(out/'transport.json',{'transport':'fresh-command','argv':argv,
+                 'production_working_directory_shared':False,'filesystem_sandbox_enforced':False,'resume':False,
+                 'stderr_sha256':hashlib.sha256(stderr.encode()).hexdigest(),
+                 'request_sha256':sha256(out/'request.json'),'response_sha256':sha256(out/'provider-response.raw.json'),
+                 'provider_identity_authenticated':False,'automatic_retry':False})
+        response=extract_json_text(stdout)
+        if task.get('task')=='image':
+            source=Path(response.get('image_file',''))
+            if not source.is_absolute():source=isolated/source
+            source=source.resolve()
+            if not source.is_relative_to(isolated) or not source.is_file() or not 0<source.stat().st_size<=MAX_IMAGE:
+                fail('image_output_path','Command must return a new image inside its isolated call directory')
+            target=out/'command-image.png'
+            with target.open('xb') as stream:stream.write(source.read_bytes())
+            response={**response,'image_file':str(target.resolve())}
+        return response
 
 
 def generate(cfg: dict, prompt: str, paths: list[Path], canvas: list[int], transparent: bool,
@@ -196,7 +225,7 @@ def generate(cfg: dict, prompt: str, paths: list[Path], canvas: list[int], trans
     authorize(allowed)
     images = [image_input(p) for p in paths]
     if not 1 <= len(images) <= 16: fail('reference_count', 'Send the actual 1–16 task reference images; no blank or fake references.')
-    if not prompt.strip() or len(prompt) > 32000: fail('image_prompt', 'Single image prompt is empty or too long.')
+    if not prompt.strip() or len(prompt) > 2400: fail('image_prompt', 'Single image prompt is empty or too long.')
     if len(canvas) != 2 or any(type(n) is not int or n < 256 for n in canvas): fail('canvas','Invalid native canvas.')
     if cfg['kind'] == 'openai_images':
         body = {'model':model_name(cfg), 'prompt':prompt,

@@ -1,6 +1,6 @@
 # 美术设计说明
 
-当前生产入口是 [CARD.md](../CARD.md)，字段是 [art-direction-2 视觉契约](visual-contract.md)，实际看图标准是 [V10 品质标准](quality-workflow.md)。本文件保留兼容链接，不再维护另一条绘画流程。
+当前生产入口是 [CARD.md](../CARD.md)，上层字段为 [卡片窄输入](card-input-contract.md)，程序生成私有 art-direction-2 绑定，实际看图标准是 [V10 品质标准](quality-workflow.md)。本文件保留兼容链接，不再维护另一条绘画流程。
 
 先保留用户已认可的 Twinlight V10 质感。默认 `twinlight-collector` 的精细幻想收藏卡风格，读取随包 `style_only` 参考；只有明确换画风请求才选择其他方向。参考的线条、材质、光线、层次和完成度可复用，旧人的形象和经历不套用。具体主体和动作来自当前人的授权资料，不从称号机械联想一堆符号。
 

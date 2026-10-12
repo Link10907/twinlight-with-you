@@ -75,6 +75,11 @@ REQUIRED += ('HTML.md','references/card-handoff.md','scripts/verify_navigation.p
              'scripts/twinlight_core/navigation.py','assets/navigation/extension-lock.json',
              'assets/navigation/before-core.js','assets/navigation/after-core.js','assets/navigation/style.css')
 
+# Narrow-input compiler/reviewer are required, not optional instructions.
+REQUIRED += ('schemas/card-image-input.schema.json','references/card-input-contract.md',
+             'assets/art-styles/image-presets.json','scripts/twinlight_core/card_context.py',
+             'scripts/twinlight_core/review_context.py')
+
 def fetch(url: str, limit: int) -> bytes:
     request = urllib.request.Request(url, headers={'User-Agent': 'Twinlight-resource-bootstrap',
                                                   'Accept': 'application/vnd.github+json'})

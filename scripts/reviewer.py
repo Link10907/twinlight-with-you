@@ -67,7 +67,10 @@ def main(argv=None):
                 r={'stage':a.stage,'targets':targets[a.stage],'observer':None,'observed_at':None,'decision':'pending',
                    'checks':{k:{'passed':False,'observation':''} for k in review_checks(design,a.stage,REVIEW_CHECKS[a.stage])},
                    'capture':None,'handoff':None,'blockers':[]}
-                if a.stage=='final':r['views']={'left':None,'right':None,'mobile':None}
+                if a.stage=='final':
+                    r['views']={'left':None,'right':None,'mobile':None}
+                    content=a.layers.resolve().parent.parent/'content.json'
+                    if content.is_file():sources[str(content)]=sha256(content)
             if a.evidence:
                 from twinlight_core.review_exchange import attach_runtime_evidence
                 evidence_root = a.workspace if a.stage=='release' else a.layers.parent
@@ -79,9 +82,6 @@ def main(argv=None):
                 import tempfile
                 with tempfile.TemporaryDirectory() as folder:
                     t=Path(folder)/'pending.json';t.write_text(json.dumps(r,ensure_ascii=False),encoding='utf-8')
-                    root=Path(__file__).resolve().parents[1]
-                    for file in ('REVIEWER.md','references/quality-workflow.md'):
-                        sources[str(root/file)]=sha256(root/file)
                     r=packet(t,sources,a.out)
             else:
                 a.out.parent.mkdir(parents=True,exist_ok=True)

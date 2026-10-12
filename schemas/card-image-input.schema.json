@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Drawing-only card input; not a biography or page brief",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "style",
+    "subject",
+    "scene"
+  ],
+  "properties": {
+    "version": {
+      "const": "card-image-input-1"
+    },
+    "style": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{2,60}$",
+          "description": "Installed versioned style; twinlight-collector is the default. Alternative styles require an explicit current preference."
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        }
+      },
+      "required": [
+        "id",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "human",
+            "animal",
+            "anthropomorphic",
+            "object"
+          ]
+        },
+        "species": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "gender_presentation": {
+          "enum": [
+            "male",
+            "female",
+            "androgynous",
+            "unspecified",
+            "not_applicable"
+          ]
+        },
+        "age_impression": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "appearance": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "part": {
+                "enum": [
+                  "hair",
+                  "face",
+                  "body",
+                  "fur",
+                  "feathers",
+                  "scales",
+                  "ears",
+                  "eyes",
+                  "horns",
+                  "surface",
+                  "shape",
+                  "color"
+                ]
+              },
+              "description": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 100
+              }
+            },
+            "required": [
+              "part",
+              "description"
+            ]
+          }
+        },
+        "clothing": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "expression": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "pose": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "main_prop": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 160
+            }
+          ]
+        },
+        "representation": {
+          "enum": [
+            "original_concept",
+            "user_reference"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "species",
+        "gender_presentation",
+        "age_impression",
+        "appearance",
+        "clothing",
+        "expression",
+        "pose",
+        "main_prop",
+        "representation"
+      ]
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "setting": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "lighting": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "composition": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 240
+        },
+        "foreground": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 160
+          }
+        }
+      },
+      "required": [
+        "setting",
+        "lighting",
+        "composition",
+        "foreground"
+      ]
+    }
+  }
+}

@@ -1,3 +1,5 @@
+> v10-split-1.1：生图投递 image-input 白名单编译的短提示；Reviewer只投阶段窄包。command路线改在项目外临时目录运行，只复制当次图像，拒绝resume选项；不声称操作系统沙箱或第三方内部记忆可由本包认证。私人request.json保留实际请求。
+
 > 双任务版：A 使用 `doctor/host --mode card`；B 使用 `doctor/host --mode integrate`，配置允许不含 image。B 只允许 review，不允许 image。以下原接口与手动接入方式继续兼容，出现旧 both 示例时以当前 AGENT/HTML 的独立工作区为准。
 
 # 可执行接入 · 不是再写一份能力声明

@@ -103,6 +103,18 @@ def export(workspace: Path, destination: Path, *, link_style: str = 'local') -> 
             gate=check_evidence(layers,state.get("persona_digest",""),front=Path(run["outputs"]["card_front"]),preview=Path(run["outputs"]["card_preview"]))
         if not gate.get("ok"):
             raise ValueError("Upstream artwork review changed or was revoked; complete export is blocked")
+        # Apply byte-level asset/preview checks to legacy card/both routes too.
+        # Runtime `layers: 5` and producer status flags cannot prove native art.
+        from .card_handoff import audit_pack
+        from .embedded_card import audit_renderer
+        audit_pack(Path(run['outputs']['card_pack']),layers,state.get('persona_digest',''))
+        if not audit_renderer(Path(run['outputs']['card_preview']),layers).get('ok'):
+            raise ValueError('Independent card preview differs from its native renderer')
+        if mode=='both' and not site_task:
+            from .embedded_card import audit_embedding
+            if not audit_embedding(Path(run['outputs']['html_with_card']),layers,state.get('persona_digest',''),strict_renderer=True).get('ok'):
+                raise ValueError('Final HTML does not contain the exact native card; placeholder delivery blocked')
+
     from .independent_review import check_release
     release=check_release(workspace,run.get('outputs',{}),mode)
     if not release['ok']:

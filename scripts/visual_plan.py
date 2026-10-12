@@ -9,6 +9,8 @@ from twinlight_core.generation_plan import write_plan,register_image,bind_compos
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);sub=p.add_subparsers(dest='cmd',required=True)
     sub.add_parser('styles')
+    q=sub.add_parser('init',help='Bind drawing-only input to host identity without adding narrative to image prompts')
+    q.add_argument('input',type=Path);q.add_argument('--persona-digest',required=True);q.add_argument('--out',type=Path,required=True)
     q=sub.add_parser('check');q.add_argument('design',type=Path);q.add_argument('--persona-digest')
     q=sub.add_parser('compile');q.add_argument('design',type=Path);q.add_argument('--out',type=Path,required=True)
     q.add_argument('--phase',choices=['prototype','layers'],default='prototype');q.add_argument('--canvas',nargs=2,type=int);q.add_argument('--capabilities',type=Path)
@@ -32,6 +34,12 @@ def main(argv=None):
     a=p.parse_args(argv)
     try:
         if a.cmd=='styles':result={'styles':[{k:x[k] for k in ('id','name','version','sha256')} for x in catalog()],'default_style':default_style()['id'],'default_subject':None,'default_typography':default_style()['typography_default']}
+        elif a.cmd=='init':
+            from twinlight_core.card_context import expand_input
+            from twinlight_core.generation_plan import _save
+            if a.out.exists():raise ValueError('Do not overwrite a frozen private design')
+            _save(a.out,expand_input(_json(a.input),a.persona_digest))
+            result={'ok':True,'out':str(a.out),'image_generation_performed':False}
         elif a.cmd=='check':
             d=validate_design(_json(a.design),a.persona_digest);result={'ok':True,'visual_keywords':visual_keywords(d),'subject_prompt':subject_prompt(d),'image_generation_performed':False}
         elif a.cmd=='compile':

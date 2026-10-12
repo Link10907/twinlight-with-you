@@ -39,6 +39,8 @@ def dispatch(plan_path: Path, role: str, workspace: Path, host_path: Path, out: 
     jobs=[j for j in plan.get('jobs',[]) if j.get('role')==role]
     if role not in IMAGE_ROLES or len(jobs)!=1: _fail('wrong_phase','This plan does not contain the selected role')
     job=jobs[0]
+    from .card_context import validate_job
+    validate_job(plan,root,job)
     if job.get('task_scope')!=_task_scope(role): _fail('image_task_scope','Exactly one image-only deliverable is required')
     prompt=checked_ref(root,job['prompt']);checked_ref(root,plan['design'])
     for ref in job['reference_images']: checked_ref(root,ref)
@@ -87,6 +89,8 @@ def verify_dispatch(plan_path: Path, role: str, path: Path | None, *, call_id: s
     jobs=[j for j in plan.get('jobs',[]) if j.get('role')==role]
     if len(jobs)!=1: _fail('wrong_phase','Missing unique job')
     job=jobs[0]
+    from .card_context import validate_job
+    validate_job(plan,root,job)
     for k in ('prompt','reference_images','task_scope','operation','transparent'):
         if value.get(k)!=job.get(k): _fail('dispatch_changed','Dispatch and compiled job disagree: '+k)
     prompt=checked_ref(root,job['prompt'])

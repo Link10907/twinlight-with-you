@@ -1,77 +1,35 @@
-# Twinlight 双任务版 · v10-split-1.0
+# Twinlight 双任务版 · v10-split-1.1
 
-**一个包、两个任务、一个内嵌闪卡的 V10 主 HTML。** 新入口见 [SKILL.md](SKILL.md) 和 [AGENT.md](AGENT.md)。
+**一个工具包，两个制作任务，一个内嵌动态闪卡的 V10 主 HTML。**
 
-A：`task-card` 独立制作与验收卡片，结束时封存私人交接。B：`task-site --card-handoff` 只导入已验收卡片，完成星系、同页跳转与整页放行。B 不再需要图像生成配置，`execution.py doctor/host --mode integrate` 支持 reviewer-only。
+先读 [SKILL.md](SKILL.md) 和 [AGENT.md](AGENT.md)，再只加载当前任务入口。
 
-实际入口与命令：[CARD.md](CARD.md)、[HTML.md](HTML.md)；[交接协议](references/card-handoff.md)；可复制给模型的两条任务说明：[PROMPT.md](PROMPT.md)。
+| 任务 | 入口 | 完成条件 |
+|---|---|---|
+| A：闪卡 | [CARD.md](CARD.md) | 原型、原生图层、程序排字、互动卡；真实独立审查后封存私人交接 |
+| B：整站 | [HTML.md](HTML.md) | 导入已验收同卡，保留 V10；页内切换、完整剧情和独立整页验收 |
 
-本版本是执行流程与工程代码改造，不包含任何新的个人卡片作品，也不声称模型服务已经配置。真实生图、独立 Reviewer、WebGL 和完整剧情仍需在可用环境验证；合成回归只验证代码。旧 `run --mode html/card/both` 保留兼容，以下旧说明仅供旧流程维护，不能覆盖上述双任务边界。
+## 本次修复
 
----
+`card-input.json` 是称号、文字和归属，不是绘画提示。绘画只使用 [card-image-input-1](references/card-input-contract.md)：主体类别、物种/性别呈现、2–5个外观特征、服装表情、一个动作和主要道具，另加选定画风与简短场景。程序拼装实际短提示，不追加上层履历、选型理由、偏好长文或整站需求。
 
-# Twinlight · 与你同光
+原型一次单图；原生图层每次只参照同一已审查原型。实际请求与附件在 dispatch 复核，改写提示后重算哈希仍不能绕过白名单。返工只发当前一句缺陷，历史留在私人记录。
 
-> v2.2 实际执行入口：[可执行接入](references/execution-adapters.md)。生图用 `execution.py image`，独立看图用 `execution.py review`；旧 dispatch/packet 仍只准备材料，不能代替调用。
+审查按阶段投影形象、画风和实际图片；仅动态阶段加冻结文字与运行证据。卡片审查不读网页手册，集成审查不重新设计角色。错误主体、无关场景、网页拼贴、占位图、错层和缺动态证据不得放行。
 
-**v10-quality-2.1-portable-review**：保留 V10 星系与揭卡视觉，完善任务隔离、独立审查、局部返工及成品导出。本版是工作流升级，不是重设计页面或替换指定画风。
+A 失败不输出占位整站。旧 `both` 缺卡不再构建 HTML；`lite-build` 缺少图像默认阻断，只有明确调试时使用 `--debug-placeholder`。所有正式卡片导出再次核对实际卡包、渲染器和内嵌字节。
 
-## 一句话启动
+## 使用与验收
 
-在同一条消息上传完整 ZIP：
-
-> 请使用本次上传的完整 Twinlight skill 包，先读包内 SKILL.md 和 AGENT.md，保留 V10 的星系与揭卡效果、精细幻想收藏卡风格，根据你实际了解的我，一次生成我的定义闪卡和 Twinlight HTML，完成后一起给我看。请先检查实际生图任务隔离和独立审查能力，内部完成审查与必要返工，不以未通过的候选冒充成品。
-
-资料充分就直接制作私人草稿，不需要先填写人物或审美问卷。资料不足不编造；本人肖像需本轮照片与授权，否则采用原创概念形象。所有卡固定 SSR，不是能力评分。总结由哪个模型生成，就用哪个模型署名。
-
-需要聊天内交互时补充：“请在当前聊天内展示可操作的星系和揭卡，下载附件不能算满足这个要求。”文件完成与站内体验分别核验。只要一个模块时明确“只生成星图 HTML”或“只生成闪卡”。
-
-## 本版具体改进
-
-生图前先查 prompt 是否真能发送、参考图是否真正传入、透明编辑与持续执行是否可用；一张原型是单独图像任务，不把整条“网站 + 闪卡”请求丢给图像模型。
-
-一个生产者与一个真实独立视觉 Reviewer 配合；模型可相同，会话必须隔离。原型、合成、独立卡和最终 HTML 分别审查；三种模式均有最终放行，纯 HTML 不强加卡片镭射。
-
-每个图像角色在同一 RUN 最多三次调用预留，换目录或重编译不清零。只修失败环节，保留已通过素材。错误类型图、粗糙抠图、重复海报不能作为降级成品。
-
-宿主能力、派发任务、原始图像、审查裁决与最终字节相互绑定；导出前重新检查上游审查，防止旧批准被错误继承。pending、revise、blocked 都不是成功。
-
-## 能力边界
-
-完整制作需要可写文件、Python 与依赖、真正可隔离的图像任务、原生编辑透明输出、实际独立视觉审查会话、浏览器及卡片 WebGL。ZIP 包含资源和程序，**不包含已经启动的 Agent 服务**，也不能给宿主补出原本没有的工具。
-
-缺少能力时尽早报告具体缺口，保留可独立完成的文字、页面与候选。不能通过同一对话换角色名来代审，不能靠弃用的图像 prompt 字段强制传参，也不宣称换成某个浏览器就一定恢复镭射。用户不应负责反复发现这些问题。
-
-最终 HTML 为自包含文件；用户打开成品不需要 Python、Node.js 或服务器。站内是否允许脚本执行取决于真实入口，不由附件链接保证。未公开、未 push、未部署；分享文件会同时分享其中的摘要与图像，公开由本人决定。
-
-## 文件导航
-
-| 用途 | 入口 |
-|---|---|
-| 最小执行规则 | [SKILL.md](SKILL.md) |
-| 完整一次请求流程 | [AGENT.md](AGENT.md) |
-| 独立任务审查与产物绑定 | [REVIEWER.md](REVIEWER.md) |
-| 指定画风、原型、原生分层 | [CARD.md](CARD.md) |
-| 实际工具能力与隔离 | [宿主契约](references/host-contract.md) |
-| 失败定位、预算与失效 | [返工规则](references/recovery-policy.md) |
-| 画面质量判据 | [质量工作流](references/quality-workflow.md) |
-| 最终文件与站内体验 | [交付协议](references/delivery-v2.md) |
-| 逐句来源追溯 | [严格工作流](references/workflow.md) |
-| 本次代码变更 | [CHANGELOG.md](CHANGELOG.md) |
-
-## 核验与分发
+[两条可复制任务指令](PROMPT.md) · [执行接入](references/execution-adapters.md) · [审查规范](REVIEWER.md) · [工件交接](references/card-handoff.md)
 
 ```sh
 python scripts/verify_skill.py --tests --out /path/out/skill-verification.json
 python scripts/package_skill.py --out /path/out/twinlight-with-you.zip
 ```
 
-默认包包含固定模板、通用无字品牌参考、生产代码和 `tests/quality` 合成回归测试，不带作者经历、真实人物成品、原始聊天、字体文件或凭证。测试结果证明校验逻辑，不证明当前宿主已连接 Reviewer 或新卡艺术效果已经验收。
+原 V10 核心、导航、shader、音乐与已有美术参考不变。本包不含新个人作品、字体、原始聊天、账号、凭证或已启动的模型服务。
 
-包内资源清单与 V10 模板锁分别校验。已上传完整包时以包内同版内容为准；不混读远端 main。低层 render/build 命令仅用于诊断，默认 public run 的完整性要求不能借此绕过。旧版没有 dispatch / host contract 的工作区不会自动升格通过；保留旧成果及未验证说明。
+真实图像调用、独立视觉任务和 WebGL 浏览器能力需要实际环境提供。项目外临时目录不是 OS 沙箱，文件哈希不是供应商认证，短提示不能保证模型每次遵循形象。合成回归只验证程序行为，不作为艺术验收或独立 Reviewer 的替代。
 
-原创代码 MIT，第三方来源见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。许可不授权复用个人经历、肖像或其他人的成品。
-
-## v2.1 宿主兼容修复
-
-默认独立任务能看图即可进入审查；平台会话/调用 ID、签名回执、OS 只读权限是可选审计信息，不再阻断制作。原件与 packet 的前后哈希核对、美术否决、原生分层和动态验收保持不变。此前 v2 在预检退出的任务按 [恢复指引](references/resume-v2-blocked.md) 复用原工作区续跑。此修复没有部署 Reviewer 服务，也不是一张新卡已验收的声明。
+默认私人草稿，不自动公开、部署或 push。任务 B 的主 HTML 自包含；聊天附件预览、本地离线打开与动态效果分别实测，不能相互冒充。

@@ -314,7 +314,7 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
     def build_html(folder: str, native: Path | None = None):
         if native is not None:
             require_sources()
-        report = site.build_lite(data, workspace / folder, generated_at=state["created_at"], layers=native, confirmed=False, navigation=card_handoff is not None)
+        report = site.build_lite(data, workspace / folder, generated_at=state["created_at"], layers=native, confirmed=False, navigation=card_handoff is not None, debug_placeholder=(mode=='html' and native is None))
         if native is not None:
             require_sources()
         return report
@@ -322,16 +322,14 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
     def site_files(folder: str) -> list[str]:
         return [folder + "/" + name for name in ("index.html", "compiled-check.js", "profile.json", "render-inputs.json", "template-receipt.json", "build-report.json")]
 
-    if mode != "card":
+    if mode == "html":
         html = _stage(state, workspace, "html", dep, lambda: build_html("site"), site_files("site"),
                       validate=lambda: verify_site(workspace / "site"))
         selected.append(html)
         if html["status"] == "files_ready":
             outputs["html"] = str(workspace / "site/index.html")
-            # In both mode the integrated page is the delivered page. Delay the
-            # base-page check until we know whether it is the available partial.
-            if mode == "html":
-                dynamic.append(_browser(state, workspace, "html_browser", workspace / "site/index.html", browser=browser, disabled=no_browser))
+            # Explicit galaxy-only module; never a fallback for failed card/both.
+            dynamic.append(_browser(state, workspace, "html_browser", workspace / "site/index.html", browser=browser, disabled=no_browser))
 
     native = None
     if mode != "html":
@@ -477,8 +475,10 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
                                "typography_font": typography, "image_capability": "unknown_required",
                                "read": [str(ROOT / "references/art-direction.md")],
                                "resume": resume + ["--art-prompt-file", str(workspace / "card/art-direction.json")],
-                               "constraints": ["Author art-direction-2 with the installed twinlight-collector style unless the user explicitly requested another style. Use its bundled style-only reference; choose one current-person visual subject, one action and at most one main prop. Keep identity keywords out of drawing prompts."],
+                               "constraints": ["Write only card-image-input-1 visible traits and one selected style, then run prepare to attach private identity/typography. Do not forward card-input, biography, site instructions or manuals to image calls."],
+                               "image_input_schema": str(ROOT / "schemas/card-image-input.schema.json"),
                                "schema": str(ROOT / "schemas/art-direction-v2.schema.json"),
+                               "prepare": [sys.executable,str(ROOT / "scripts/visual_plan.py"),"init",str(workspace / "card-image-input.json"),"--persona-digest",state["persona_digest"],"--out",str(workspace / "card/art-direction.json")],
                                "style_catalog": str(ROOT / "assets/art-styles/catalog.json")}
             state["stages"]["card"] = {"status": "needs_card", "attempts": 0,
                                        "reason": "Native current-person image layers have not been supplied."}
@@ -502,9 +502,6 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
             if imported is not None:
                 dynamic.append(_browser(state, workspace, "navigation_browser", workspace / "site-with-card/index.html",
                                         browser=browser, disabled=no_browser, navigation_only=True))
-    if mode == "both" and "html" in outputs and "html_with_card" not in outputs:
-        dynamic.append(_browser(state, workspace, "html_browser", workspace / "site/index.html",
-                                browser=browser, disabled=no_browser))
     # Browser/image tools run after builds. Recheck the final files before
     # reporting links, so a mid-check rewrite cannot inherit an earlier gate.
     owners = {"html": "html", "card_preview": "card", "card_front": "card", "card_pack": "card",
@@ -530,7 +527,7 @@ def _run_mechanical(input_path: Path, workspace: Path, *, mode: str = "both", la
         current_stages = {id(item) for item in selected + dynamic}
         next_action = {"type": "repair", "failed_stages": [name for name, value in state["stages"].items()
                        if id(value) in current_stages and value.get("status") in ("failed", "blocked")], "resume": resume,
-                       "pending_actions": pending_actions, "continue_independent_modules": True,
+                       "pending_actions": pending_actions, "continue_independent_modules": mode == "html",
                        "constraints": ["Repair the actual error; do not write passed into state or fabricate browser reports."]}
     elif any(item["status"] == "needs_card" for item in selected):
         status = "needs_card"

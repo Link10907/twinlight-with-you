@@ -262,17 +262,21 @@ def render_card_preview(data: dict, out: Path, *, layers: Path|None=None,
 
 def build_lite(data: dict, out: Path, *, generated_at: str, confirmed: bool=False,
                portrait: Path|None=None, character: Path|None=None, background: Path|None=None,
-               layers: Path|None=None, prototype: Path|None=None, navigation: bool=False) -> dict:
+               layers: Path|None=None, prototype: Path|None=None, navigation: bool=False, debug_placeholder: bool=False) -> dict:
+    check(debug_placeholder or any(x is not None for x in (layers,prototype,portrait,character)),
+          'No card artwork supplied. Complete task A first; --debug-placeholder is only for explicitly requested engineering previews, never delivery.')
     from .lite import to_profile
     provisional=to_profile(data,generated_at=generated_at)
     art=lite_layers(portrait,character,background,layers=layers,prototype=prototype,
                     expected_persona=provisional['persona']['persona_digest'])
+    check(debug_placeholder or art['art_status']!='placeholder','Placeholder card requires explicit debug mode')
     profile=to_profile(data,generated_at=generated_at,art_status=art['art_status'],art_mode=art['art_mode'],confirmed=confirmed)
     html=write_site(out,profile,art['layers'],art['card_image'],art['depths'],navigation=navigation)
     save(out/'profile.json',profile)
     report={'ok':True,'mode':'lite','stars':len(profile['chapters']),'planets':len(profile['layout']['topics']),
             'persona_digest':profile['persona']['persona_digest'],'art_status':art['art_status'],'art_mode':art['art_mode'],
             'art_binding':art['binding'],'art_validation':art['art_validation'],'native_full_canvas':art['native_full_canvas'],
+            'debug_only':art['art_status']=='placeholder','delivery_eligible':False,
             'share_allowed':profile['release']['share_allowed'],
             'html_sha256':__import__('hashlib').sha256(html.encode()).hexdigest(),'html_bytes':len(html.encode()),
             'out':str(out/'index.html')}

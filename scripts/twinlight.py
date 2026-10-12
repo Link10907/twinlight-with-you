@@ -79,6 +79,7 @@ def parser():
     q.add_argument('--character','--subject',dest='character',type=Path);q.add_argument('--background',type=Path)
     q.add_argument('--layers',type=Path,help='A six-layer manifest bound to this person\'s card-spec persona_digest')
     q.add_argument('--confirmed',action='store_true',help='The person has reviewed the text; enables card export')
+    q.add_argument('--debug-placeholder',action='store_true',help='Explicit engineering preview only; never use after a failed card task to substitute delivery')
     q=sub.add_parser('verify-site',help='Read-only fixed-template origin check by independently reconstructing the saved site')
     q.add_argument('site',type=Path,help='Site directory or its index.html; browser viewer exports are not covered')
     q=sub.add_parser('run',help='Controlled independent HTML/card drafts, real gates and resumable one-request delivery')
@@ -217,7 +218,7 @@ def main(argv=None):
             check(report['ok'],'JSON 未通过校验，先运行 lite-check：'+'；'.join(f"{e['path']} {e['message']}" for e in report['errors'][:5]))
             result=build_lite(report['data'],args.out,generated_at=dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace('+00:00','Z'),
                               confirmed=args.confirmed,portrait=args.portrait,prototype=args.prototype,
-                              character=args.character,background=args.background,layers=args.layers)
+                              character=args.character,background=args.background,layers=args.layers,debug_placeholder=args.debug_placeholder)
         elif args.cmd=='showcase':
             from twinlight_core.showcase import build_showcase
             result=build_showcase(args.out)

@@ -150,12 +150,12 @@ def _review_inputs(packet_dir: Path) -> tuple[dict,dict,list[Path],list[str]]:
     manifest=validate_packet(packet_dir/'packet.json',draft)
     images=[];texts=[]
     # Do not preload arbitrary HTML/JS, producer verdicts, call logs or whole chat exports.
-    allowed_names=('REVIEWER.md','quality-workflow.md','art-direction.json','review-evidence.json','content.json')
+    allowed_names=('card-review-input.json',)
     for entry in manifest['attachments']:
         p=packet_dir/entry['file'];source=Path(entry['source'])
         if p.suffix.lower() in ('.png','.jpg','.jpeg','.webp'):
             images.append(p)
-        elif (source.name in allowed_names or source.name.endswith('-evidence.json')
+        elif (source.name in allowed_names
               or (draft.get('stage') == 'release'
                   and draft.get('targets',{}).get('task') == 'site'
                   and entry['sha256'] == draft['targets'].get('navigation',{}).get('sha256'))):

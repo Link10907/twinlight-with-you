@@ -175,6 +175,8 @@ def validate_design(design: dict, persona: str | None = None) -> dict:
         _visible(item, 'scene.foreground')
     if bool(design['references']) != (design['reference_basis'] == 'visible_images'):
         raise VisualContractError('reference_basis', 'Do not claim an unseen image as a reference')
+    if design['references'] and (subject['representation'] != 'user_reference' or design['reference_consent'] is not True):
+        raise VisualContractError('reference_scope', 'Only consented likeness references may be added; original concepts use the selected bundled style references only')
     if subject['representation'] == 'user_reference' and not (design['reference_consent'] is True and design['references']):
         raise VisualContractError('likeness_reference', 'A likeness requires an actual supplied image and consent; otherwise use original_concept')
     return design
@@ -208,68 +210,21 @@ def subject_prompt(design: dict) -> str:
 
 
 def visual_brief(design: dict, role: str = 'prototype') -> str:
-    """Background/effects never receive hair, species, props or personal keywords."""
-    validate_design(design)
-    if role not in ROLES: raise VisualContractError('layer_role', 'Unsupported image role')
-    style = style_for(design['style']['id'], design['style']['version'])
-    scene = design['scene']
-    lines = ['固定画风：' + style['name'] + '。' + style['visual_language'],
-             '材质与绘画光感：' + style['materials_and_light'], '固定配色语言：' + style['palette'],
-             '本次光线：' + scene['lighting'], '共同构图与文字留白：' + scene['composition']]
-    if style.get('geometry'):
-        lines.append('典藏卡共同几何约束：' + json.dumps(style['geometry'], ensure_ascii=False))
-    if style.get('reference_manifest') and role == 'prototype':
-        lines.append('工具同时提供的 style_only 图像是必须查看的画风与完成度基准：只借鉴绘制品质、材质、光照、深度和主次关系。不得复制参考人物、动物、身份、场景、道具或任何参考像素作为本次输出。')
-    if role in ('prototype','subject'):
-        lines.append(subject_prompt(design))
-    if role in ('prototype','background'):
-        lines.append('场景：' + scene['setting'])
-    if role in ('prototype','effects'):
-        lines.append('少量前景：' + '；'.join(scene['foreground']))
-    lines.append('风格保留：' + '；'.join(style['keep']))
-    lines.append('风格排除：' + '；'.join(style['avoid']))
-    # Preferences are review inputs. Do not inject untyped personal text into background calls.
-    if role == 'prototype':
-        if design['preferences']['keep']: lines.append('本次视觉偏好：' + '；'.join(design['preferences']['keep']))
-        if design['preferences']['avoid']: lines.append('本次否决方向：' + '；'.join(design['preferences']['avoid']))
-    return '\n'.join(lines)
+    from .card_context import image_input, render_prompt
+    return render_prompt(image_input(design), role, (1080,1440))
 
 
-def layer_prompt(design: dict, role: str, canvas: tuple[int, int], composition: dict | None = None) -> str:
-    validate_design(design)
-    w,h = canvas
-    if type(w) is not int or type(h) is not int or min(w,h) < 256 or w*h>16_000_000 or abs(w/h-.75)>=.01:
-        raise VisualContractError('canvas', 'Use one actual native 3:4 canvas, without cropping or resampling')
-    tasks = {
-      'prototype':'只生成一张无字原型插画，不生成网页、导航、面板、屏幕截图或卡片展示场景。一个主体、一个清楚动作，至多一个主要道具。',
-      'background':'原生编辑 Image1：删除原图中的主体及其接触道具，同时删除下文指定归属 effects 的全部独立近景元素。保留原有中远景位置、透视与光照，只在删除区域补绘合理连续的环境。输出完整不透明空场景；不得留下主体、替身、残影、手持物，也不得重复保留 effects 前景。',
-      'subject':'原生编辑 Image1：只保留原图中的主体及其接触道具，保持所有现有可见细节的原位置、原尺度、原朝向和原光照。移除全部中远景和独立近景，其他区域改为真实 alpha 透明。若指定前景遮住少量衣料，只在该遮挡位置补全同一衣料。不要重新生成角色立绘、缩放至填满画布或把人物居中；头顶到上缘、道具到左右边缘的距离必须与原图相同。',
-      'effects':'原生编辑 Image1：仅保留下文指定的独立近景元素，严格保持每块元素的原位置、原大小、原景深与原遮挡轮廓，其余整个画布改为真实 alpha 透明。不得保留主体、接触道具或中远景，也不得把前景重新摆放成装饰边框或覆盖满屏。',
-      'spirit':'本简洁构图不设置第二主体；此任务不调用图像模型，由程序创建同尺寸全透明层。'}
-    if role not in tasks: raise VisualContractError('layer_role', 'Unsupported image role')
-    if role == 'prototype':
-        lines = [visual_brief(design, role), '本次任务：' + tasks[role]]
-    else:
-        style = style_for(design['style']['id'], design['style']['version'])
-        lines = ['唯一输入 Image1 是当前已审查原型，也是本次 composition 编辑画布与唯一坐标权威。执行图像工具原生编辑，不是参考图再创作；没有其他 style_only 图，也不要追加品牌示范图或用户照片。',
-                 '本次任务：' + tasks[role],
-                 '沿用 Image1 已审查通过的' + style['name'] + '精绘风格、表面材质与光照，不重新设计人物、场景或配色。',
-                 '典藏卡共同几何约束以 Image1 的实际画布为准：保留完整画幅、视野、位置、大小、透视和透明空白，禁止自动紧边裁切、缩放放大、居中、重新取景或补出画布外的身体；不得重新设计或换姿势。',
-                 '指定 effects 独立前景（本层只按上述保留或移除任务处理）：' + '；'.join(design['scene']['foreground'])]
-    lines.append(f'全画布 {w}×{h}，竖版 3:4；必须与 Image1 相同原生像素尺寸，不能靠之后裁切、缩放或平移修正。' if role != 'prototype' else f'全画布 {w}×{h}，竖版 3:4；不得自动裁切、缩放或重摆主体。')
-    if role in ('subject','effects'): lines.append('启用工具真实 alpha 透明输出；主体外完全透明，不画棋盘、纯色幕布或假透明。')
-    if role in ('prototype','background'): lines.append('输出完全不透明的场景 PNG。')
-    if composition:
-        for key in ('subject_bounds','subject_center_region','text_safe_regions'):
-            if key in composition: lines.append(key + '=' + json.dumps(composition[key],ensure_ascii=False))
-    lines.append('不要生成文字、SSR、签名、边框、网页 UI 或预烘焙镭射；文字由程序排版，闪光由渲染器产生。')
-    return '\n'.join(lines)
+def layer_prompt(design: dict, role: str, canvas: tuple[int,int], composition: dict | None=None) -> str:
+    # The prototype's actual pixels remain the coordinate authority for edits.
+    from .card_context import image_input, render_prompt
+    return render_prompt(image_input(design), role, canvas)
 
 
 def style_binding(design: dict) -> dict:
     validate_design(design)
     s = style_for(design['style']['id'], design['style']['version'])
-    result = {'id':s['id'],'version':s['version'],'sha256':s['sha256']}
+    result = {'id':s['id'],'version':s['version'],'sha256':s['sha256'],
+              'image_preset_sha256':sha256(STYLE_DIR/'image-presets.json')}
     refs = style_references(s)
     if refs:
         result['reference_sha256'] = [r['sha256'] for r in refs]
@@ -278,8 +233,8 @@ def style_binding(design: dict) -> dict:
 
 def review_checks(design: dict, stage: str, base: tuple[str,...]) -> tuple[str,...]:
     if design.get('version') != VERSION: return base
-    extras = {'prototype':('concrete_subject','style_fidelity','simple_composition'),
-              'composite':('style_fidelity','single_subject'),
+    extras = {'prototype':('concrete_subject','style_fidelity','simple_composition','single_artwork_not_layout','subject_matches_input','scene_matches_input'),
+              'composite':('style_fidelity','single_subject','subject_matches_input','scene_matches_input'),
               'final':('style_fidelity','fixed_text','touch_keyboard_reduced_motion')}
     collector = ('visual_hierarchy','material_finish','spatial_depth','reference_quality_parity') if design['style']['id'] == DEFAULT_STYLE and stage in ('prototype','composite','final') else ()
     return tuple(dict.fromkeys((*base,*extras.get(stage,()),*collector)))

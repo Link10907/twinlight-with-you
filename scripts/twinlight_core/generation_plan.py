@@ -24,21 +24,6 @@ def _task_scope(role: str) -> dict:
             'host_renderer_only':['website_ui','card_frame','typography','foil_animation']}
 
 
-def _task_instruction(design: dict, role: str, canvas: tuple[int, int]) -> str:
-    """Put the current output first; keep the evidenced base prompt unchanged."""
-    if role == 'prototype':
-        subject = design['subject']
-        lines = ['本次唯一产物：一张占满画布的无字连续场景插画。'
-                 '画布本身就是作品；一个主角、一个清楚动作。',
-                 f'原生画布：{canvas[0]}×{canvas[1]}，竖版 3:4；主体按下述构图保留边距。',
-                 '当前主角：' + subject['species'] + '；当前动作：' + subject['pose'] + '。']
-    else:
-        lines = ['本次唯一产物：一张 ' + role + ' 原生编辑图层。只处理当前已通过原型的这一层，'
-                 '保持原型完整画布与原坐标，执行下述具体保留/删除任务。']
-    lines.append('仅输出当前插画或图层。不要界面、拼图、文字、边框或预先画死的反光。')
-    return '\n'.join(lines)
-
-
 def _save(path: Path, value) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_name(path.name + '.tmp')
@@ -83,19 +68,6 @@ def check_capabilities(value: dict, canvas) -> dict:
     return value
 
 
-def _ownership_instruction(design: dict, role: str) -> str:
-    """Explicit object ownership; append to the stable, evidenced edit contract."""
-    foreground = json.dumps(design['scene']['foreground'], ensure_ascii=False)
-    subject = design['subject']['species']
-    prop = design['subject']['main_prop']
-    kept = subject + ('; attached prop: ' + prop if prop else '; no attached prop')
-    tasks = {
-        'subject': 'KEEP ONLY the existing subject and attached prop: ' + kept + '. DELETE the entire environment AND DELETE EACH foreground item listed here: ' + foreground + '. These foreground objects are NOT part of the subject, even when they overlap its clothes or the lower canvas. Make every deleted region transparent, locally complete covered clothing only. Delete the named foreground even when it is out of focus, but never confuse it with similarly colored clothing or the explicitly retained subject/prop.',
-        'background': 'DELETE the subject and attached prop: ' + kept + '. ALSO DELETE EACH independently layered foreground item listed here: ' + foreground + '. Reconstruct the medium/distant environment behind these removed objects. None of the named foreground objects may remain here; keep distant environmental objects that are not on this foreground list.',
-        'effects': 'KEEP ONLY EACH of these exact original foreground objects at its original coordinates: ' + foreground + '. DELETE the subject and attached prop (' + kept + ') AND DELETE all medium/distant environment. Every other pixel must be transparent. Do not introduce extra foreground or a complete scene.'}
-    return 'EXPLICIT LAYER OWNERSHIP — ' + tasks[role] + ' Preserve the full original canvas, framing and pixel coordinates.'
-
-
 def repair_plan(plan_path: Path, role: str, instruction: str) -> dict:
     """Append observed host feedback without changing identity or erasing attempts."""
     plan_path = Path(plan_path).resolve(); root = plan_path.parent
@@ -103,8 +75,8 @@ def repair_plan(plan_path: Path, role: str, instruction: str) -> dict:
     expected_phase='prototype' if role=='prototype' else 'layers'
     if plan.get('version') != 'generation-plan-2' or plan.get('phase') != expected_phase or role not in IMAGE_ROLES:
         raise VisualContractError('repair_phase', 'Repair a job in its existing phase, retaining design and attempts')
-    if not isinstance(instruction, str) or not 8 <= len(instruction.strip()) <= 2500 or '\x00' in instruction:
-        raise VisualContractError('repair_instruction', 'Supply 8–2500 characters of actual observed visual feedback and a concrete correction')
+    if not isinstance(instruction, str) or not 8 <= len(instruction.strip()) <= 240 or '\x00' in instruction:
+        raise VisualContractError('repair_instruction', 'Supply 8–240 characters of actual observed visual feedback and a concrete correction')
     instruction = instruction.strip()
     jobs = [job for job in plan.get('jobs', []) if job.get('role') == role]
     if len(jobs) != 1:
@@ -138,14 +110,13 @@ def repair_plan(plan_path: Path, role: str, instruction: str) -> dict:
     if used >= 3:
         raise VisualContractError('retry_limit', 'Three returns are already recorded for this role; repair must not reset the attempt limit')
     previous = job['prompt']
-    text = prompt.read_text(encoding='utf-8')
-    ownership = (job.get('ownership_instruction') or _ownership_instruction(design, role)) if role!='prototype' else ''
-    if ownership and ownership not in text:
-        text = ownership + '\n\n' + text
-    text = 'OBSERVED FAILURE — correct only the following defects; preserve the frozen design and valid composition:\n' + instruction + '\n\n' + text
+    from .card_context import image_input, render_prompt, visible_text
+    visible_text(instruction,'repair',240)
+    # Retain old feedback in audit history, not in the next image context.
+    text=render_prompt(image_input(design),role,tuple(plan['canvas']),repair=instruction)+'\n'
     prompt.write_text(text, encoding='utf-8')
     job['prompt'] = _ref(prompt, root)
-    job['ownership_instruction'] = ownership
+    job['ownership_instruction'] = None
     job['repair_instruction'] = instruction
     job.setdefault('repair_history', []).append({'instruction':instruction,'previous_prompt_sha256':previous['sha256'],
                                                'prompt_sha256':job['prompt']['sha256'],'attempts_already_recorded':used})
@@ -188,6 +159,9 @@ def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(
             raise VisualContractError('design_conflict','Do not overwrite another visual direction')
         shutil.copyfile(design_path,target)
     style=style_binding(design)
+    from .card_context import image_input, render_prompt
+    clean_input=image_input(design)
+    _save(out/'image-input.json',clean_input)
     # Brand examples travel as real tool inputs, separately from user likeness consent.
     style_refs = []
     for index, ref in enumerate(style_references(style_for(design['style']['id'], design['style']['version']))):
@@ -205,8 +179,8 @@ def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(
     prompt_dir=out/'prompts';prompt_dir.mkdir(exist_ok=True)
     for role in roles:
         path=prompt_dir/(role+'.txt')
-        ownership = _ownership_instruction(design, role) if prototype_ref else None
-        path.write_text((ownership+'\n\n' if ownership else '')+_task_instruction(design,role,canvas)+'\n\n'+layer_prompt(design,role,canvas)+'\n',encoding='utf-8')
+        ownership = None
+        path.write_text(render_prompt(clean_input,role,canvas)+'\n',encoding='utf-8')
         refs = ([{**prototype_ref, 'purpose': 'composition'}] if prototype_ref else style_refs + [
             {**x, 'purpose': 'user_reference'} for x in design['references']])
         jobs.append({'role':role,'prompt':_ref(path,out),'requested_canvas':list(canvas),
@@ -221,7 +195,7 @@ def write_plan(design_path: Path, out: Path, *, phase: str='prototype', canvas=(
                      'reference_sha256':[ref['sha256'] for ref in refs],
                      'style_binding':style,'status':'not_called'})
     plan={'version':'generation-plan-2','phase':phase,'persona_digest':design['persona_digest'],
-          'design':_ref(target,out),'style_binding':style,'canvas':list(canvas),
+          'design':_ref(target,out),'image_input':_ref(out/'image-input.json',out),'style_binding':style,'canvas':list(canvas),
           'prototype':prototype_ref,'jobs':jobs,'capabilities':capabilities,
           'canvas_policy':'observe_native_prototype_then_freeze' if capabilities and capabilities.get('canvas_selection') == 'prompt_only' else 'declared_native_canvas',
           'layer_strategy':'prototype_native_edit_v1',

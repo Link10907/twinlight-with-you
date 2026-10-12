@@ -235,6 +235,9 @@ def _source(root: Path, entry: dict, role: str, prototype_hash: str, canvas: tup
                     "edit_base_mismatch", "Native layer editing must retain the current approved prototype canvas")
             inputs[str(base)] = sha256(base)
             visual = layer_prompt(design, role, tuple(canvas))
+        elif v2:
+            from .visual_contract import layer_prompt
+            visual = layer_prompt(design,role,tuple(request["canvas"]))
         else:
             visual = compile_visual_brief(json.dumps(design, ensure_ascii=False), role=role)
         require(visual in prompt.read_text(encoding="utf-8"), "visual_brief_missing", "Actual prompt must include the current concrete visual brief")

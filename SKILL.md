@@ -4,7 +4,7 @@ description: Produce Twinlight in two explicit tasks. Task A creates and indepen
 ---
 # Twinlight · 与你同光
 
-版本：`v10-split-1.0`。**一个包，两个制作任务，一个主 HTML。** 先读 [AGENT.md](AGENT.md)，再按本次任务读取一个入口；不要预加载另一项任务的完整上下文。
+版本：`v10-split-1.1`。**一个包，两个制作任务，一个主 HTML。** 先读 [AGENT.md](AGENT.md)，再按本次任务读取一个入口；不要预加载另一项任务的完整上下文。
 
 | 任务 | 入口 | 输出与边界 |
 |---|---|---|
@@ -21,6 +21,10 @@ description: Produce Twinlight in two explicit tasks. Task A creates and indepen
 
 只使用当前授权资料。共享 `person.json` 及其 `card-input.json` 投影；称号、文字、归属和总结模型绑定一致。计划不写成成果，提问不写成能力；未经本轮照片与授权，不画本人肖像。不给其他人的卡换名字冒充当前作品。
 
+## 信息传递
+
+上层只写具体可见形象与一个选定画风，见 [窄输入契约](references/card-input-contract.md)。生图只收当前短提示、明列图像、合法参数；姓名、称号、总结者、履历和全部站点信息留在宿主。卡片审查使用程序生成的阶段窄包，不附通用整站手册。
+
 ## 真实执行与审查
 
 A 预检真实图像任务隔离、参考传入、原生编辑/透明输出及独立视觉任务；B 的预检模式是 `integrate`，仅需实际浏览器与独立审查，不能因为没有生图账号而失败。独立任务可以使用已授权宿主工具或 [执行适配器](references/execution-adapters.md)，但本包不提供账户、凭证或额外模型服务。
@@ -33,6 +37,6 @@ A 只有当前卡片、动态和独立 release 均通过，才能 `seal-card` �
 
 B 的 `index.html` 已内嵌同卡、脚本、样式、音乐与个人内容；`#galaxy` / `#card` 同页切换，保留 `#finale`。完整剧情和快捷入口汇入同一张卡，不使用 iframe；返回恢复同次会话的星系状态。`card-preview.html` 只是附加入口，不是主页面依赖。
 
-`files_built` 不是通过；`complete` 还需要真实技术关卡与独立裁决；明确要求聊天内交互时另检查 `request_satisfied`。只通过 `deliver_artifacts.py` 导出当前放行工件。候选、CSS fallback、合成单测、截图变化不能冒充艺术验收或 WebGL 通过。主文件离线浏览器成功也不证明聊天附件可交互。
+`files_built` 不是通过；`complete` 还需要真实技术关卡与独立裁决；明确要求聊天内交互时另检查 `request_satisfied`。只通过 `deliver_artifacts.py` 导出当前放行工件。A 失败后不得改跑 lite-build/旧 both 或手工ZIP交付占位整站；调试页须用户明确要求。候选、CSS fallback、合成单测、截图变化不能冒充艺术验收或 WebGL 通过。主文件离线浏览器成功也不证明聊天附件可交互。
 
 默认私人草稿，不自动 push、部署或公开。不导出原始聊天、审查日志、凭证、私人路径或字体文件。旧 `run --mode html/card/both` 保留兼容，不作为这次双任务工作流的新入口。
