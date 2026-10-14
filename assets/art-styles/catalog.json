@@ -27,6 +27,6 @@
     }
   ],
   "default_style": "twinlight-collector",
-  "selection_policy": "Upstream owns selection. Honor explicit style first; otherwise choose once at random from host-selected subject-compatible candidates, or all styles when no narrower preference exists. Freeze id/version per work; reuse on resume and repair. default_style is a legacy compatibility value only. Never change the subject to fit a style.",
-  "upstream_default_mode": "subject_random"
+  "selection_policy": "Upstream owns selection. Honor an explicit installed style first; otherwise draw once uniformly from all installed styles. Do not filter by biography or subject unless the user explicitly requests a narrower pool (subject_random). Freeze id/version per work; reuse on resume and repair. default_style is a legacy compatibility value only. New subjects are human original concepts or non-animal objects, never animals or anthropomorphic animals.",
+  "upstream_default_mode": "random"
 }

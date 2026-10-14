@@ -1,0 +1,49 @@
+{
+  "version": "portable-1.2.2-maintenance-verification-1",
+  "base_commit": "9a7b5ff766383a485e4334b8691eadb12fa2b94e",
+  "code_tree_before_this_report": "947240bb37fedc4fe0cc1bd550caef547868eaaa",
+  "scope": "Local engineering regression and resource integrity; not new image generation, visual acceptance or a GitHub Actions success claim.",
+  "maintained_skill": {
+    "command": "python scripts/verify_skill.py --tests --out verification.json",
+    "executed": true,
+    "run": 412,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true,
+    "fixture_scope": "SYNTHETIC ONLY; fake test receipts cannot be reused for delivery.",
+    "resource_complete": true,
+    "package_manifest_verified": true,
+    "template_lock_ok": true,
+    "forbidden_distributed_fonts": []
+  },
+  "legacy_suite_same_environment": {
+    "command": "python -m unittest discover -s tests -v",
+    "baseline": {
+      "run": 466,
+      "failures": 57,
+      "errors": 89,
+      "skipped": 3
+    },
+    "candidate": {
+      "run": 467,
+      "failures": 57,
+      "errors": 89,
+      "skipped": 3
+    },
+    "new_failing_test_ids": [],
+    "failing_test_ids_identical": true,
+    "passed": false,
+    "scope_note": "Legacy source trees were reconstructed from a cached archive and checked against the pinned repository tree. The same older viewer.html was used for both local runs; that file is not changed or published by this commit. These results do not establish live CI success."
+  },
+  "unchanged": [
+    "assets/template",
+    "assets/navigation",
+    "assets/card-preview",
+    "assets/art-styles/image-presets.json",
+    "assets/art-references",
+    "viewer.html"
+  ],
+  "real_image_generation_performed": false,
+  "new_artwork_approved": false
+}

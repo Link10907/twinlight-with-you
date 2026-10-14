@@ -1,7 +1,8 @@
 """Upstream-only style choice. Never redraw, layer, render, or rewrite art prompts.
 
-The host proposes eligible styles from a concrete subject and scene. This module
-validates that proposal, draws once, and projects the existing drawing-only input.
+New works default to a uniform draw from all installed styles. Explicit choices
+win; a user-requested filtered draw remains available. This module validates the
+request, draws once, and projects the existing drawing-only input.
 A frozen selection is reused on resume; it is not an aesthetic approval.
 """
 from __future__ import annotations
@@ -25,12 +26,12 @@ RECORD = 'style-selection.json'
 DRAWING = 'card-image-input.json'
 
 
-def _normalize(request: dict) -> dict:
+def _normalize(request: dict, *, frozen: bool = False) -> dict:
     check(isinstance(request, dict), 'Style request must be an object')
     allowed = {'version', 'mode', 'style', 'candidates', 'reason', 'seed', 'subject', 'scene'}
     check(not set(request) - allowed, 'Unknown upstream style request field')
     check(request.get('version') == REQUEST_VERSION, 'Unsupported upstream style request version')
-    mode = request.get('mode', 'subject_random')
+    mode = request.get('mode', 'random')
     check(mode in MODES, 'Use explicit, random or subject_random')
     selected = request.get('style')
     # An explicitly supplied versioned style takes precedence over random defaults.
@@ -48,6 +49,9 @@ def _normalize(request: dict) -> dict:
     if selected is not None:
         check(supplied is None or selected['id'] in candidates, 'Explicit style conflicts with the supplied candidate constraints')
         candidates = [selected['id']]
+    elif mode == 'random':
+        check(frozen or set(candidates) == set(installed),
+              'Random mode uses all installed styles; use explicit subject_random for a user-requested subset')
     elif mode == 'subject_random':
         check(len(candidates) >= 2, 'Keep at least two subject-compatible styles; use explicit mode for a single choice')
     reason = request.get('reason', '')
@@ -157,7 +161,7 @@ def _read(workspace: Path, *, restore: bool = False) -> dict:
           'Invalid frozen style selection')
     check(r.get('record_sha256') == digest({k: v for k, v in r.items() if k != 'record_sha256'}),
           'Style record changed; preserve the original run')
-    request = _normalize(r['request'])
+    request = _normalize(r['request'], frozen=True)
     check(request == r['request'] and digest(request) == r['request_sha256'], 'Frozen style request changed')
     seed = r.get('seed')
     check(isinstance(seed, str) and 0 < len(seed) <= 128, 'Invalid frozen seed')
@@ -184,12 +188,16 @@ def _summary(workspace: Path, r: dict, reused: bool) -> dict:
 def select(workspace: Path, request: dict) -> dict:
     """Freeze once or reuse; never mutate a prior image, layer or drawing input."""
     workspace = Path(workspace)
-    normalized = _normalize(request)
     if (workspace / RECORD).exists() or (workspace / RECORD).is_symlink():
         r = _read(workspace, restore=True)
+        # An omitted mode must not migrate an older frozen default on resume.
+        if isinstance(request, dict) and 'mode' not in request and request.get('style') is None:
+            request = {**request, 'mode': r['request']['mode']}
+        normalized = _normalize(request, frozen=True)
         check(digest(normalized) == r['request_sha256'],
               'Selection is frozen; changed subject, candidates, seed or style requires a new workspace')
         return _summary(workspace, r, True)
+    normalized = _normalize(request)
     check(not _legacy_art_started(workspace), 'Artwork already started without this selector; resume its original style, do not retrofit random selection')
     seed = normalized['seed'] if normalized['seed'] is not None else secrets.token_hex(16)
     selected = _resolve(normalized, seed)
@@ -219,7 +227,7 @@ def selection_status(workspace: Path) -> dict:
     if _legacy_art_started(workspace):
         return {'status': 'reuse_existing_artwork', 'reselect': False,
                 'instruction': 'Keep the existing design/prototype style. Do not restart accepted work to add a selection record.'}
-    return {'status': 'selection_required', 'default_mode': 'subject_random',
+    return {'status': 'selection_required', 'default_mode': 'random',
             'styles': [{k: s[k] for k in ('id', 'name', 'version')} for s in catalog()],
             'guide': str(ROOT / 'references/style-selection.md'),
-            'instruction': 'Host chooses from the concrete subject and scene, honoring an explicit style first. Otherwise propose at least two compatible styles and draw once with portable.py select-style. With no preference, use all installed styles. Reuse the frozen drawing input for every repair; do not send selection metadata to the image tool.'}
+            'instruction': 'Honor an explicit installed style first. Otherwise draw once uniformly from all installed styles with portable.py select-style; do not filter by biography or subject. Use subject_random only for a user-requested narrower pool. Reuse the frozen drawing input for every repair; do not send selection metadata to the image tool.'}

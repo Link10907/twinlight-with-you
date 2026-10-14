@@ -9,7 +9,7 @@ import json
 import re
 from pathlib import Path
 from jsonschema import Draft202012Validator
-from .visual_contract import ROOT, VisualContractError, _json, sha256, style_for, style_references, validate_design
+from .visual_contract import ROOT, VisualContractError, _json, sha256, style_for, style_references, validate_design, validate_subject
 
 VERSION = 'card-image-input-1'
 SUBJECT_KEYS = ('kind','species','gender_presentation','age_impression','appearance',
@@ -55,6 +55,7 @@ def validate_input(value: dict) -> dict:
         elif isinstance(node,list):
             for i,item in enumerate(node):walk(item,path+'.'+str(i))
         elif isinstance(node,str):visible_text(node,path,240)
+    validate_subject(value['subject'])
     walk(value['subject'],'subject');walk(value['scene'],'scene');preset(value['style'])
     if len(json.dumps(value,ensure_ascii=False,separators=(',',':')))>2800:
         _error('card_input_budget','Drawing input exceeds 2800 characters; simplify concrete features instead of truncating')
@@ -94,13 +95,12 @@ def render_prompt(value: dict, role: str, canvas: tuple[int,int], *, repair: str
     if role not in MAX_PROMPT:_error('layer_role','Unsupported image role')
     s=value['subject'];scene=value['scene'];sty=preset(value['style'])
     gender={'male':'男性','female':'女性','androgynous':'中性呈现','unspecified':'不强调性别','not_applicable':'物件'}[s['gender_presentation']]
-    if s['kind']=='animal':gender={'male':'雄性','female':'雌性'}.get(s['gender_presentation'],gender)
     prop=s['main_prop'] or '无接触道具'
     fg='；'.join(scene['foreground'])
     if role=='prototype':
-        parts={'hair':'头发','face':'面部','body':'体型','fur':'毛发','feathers':'羽毛','scales':'鳞片','ears':'耳朵','eyes':'眼睛','horns':'角','surface':'表面','shape':'形状','color':'颜色'}
+        parts={'hair':'头发','face':'面部','body':'体型','ears':'耳朵','eyes':'眼睛','surface':'表面','shape':'形状','color':'颜色'}
         features='；'.join(parts[x['part']]+'：'+x['description'] for x in s['appearance'])
-        kind={'human':'人类角色','animal':'动物','anthropomorphic':'拟人动物','object':'物件'}[s['kind']]
+        kind={'human':'人类角色','object':'非动物器物'}[s['kind']]
         ref_count=len(style_references(style_for(value['style']['id'],value['style']['version'])))
         refs=(f'按附件顺序，前{ref_count}张仅借画风完成度，不借角色、场景或道具。' if ref_count else '无画风图片，以选定绘画语言为准。')
         if s['representation']=='user_reference':refs+='其余附件仅为授权人物外貌参考。'
@@ -116,6 +116,7 @@ def render_prompt(value: dict, role: str, canvas: tuple[int,int], *, repair: str
                refs]
         if s['representation']=='original_concept':lines.append('原创角色，不复原本人长相；不添加同伴或额外道具。')
         else:lines.append('人物参考仅用于授权外貌；场景与动作以文字为准。')
+        lines.append('不使用动物、拟人动物、兽耳兽尾或动物同伴；参考图中的动物不进入画面。')
         lines.append('不透明 PNG；不画文字、边框、界面拼贴或固定反光。')
     elif role=='spirit':
         lines=['不调用生图；由程序建立同画布全透明空层，不添加第二主体。']

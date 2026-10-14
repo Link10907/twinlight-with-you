@@ -29,8 +29,10 @@ class VisualContractTests(unittest.TestCase):
         d=design();d['subject']['gender_presentation']='male';self.assertIn('男性呈现',subject_prompt(d))
     def test_neutral_does_not_infer_gender(self):
         d=design();d['subject']['gender_presentation']='unspecified';self.assertIn('不强调性别',subject_prompt(d))
-    def test_animal_species_and_sex_are_explicit(self):
-        p=subject_prompt(design('animal'));self.assertIn('赤狐',p);self.assertIn('雄性',p)
+    def test_animal_and_anthropomorphic_subjects_are_rejected(self):
+        for kind in ('animal', 'anthropomorphic'):
+            with self.subTest(kind=kind), self.assertRaises(VisualContractError):
+                subject_prompt(design(kind))
     def test_object_has_no_assumed_person(self):
         d=design('object');self.assertIn('陶瓷小碗',subject_prompt(d));self.assertIsNone(d['subject']['main_prop'])
     def test_animal_cannot_be_generic_animal(self):

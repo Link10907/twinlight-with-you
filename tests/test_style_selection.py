@@ -32,16 +32,22 @@ class StyleSelectionTests(unittest.TestCase):
 
     def test_forest_and_eastern_do_not_change_global_default(self):
         self.compile('forest-fantasy', 'human')
-        self.compile('eastern-fantasy-scroll', 'animal')
+        self.compile('eastern-fantasy-scroll', 'human')
         self.assertEqual(default_style()['id'], 'twinlight-collector')
 
     def test_forest_subject_is_not_inferred_from_its_deer_reference(self):
-        for kind in ('human', 'animal', 'object'):
+        for kind in ('human', 'object'):
             content, plan, prompt = self.compile('forest-fantasy', kind)
             persisted = json.loads((self.root / ('forest-fantasy-' + kind) / 'art-direction.json').read_text())
             self.assertEqual(persisted['subject'], content['subject'])
             self.assertIn(content['subject']['species'], prompt)
             self.assertEqual(plan['style_binding']['id'], 'forest-fantasy')
+
+    def test_no_style_authorizes_an_animal_subject(self):
+        for style_id in ('forest-fantasy', 'eastern-fantasy-scroll'):
+            for kind in ('animal', 'anthropomorphic'):
+                with self.subTest(style=style_id, kind=kind), self.assertRaises(ValueError):
+                    self.compile(style_id, kind)
 
     def test_selected_references_do_not_import_collector_human_style(self):
         collector_hashes = {ref['sha256'] for ref in style_references(default_style())}

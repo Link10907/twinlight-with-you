@@ -24,12 +24,12 @@ ABSTRACT = frozenset(('拆解', '验证', '构建', '迭代', '共创', '成长'
                      '系统织星者', '工程创作者气质', '文艺气质', 'curiosity', 'growth',
                      'iteration', 'co-creation', 'builder', 'potential', 'exploration'))
 PLACEHOLDERS = re.compile(r'\{\{|\}\}|\$\{|<[^>]{1,80}>|待填写|待补充|自行发挥|三选一|二选一|TODO|TBD', re.I)
-PART_NAMES = {'hair':'发型','face':'面部','body':'体态','fur':'毛发','feathers':'羽毛',
-              'scales':'鳞片','ears':'耳朵','eyes':'眼睛','horns':'角','surface':'表面材质',
+PART_NAMES = {'hair':'发型','face':'面部','body':'体态',
+              'ears':'耳朵','eyes':'眼睛','surface':'表面材质',
               'shape':'形状','color':'颜色'}
 PRESENTATION = {'male':'男性呈现','female':'女性呈现','androgynous':'中性呈现',
                 'unspecified':'不强调性别','not_applicable':'性别不适用'}
-KINDS = {'human':'人类原创角色','animal':'动物角色','anthropomorphic':'拟人动物角色','object':'物件主体'}
+KINDS = {'human':'人类原创角色','object':'非动物器物主体'}
 
 
 class VisualContractError(ValueError):
@@ -137,6 +137,30 @@ def _visible(value: str, field: str) -> None:
         raise VisualContractError('abstract_visual_term', field + ' must describe something visible, not identity keywords')
 
 
+def validate_subject(subject: dict) -> None:
+    """Shared structural checks; rendered images still need visual inspection."""
+    if subject['kind'] not in ('human', 'object'):
+        raise VisualContractError('subject_kind', 'Use an original human character or a non-animal object')
+    if subject['kind'] == 'human' and subject['species'].casefold() not in ('human', '人', '人类', '人類'):
+        raise VisualContractError('subject_species', 'Human subject must explicitly use species=人类 or human')
+    if subject['kind'] == 'object' and subject['gender_presentation'] != 'not_applicable':
+        raise VisualContractError('object_gender', 'An object must not be assigned a human gender by default')
+    if subject['kind'] != 'object' and subject['gender_presentation'] == 'not_applicable':
+        raise VisualContractError('subject_presentation', 'Use an explicit presentation or unspecified for a living subject')
+    if subject['kind'] == 'object' and subject['main_prop'] is not None:
+        raise VisualContractError('prop_budget', 'The object is already the sole main prop')
+    parts = [t['part'] for t in subject['appearance']]
+    if len(set(parts)) != len(parts):
+        raise VisualContractError('duplicate_trait', 'Use one resolved description per appearance feature')
+    # Catch obvious animal hybrids even when mislabeled as human/object.
+    traits = ' '.join(t['description'] for t in subject['appearance'])
+    morphology = ' '.join((subject['species'], traits, subject['clothing']))
+    if re.search(r'兽耳|獸耳|兽尾|獸尾|猫耳|貓耳|猫尾|貓尾|狐耳|狐尾|兔耳|狼耳|鹿角|'
+                 r'\b(?:cat|fox|wolf|rabbit|animal)[ -](?:ears?|tail|head)\b|'
+                 r'\b(?:anthropomorphic|beastkin|furry|antlers?)\b', morphology, re.I):
+        raise VisualContractError('animal_morphology', 'Animal features are not allowed; use human anatomy or a non-animal object')
+
+
 def validate_design(design: dict, persona: str | None = None) -> dict:
     errors = sorted(Draft202012Validator(_json(SCHEMA)).iter_errors(design), key=lambda e: str(list(e.path)))
     if errors:
@@ -148,19 +172,7 @@ def validate_design(design: dict, persona: str | None = None) -> dict:
     if design['style']['id'] == DEFAULT_STYLE and design['typography'].get('layout') != 'collector':
         raise VisualContractError('collector_typography', 'Use the collector typography profile from the selected style; do not silently fall back to compact lettering')
     subject = design['subject']
-    if subject['kind'] == 'human' and subject['species'].casefold() not in ('human', '人', '人类', '人類'):
-        raise VisualContractError('subject_species', 'Human subject must explicitly use species=人类 or human')
-    if subject['kind'] in ('animal', 'anthropomorphic') and subject['species'].casefold() in ('animal','动物','動物','human','人类','人類'):
-        raise VisualContractError('subject_species', 'Name the actual animal species, not just "animal"')
-    if subject['kind'] == 'object' and subject['gender_presentation'] != 'not_applicable':
-        raise VisualContractError('object_gender', 'An object must not be assigned a human gender by default')
-    if subject['kind'] != 'object' and subject['gender_presentation'] == 'not_applicable':
-        raise VisualContractError('subject_presentation', 'Use an explicit presentation or unspecified for a living subject')
-    if subject['kind'] == 'object' and subject['main_prop'] is not None:
-        raise VisualContractError('prop_budget', 'The object is already the sole main prop')
-    parts = [t['part'] for t in subject['appearance']]
-    if len(set(parts)) != len(parts):
-        raise VisualContractError('duplicate_trait', 'Use one resolved description per appearance feature')
+    validate_subject(subject)
     for field in ('species','age_impression','clothing','expression','pose'):
         _visible(subject[field], 'subject.' + field)
     for trait in subject['appearance']:
@@ -184,8 +196,6 @@ def validate_design(design: dict, persona: str | None = None) -> dict:
 
 def presentation_for(subject: dict) -> str:
     value = subject['gender_presentation']
-    if subject['kind'] == 'animal' and value in ('male', 'female'):
-        return '雄性' if value == 'male' else '雌性'
     return PRESENTATION[value]
 
 

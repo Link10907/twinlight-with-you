@@ -27,11 +27,11 @@ class SelectionTests(unittest.TestCase):
     def setUp(self):
         t = tempfile.TemporaryDirectory(); self.addCleanup(t.cleanup)
         self.root = Path(t.name); self.w = self.root / 'work'
-    def test_default_is_subject_random_over_six(self):
+    def test_default_is_uniform_random_over_six(self):
         ss.select(self.w, request()); r = load(self.w / ss.RECORD)['request']
-        self.assertEqual(r['mode'], 'subject_random'); self.assertEqual(len(r['candidates']), 6)
+        self.assertEqual(r['mode'], 'random'); self.assertEqual(len(r['candidates']), 6)
     def test_status_does_not_choose_or_create_files(self):
-        r = ss.selection_status(self.w); self.assertEqual(r['default_mode'], 'subject_random')
+        r = ss.selection_status(self.w); self.assertEqual(r['default_mode'], 'random')
         self.assertFalse(self.w.exists()); self.assertNotIn('selected_style', r)
     def test_legacy_default_function_remains_unchanged(self):
         self.assertEqual(default_style()['id'], 'twinlight-collector')
@@ -68,7 +68,7 @@ class SelectionTests(unittest.TestCase):
         seen={ss._choice(choices,str(i)) for i in range(120)}
         self.assertEqual(seen,set(choices))
     def test_candidate_order_does_not_change_choice(self):
-        q=request(candidates=['paper-craft-story','forest-fantasy'],reason='SYNTHETIC candidates.',seed='test')
+        q=request(mode='subject_random',candidates=['paper-craft-story','forest-fantasy'],reason='SYNTHETIC candidates.',seed='test')
         a=ss.select(self.w,q);q['candidates'].reverse();b=ss.select(self.w,q)
         self.assertEqual(a['selected_style'],b['selected_style']);self.assertTrue(b['reused'])
     def test_duplicate_candidates_rejected(self):
@@ -78,9 +78,9 @@ class SelectionTests(unittest.TestCase):
     def test_unknown_candidate_rejected(self):
         with self.assertRaises(ValueError):ss.select(self.w,request(candidates=['forest-fantasy','ink-wash'],reason='test'))
     def test_single_subject_candidate_requires_explicit_mode(self):
-        with self.assertRaises(ValueError):ss.select(self.w,request(candidates=['forest-fantasy'],reason='test'))
+        with self.assertRaises(ValueError):ss.select(self.w,request(mode='subject_random',candidates=['forest-fantasy'],reason='test'))
     def test_filtered_subject_choice_requires_reason(self):
-        with self.assertRaises(ValueError):ss.select(self.w,request(candidates=['forest-fantasy','paper-craft-story']))
+        with self.assertRaises(ValueError):ss.select(self.w,request(mode='subject_random',candidates=['forest-fantasy','paper-craft-story']))
     def test_unknown_mode_rejected(self):
         with self.assertRaises(ValueError):ss.select(self.w,request(mode='guess'))
     def test_bad_seed_rejected(self):

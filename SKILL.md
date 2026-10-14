@@ -1,10 +1,10 @@
 ---
 name: twinlight-with-you
-description: One-instruction native-AI Twinlight workflow. Acquire the complete pinned package automatically. Default portable mode uses the host's native image tools for a reviewed layered fantasy card and embeds the same card in V10 HTML; when image tools are genuinely unavailable, create a complete card-free V10 galaxy HTML. Prefer independent review, otherwise record actual self review. Never require an external API account by default.
+description: One-instruction native-AI Twinlight workflow. Acquire the complete pinned package automatically. Default portable mode uses the host's native image tools for a reviewed layered collectible card and embeds the same card in V10 HTML; when image tools are genuinely unavailable, create a complete card-free V10 galaxy HTML. Prefer independent review, otherwise record actual self review. Never require an external API account by default.
 ---
 # Twinlight · 与你同光
 
-版本：`v10-portable-1.2.1`。先读 [AGENT.md](AGENT.md)。默认交互只有一次请求和一次成品交付，不要求用户选择 A/B、下载 Git 包、运行脚本、配置 API 或手填审查 JSON。
+版本：`v10-portable-1.2.2`。先读 [AGENT.md](AGENT.md)。默认交互只有一次请求和一次成品交付，不要求用户选择 A/B、下载 Git 包、运行脚本、配置 API 或手填审查 JSON。
 
 ## 先判定功能，再组织任务
 
@@ -18,7 +18,7 @@ description: One-instruction native-AI Twinlight workflow. Acquire the complete 
 
 保留 V10 光点全景、近景行星、发光选中、星系旋转、连续不超过 15 秒的交融和音乐。完整模式保留模型署名、揭卡、拖转、翻面、自动轻摇、独立图层视差和 WebGL 镭射。主 HTML 内嵌同一卡片，支持星系与闪卡相互返回；无卡模式没有这些卡片功能，也不伪造它们。
 
-保留精细原创收藏卡的完成度，使用一个明确主体、一个动作、一个确定画风。宿主依 AGENT.md 完成选择，A 只读取具体绘画输入。原画无字无框，宿主排字；不以代码插画、静态海报、旧卡换名或切一张图重复贴层替代真实分层。PNG 仅是素材或静态留图，成品是主 HTML 内的可交互卡。制作路径与动态验收见 [交互闪卡契约](references/interactive-card.md)。
+保留精细原创收藏卡的完成度，使用一个明确主体、一个动作、一个确定画风。画风为启动句末尾可选项，未指定从全部已安装画风随机一次。宿主依 AGENT.md 完成选择，A 只读取具体绘画输入。新主体限原创人类角色或非动物器物，不使用动物、拟人动物、兽耳兽尾或动物同伴；画风参考不授权复制其中动物。原画无字无框，宿主排字；不以代码插画、静态海报、旧卡换名或切一张图重复贴层替代真实分层。PNG 仅是素材或静态留图，成品是主 HTML 内的可交互卡。制作路径与动态验收见 [交互闪卡契约](references/interactive-card.md)。
 
 只使用本次可访问且授权的个人信息。未知事实不编造，愿望不写成成果，署名按本次实际总结者，不按历史提到的模型推断。无本轮照片/许可不画本人肖像；可以选择明确不冒充真人的象征形象。
 

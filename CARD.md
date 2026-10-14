@@ -4,7 +4,7 @@
 
 ## 具体形象 → 一个画风 → 一张冻结原型
 
-读取本次 card-image-input.json 中的 style、subject、scene；已有设计直接沿用。按 style.id/version 加载 assets/art-styles/image-presets.json 中对应的原有画法及该画风的参考图。主体、动作、道具和场景使用输入中的具体描述。
+读取本次 card-image-input.json 中的 style、subject、scene；已有设计直接沿用。按 style.id/version 加载 assets/art-styles/image-presets.json 中对应的原有画法及该画风的参考图。主体、动作、道具和场景使用输入中的具体描述。主体限人类角色或非动物器物，不使用动物、拟人动物、兽耳兽尾或动物同伴；参考图只借画法，不能带入其中动物。发现违规输入退回上游修正具体形象，不改变所选画风，也不静默替换已冻结原型。
 
 绘画输入不含姓名、履历、职业列表、称号、总结模型、星系、HTML 或审查表；仅可见形象、所选画风和当前图层要求。严格使用宿主支持的接口；不虚构 prompt 参数、文件引用或清除历史能力，平台继承上下文时如实记 contextual_native_tool。
 

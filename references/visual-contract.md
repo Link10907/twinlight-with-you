@@ -8,13 +8,13 @@
 
 `style` 管线条、材质、光线、细节组织和排字默认值；`subject` 管当前的具体角色；`scene` 管当前空间与动作构图；任务 role 管本次实际图层。清楚的一位主角仍可以处在有组织的丰富环境中。
 
-明确选定画风后，scene 可以说明场景、时间和光源，preferences 仅供私人审计保留本次偏好，不传给模型；可见偏好要落到对应形象字段；不要在这些字段里再写一套与所选 style 冲突的画法。验收换画风是否生效，要同时看主体与环境的笔触、材质、配色和光照，不以换服装、换物种或背景变绿作为依据。森系参考只提供视觉标准，出现鹿不意味着当前主体也要选鹿。
+明确选定画风后，scene 可以说明场景、时间和光源，preferences 仅供私人审计保留本次偏好，不传给模型；可见偏好要落到对应形象字段；不要在这些字段里再写一套与所选 style 冲突的画法。验收换画风是否生效，要同时看主体与环境的笔触、材质、配色和光照，不以换服装、换物种或背景变绿作为依据。森系参考只提供视觉标准，其中的动物不得进入当前形象或作为同伴；新主体仅限人类角色或非动物器物。
 
 ## 设计字段
 
 schema 为 `schemas/art-direction-v2.schema.json`，写好后先用 `visual_plan.py check` 验证。
 
-- `subject`：kind、具体 species、gender_presentation、age_impression、两到五个不同部位的 appearance、clothing、expression、pose、main_prop、representation、selection_basis。动物写具体物种；物件用 `not_applicable`。`main_prop` 为 null 或一个已选定的道具，接触的手、衣服和道具保留同层。
+- `subject`：kind、具体 species、gender_presentation、age_impression、两到五个不同部位的 appearance、clothing、expression、pose、main_prop、representation、selection_basis。kind 仅 `human` / `object`；人类的 species 明确写人类或 human，物件用 `not_applicable`；不使用动物、拟人动物或兽化特征。`main_prop` 为 null 或一个已选定的道具，接触的手、衣服和道具保留同层。
 - `scene`：setting、lighting、composition、foreground。写可画的环境、光源、主体大小与焦点、文字留白；foreground 是一到两类少量具体近景，不是第二主角。
 - `preferences`：保留当前用户偏好、否决方向、依据与被否决图 hash。不能把旧例子的角色细节当成新用户偏好。
 - `selection_reason` 与 `selection_basis`：记录当前资料到画面设计的理由，不发给图像模型。程序从可见形象字段派生 `visual_keywords`；`card.keywords` 仍只是卡面文案。

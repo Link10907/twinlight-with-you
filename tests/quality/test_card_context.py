@@ -72,8 +72,8 @@ class ThinInputTests(unittest.TestCase):
         x=image_input(self.d);x['scene']['setting']='精细石砌长廊，雕花立柱与远处拱窗，构成完整可信的空间'
         text=render_prompt(x,'prototype',(600,800));self.assertIn(x['scene']['setting'],text)
         self.assertIn('环境可以精细',text)
-    def test_concrete_human_animal_object_supported(self):
-        for kind in ('human','animal','anthropomorphic','object'):
+    def test_concrete_human_and_object_supported(self):
+        for kind in ('human','object'):
             with self.subTest(kind=kind):
                 x=image_input(design(kind,style='twinlight-collector'))
                 self.assertIn(x['subject']['species'],render_prompt(x,'prototype',(600,800)))
