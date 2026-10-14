@@ -4,7 +4,7 @@ description: One-instruction native-AI Twinlight workflow. Acquire the complete 
 ---
 # Twinlight · 与你同光
 
-版本：`v10-portable-1.2.2`。先读 [AGENT.md](AGENT.md)。默认交互只有一次请求和一次成品交付，不要求用户选择 A/B、下载 Git 包、运行脚本、配置 API 或手填审查 JSON。
+版本：`v10-portable-1.2.3`。先读 [AGENT.md](AGENT.md)。默认交互只有一次请求和一次成品交付，不要求用户选择 A/B、下载 Git 包、运行脚本、配置 API 或手填审查 JSON。
 
 ## 先判定功能，再组织任务
 

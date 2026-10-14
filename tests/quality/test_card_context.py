@@ -63,7 +63,7 @@ class ThinInputTests(unittest.TestCase):
         x=image_input(self.d);x['subject']['appearance']*=3
         with self.assertRaises(VisualContractError):validate_input(x)
     def test_each_existing_style_has_concrete_short_preset(self):
-        for style in ('twinlight-collector','forest-fantasy','eastern-fantasy-scroll','real-life-cinematic','futuristic-clean','paper-craft-story'):
+        for style in ('twinlight-collector','forest-fantasy','eastern-fantasy-scroll','real-life-cinematic','paper-craft-story'):
             with self.subTest(style=style):
                 d=design(style=style);x=image_input(d);p=preset(x['style']);text=render_prompt(x,'prototype',(600,800))
                 self.assertEqual(set(p),{'drawing','materials','palette'})

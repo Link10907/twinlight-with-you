@@ -56,7 +56,7 @@ REQUIRED += (
     'assets/art-styles/catalog.json',
 )
 REQUIRED += tuple('assets/art-styles/' + name + '.json' for name in
-                  ('twinlight-collector', 'forest-fantasy', 'real-life-cinematic', 'eastern-fantasy-scroll', 'futuristic-clean', 'paper-craft-story'))
+                  ('twinlight-collector', 'forest-fantasy', 'real-life-cinematic', 'eastern-fantasy-scroll', 'paper-craft-story'))
 REQUIRED += ('assets/art-references/twinlight-collector/prototype.png',
              'assets/art-references/twinlight-collector/human-prototype.png',
              'assets/art-references/twinlight-collector/manifest.json',

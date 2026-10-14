@@ -67,7 +67,7 @@ class HandoffBoundaryTests(unittest.TestCase):
                     self.assertNotIn(self.q['reason'],prompt)
 
     def test_different_selection_reasons_have_identical_art_input(self):
-        a = request(style={'id':'futuristic-clean','version':'1.0.0'},reason='PRIVATE_A')
+        a = request(style={'id':'paper-craft-story','version':'1.0.0'},reason='PRIVATE_A')
         b = copy.deepcopy(a); b['reason'] = 'PRIVATE_B'
         ra=ss.select(self.w/'a',a); rb=ss.select(self.w/'b',b)
         self.assertEqual(Path(ra['drawing_input']).read_bytes(),Path(rb['drawing_input']).read_bytes())
@@ -88,7 +88,7 @@ class HandoffBoundaryTests(unittest.TestCase):
     def test_new_host_still_receives_selection_instructions(self):
         r=ss.selection_status(self.w)
         self.assertEqual(r['status'],'selection_required')
-        self.assertEqual(len(r['styles']),6)
+        self.assertEqual(len(r['styles']),5)
         self.assertTrue(Path(r['guide']).is_file())
         self.assertFalse(self.w.exists())
 

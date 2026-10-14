@@ -27,9 +27,9 @@ class SelectionTests(unittest.TestCase):
     def setUp(self):
         t = tempfile.TemporaryDirectory(); self.addCleanup(t.cleanup)
         self.root = Path(t.name); self.w = self.root / 'work'
-    def test_default_is_uniform_random_over_six(self):
+    def test_default_is_uniform_random_over_five(self):
         ss.select(self.w, request()); r = load(self.w / ss.RECORD)['request']
-        self.assertEqual(r['mode'], 'random'); self.assertEqual(len(r['candidates']), 6)
+        self.assertEqual(r['mode'], 'random'); self.assertEqual(len(r['candidates']), 5)
     def test_status_does_not_choose_or_create_files(self):
         r = ss.selection_status(self.w); self.assertEqual(r['default_mode'], 'random')
         self.assertFalse(self.w.exists()); self.assertNotIn('selected_style', r)
@@ -60,10 +60,10 @@ class SelectionTests(unittest.TestCase):
         for i in range(12):
             r=ss.select(self.w/str(i),request(mode='subject_random',candidates=choices,reason='SYNTHETIC visual compatibility.',seed=str(i)))
             self.assertIn(r['selected_style']['id'],choices)
-    def test_random_with_no_filter_uses_six(self):
+    def test_random_with_no_filter_uses_five(self):
         ss.select(self.w,request(mode='random'))
-        self.assertEqual(len(load(self.w / ss.RECORD)['request']['candidates']),6)
-    def test_all_six_reachable_for_deterministic_test_seeds(self):
+        self.assertEqual(len(load(self.w / ss.RECORD)['request']['candidates']),5)
+    def test_all_five_reachable_for_deterministic_test_seeds(self):
         choices=sorted(s['id'] for s in catalog())
         seen={ss._choice(choices,str(i)) for i in range(120)}
         self.assertEqual(seen,set(choices))
@@ -136,7 +136,7 @@ class SelectionTests(unittest.TestCase):
             if change=='subject':other['subject']['clothing']='深色棉质衬衫'
             if change=='seed':other['seed']='after'
             if change=='candidates':other.update(candidates=['forest-fantasy','paper-craft-story'],reason='test')
-            if change=='style':other['style']={'id':'futuristic-clean','version':'1.0.0'}
+            if change=='style':other['style']={'id':'real-life-cinematic','version':'1.0.0'}
             with self.subTest(change=change),self.assertRaises(ValueError):ss.select(self.w,other)
         self.assertEqual(before,(self.w/ss.RECORD).read_bytes())
     def test_changed_drawing_rejected_without_overwrite(self):

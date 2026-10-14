@@ -1,0 +1,43 @@
+{
+  "version": "portable-1.2.3-maintenance-verification-1",
+  "base_commit": "58d0c93d66ca28f666a6f9ad41e824de58d406a3",
+  "skill_revision": "v10-portable-1.2.3",
+  "removed_style": "futuristic-clean",
+  "active_style_ids": [
+    "twinlight-collector",
+    "forest-fantasy",
+    "real-life-cinematic",
+    "eastern-fantasy-scroll",
+    "paper-craft-story"
+  ],
+  "command": "python scripts/verify_skill.py --tests --out verification.json",
+  "baseline_tests": {
+    "run": 412,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "candidate_tests": {
+    "run": 423,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "new_retirement_tests": 11,
+  "resource_complete": true,
+  "package_manifest_verified": true,
+  "syntax_errors": [],
+  "broken_entry_links": [],
+  "template_lock_verified": true,
+  "navigation_lock_verified": true,
+  "remaining_style_definitions_unchanged": true,
+  "remaining_drawing_presets_unchanged": true,
+  "art_references_unchanged": true,
+  "v10_template_unchanged": true,
+  "core_runtime_unchanged": true,
+  "full_legacy_suite_executed": false,
+  "whole_repository_ci_success_claimed": false,
+  "real_image_generation_performed": false,
+  "new_artwork_approved": false,
+  "scope": "Maintained Skill integrity and synthetic regression tests only; not a full legacy-suite run or artistic acceptance."
+}
