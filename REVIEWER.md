@@ -10,6 +10,8 @@
 
 card 最终检查键：`subject_and_style`、`prototype_consistency`、`native_layers_and_alpha`、`typography_and_attribution`、`composition_and_depth`。须逐项符合并写实际观察；不能只输出通过五次。辅助路径只将 native_layers_and_alpha 换为 assisted_layers_and_alpha，其余检查相同。静态原型不替代分层交互成品。
 
+逐次返回登记不能替代本节整张卡的视觉审查。发现已接受的单层缺陷时只撤回该层；保留原型、其他图层、真实失败原因与累计次数。新工作区的调用/用途核对见 [逐次图像任务](references/portable-image-tasks.md)，不宣称覆盖流程外的宿主调用。
+
 ## B：整站
 
 site 检查键：`content_and_privacy`、`galaxy_navigation`、`ending_and_return`、`same_card_or_no_card`、`layout_and_readability`。无卡版最后两项指没有残留卡位/卡按钮、终章正常结束和页面布局正确，而不是强行检验不存在的卡。
@@ -24,7 +26,7 @@ site 检查键：`content_and_privacy`、`galaxy_navigation`、`ending_and_retur
 
 只有 accept 且本阶段检查均符合才续跑。返工后的目标字节改变必须重看，旧批准不能通用。缺能力不是美术失败，自检也不是独立审查；在交付说明里保持这个区别。
 
-默认每角色最多三次真实生图/编辑，记录 WORK/image-attempts.json，复用已合格层；到上限仍不合格就报告具体阻断，不替换成占位品。
+默认每角色最多三次生图/编辑预留；新工作区通过 reserve-image / record-image-result 记录 WORK/image-tasks.json，旧工作区的 image-attempts.json 不补写为新记录。复用已合格层；到上限仍不合格就报告具体阻断，不替换成占位品。
 
 strict 模式继续使用 references/strict/REVIEWER.md 及真实独立执行器门禁；portable 不伪造 strict 放行文件。
 

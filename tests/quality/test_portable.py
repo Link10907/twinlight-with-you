@@ -108,13 +108,13 @@ class PortableBuildTests(unittest.TestCase):
         with self.assertRaises(ValueError):portable.run(self.input,self.work,caps('unavailable'))
     def test_no_full_site_when_card_review_not_accepted(self):
         self.work.mkdir();layers=native(self.work/'card-task/native',lite.persona_digest(person()))
-        with patch.object(portable,'generation_check',return_value={'SYNTHETIC':True}):
+        with patch.object(portable,'generation_check',return_value={'SYNTHETIC':True}),patch('twinlight_core.portable_images.audit',return_value={'ok':True,'SYNTHETIC':True}):
             r=portable.run(self.input,self.work,caps(),layers=layers)
         self.assertEqual(r['status'],'review_required');self.assertFalse((self.work/'site-task').exists())
     def test_full_embeds_same_bytes_with_mocked_review_only(self):
         self.work.mkdir();layers=native(self.work/'card-task/native',lite.persona_digest(person()))
         fake={'ok':True,'method':'self','status':'accepted','SYNTHETIC':True}
-        with patch.object(portable,'generation_check',return_value={'SYNTHETIC':True}),patch.object(portable,'review_check',return_value=fake):
+        with patch.object(portable,'generation_check',return_value={'SYNTHETIC':True}),patch.object(portable,'review_check',return_value=fake),patch('twinlight_core.portable_images.audit',return_value={'ok':True,'SYNTHETIC':True}):
             r=portable.run(self.input,self.work,caps(),layers=layers)
         self.assertTrue(r['complete']);self.assertTrue(r['card_enabled']);self.assertFalse(r['all_checks_passed'])
         self.assertTrue((self.work/'site-task/site/index.html').is_file())

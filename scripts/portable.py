@@ -14,6 +14,9 @@ def main():
  q=sub.add_parser('style-status');q.add_argument('--workspace',type=Path,required=True)
  q=sub.add_parser('layers-plan');q.add_argument('--capabilities',type=Path,required=True);q.add_argument('--workspace',type=Path,required=True)
  q=sub.add_parser('record-image-attempt');q.add_argument('--workspace',type=Path,required=True);q.add_argument('--role',choices=('background','subject','effects'),required=True);q.add_argument('--outcome',choices=('success','failure','reference_mismatch'),required=True);q.add_argument('--reason',required=True);q.add_argument('--prototype',type=Path,required=True);q.add_argument('--output',type=Path)
+ q=sub.add_parser('reserve-image');q.add_argument('--workspace',type=Path,required=True);q.add_argument('--task-id',required=True);q.add_argument('--tool',required=True)
+ q=sub.add_parser('record-image-result');q.add_argument('result',type=Path);q.add_argument('--workspace',type=Path,required=True)
+ q=sub.add_parser('withdraw-image-layer');q.add_argument('--workspace',type=Path,required=True);q.add_argument('--role',choices=('background','subject','effects'),required=True);q.add_argument('--reason',required=True)
  q=sub.add_parser('run');q.add_argument('input',type=Path);q.add_argument('--workspace',type=Path,required=True);q.add_argument('--capabilities',type=Path,required=True);q.add_argument('--layers',type=Path)
  q=sub.add_parser('deliver');q.add_argument('--workspace',type=Path,required=True);q.add_argument('--out',type=Path,required=True)
  a=p.parse_args()
@@ -26,8 +29,18 @@ def main():
    from twinlight_core.style_selection import selection_status
    r=selection_status(a.workspace)
   elif a.command=='layers-plan':
-   hp=a.workspace/'image-attempts.json';r=layer_plan(load(a.capabilities),load(hp) if hp.exists() else None)
+   from twinlight_core.portable_images import history
+   r=layer_plan(load(a.capabilities),history(a.workspace))
   elif a.command=='record-image-attempt':r=record_attempt(a.workspace,a.role,a.outcome,a.reason,a.prototype,a.output)
+  elif a.command=='reserve-image':
+   from twinlight_core.portable_images import reserve
+   r=reserve(a.workspace,a.task_id,a.tool)
+  elif a.command=='record-image-result':
+   from twinlight_core.portable_images import record
+   r=record(a.workspace,load(a.result,max_bytes=32*1024))
+  elif a.command=='withdraw-image-layer':
+   from twinlight_core.portable_images import withdraw
+   r=withdraw(a.workspace,a.role,a.reason)
   elif a.command=='run':r=portable.run(a.input,a.workspace,load(a.capabilities),layers=a.layers)
   else:r=portable.deliver(a.workspace,a.out)
   print(json.dumps(r,ensure_ascii=False,indent=2));return 0

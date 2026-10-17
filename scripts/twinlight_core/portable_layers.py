@@ -62,6 +62,9 @@ def record_attempt(workspace: Path, role: str, outcome: str, reason: str, protot
     check(outcome in ('success', 'failure', 'reference_mismatch'), 'Invalid actual outcome')
     check(bool(reason.strip()), 'Record the observed result, not a generic pass')
     root = workspace.resolve()
+    state = root / 'portable-state.json'
+    check(not state.exists() or not load(state).get('image_task_contract'),
+          'Tracked portable run: reserve-image before calling, then record-image-result; do not backfill the old attempt log')
     check(prototype.is_file() and prototype.resolve().is_relative_to(root), 'Keep the actual prototype inside the workspace')
     path = root / 'image-attempts.json'
     history = load(path) if path.exists() else {'version': 'portable-attempts-1', 'attempts': []}

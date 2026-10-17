@@ -119,7 +119,7 @@ class RetiredStyleTests(unittest.TestCase):
             self.assertEqual(set(presets['presets']), ACTIVE)
             manifest = json.loads(zipped.read(prefix + 'package-manifest.json'))
             self.assertNotIn(relative, manifest['files_sha256'])
-            self.assertEqual(manifest['skill_revision'], 'v10-portable-1.2.3')
+            self.assertEqual(manifest['skill_revision'], 'v10-portable-1.2.4')
 
 
 if __name__ == '__main__':

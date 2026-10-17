@@ -29,6 +29,10 @@ reviewer mode：independent / self / unavailable。自检需要实际观察能�
 
 平台安全审批、真实肖像参考、额外费用和运行环境规则优先；不因“一句话”授权购买服务、公开资料或修改 GitHub。
 
+## 新工作区的逐次调用
+
+新 full 工作区启用 [portable-image-tasks-1](portable-image-tasks.md)：预留具体原型/图层任务、登记真实返回与处置、在 A→B 和交付前核对素材去向。采用结果进入原有 generation.json / 图层流程；弃用结果保留原因但不强行交付。普通文档和本地记录不能拦截流程外的全部宿主调用。旧工作区不伪造过去的调用前记录，无卡流程不启用图像任务。
+
 ## 真实生成记录
 
 完整方法与动态交付遵循 [交互闪卡契约](interactive-card.md)，仅改变 portable 分层制作路径，原六层接口与 strict 门禁不变。

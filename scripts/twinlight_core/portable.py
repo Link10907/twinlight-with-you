@@ -16,7 +16,7 @@ from . import galaxy_only, lite
 from .art import validate_layers, asset_digest
 from .site import build_lite, render_card_preview
 
-VERSION='v10-portable-1.2.1'
+VERSION='v10-portable-1.2.4'
 STATUSES={'available','unavailable','unknown','temporarily_blocked'}
 CHECKS={
  'card':('subject_and_style','prototype_consistency','native_layers_and_alpha','typography_and_attribution','composition_and_depth'),
@@ -103,6 +103,8 @@ def _state(workspace: Path, source: Path, chosen: dict) -> dict:
         return state
     state={'version':VERSION,'mode':chosen['mode'],'input_sha256':input_hash,
            'created_at':dt.datetime.now(dt.timezone.utc).isoformat(),'status':'started','input_path':str(source.resolve())}
+    if chosen['mode']=='full':
+        state['image_task_contract']='portable-image-tasks-1'
     save(path,state);return state
 
 def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=None) -> dict:
@@ -125,19 +127,28 @@ def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=
         data=checked['data']
         from .style_selection import selection_status
         result['style_selection']=selection_status(workspace)
+        from . import portable_images
+        contract=state.get('image_task_contract')
+        check(contract in (None,portable_images.CONTRACT),'Unsupported image task contract; use the pinned Skill version')
+        tracked=contract==portable_images.CONTRACT
+        if tracked:
+            result['image_task']=portable_images.next_task(workspace,capabilities)
+        else:
+            result['image_accounting']={'ok':False,'status':'legacy_untracked',
+                'scope':'Older workspace retained as-is; no pre-call image task accounting can be claimed retroactively.'}
         if layers is None:
             from .portable_layers import layer_plan
-            history=load(workspace/'image-attempts.json') if (workspace/'image-attempts.json').exists() else None
+            history=portable_images.history(workspace)
             result.update(status='native_image_generation_required',layer_plan=layer_plan(capabilities,history),
-                          next_action=('Complete the host-only style_selection, then hand drawing_input to CARD.md. '
-                                       if result['style_selection']['status']=='selection_required' else
-                                       'Use drawing_input or the existing design with CARD.md. ')
-                                      + 'Follow layer_plan for the prototype and layers; resume with --layers.')
+                          next_action=(result['image_task']['next_action'] if tracked else
+                                       'Resume this untracked workspace with its originally pinned Skill; do not reconstruct earlier image calls.'))
             save(workspace/'portable-report.json',result);return result
         check(layers.resolve().is_relative_to(workspace.resolve()),'Keep A assets inside this private workspace')
         validation=validate_layers(layers,lite.persona_digest(data))
         check(validation['art_status'] in ('generated','approved'),'Static art, examples and placeholders are not finished cards')
         generation=generation_check(workspace/'generation.json',layers)
+        if tracked:
+            result['image_accounting']=portable_images.audit(workspace,layers,generation)
         from preview_card import preview
         from package_card import package
         card=workspace/'card-task/card';card.mkdir(parents=True,exist_ok=True)
@@ -150,6 +161,9 @@ def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=
         if not reviewed['ok']:
             result.update(status=reviewed['status'],next_action='Visually inspect A front/layers and available interactive preview; write the real review-card.json for the displayed target. Revise failed assets, not the acceptance rules.')
             save(workspace/'portable-report.json',result);return result
+        if tracked:
+            result['image_accounting']=portable_images.audit(workspace,layers,generation,close=True)
+            result['image_task']={'status':'image_tasks_closed','next_action':'Task B embeds this accepted card without image calls.'}
         folder=workspace/'site-task/site';html=folder/'index.html'
         cached=state.get('card_target')
         if not html.is_file() or cached!=card_target:
@@ -179,9 +193,9 @@ def run(source: Path, workspace: Path, capabilities: dict, *, layers: Path|None=
     check(not any(c.get('passed') is False for c in runtime.get('checks',[]) if isinstance(c,dict)), 'Known functional check failure blocks release')
     if runtime.get('status')!='unavailable':check(runtime.get('html_sha256')==site_target,'Runtime check targets stale HTML')
     result.update(runtime=runtime,status='ready_for_delivery',complete=True,
-                  all_checks_passed=(reviewed['method']!='source' and runtime.get('status')=='passed' and runtime.get('webgl')=='passed' and runtime.get('offline_file_open')=='passed' and (mode=='html-only' or result['card_motion'].get('status')=='passed')),
+                  all_checks_passed=(reviewed['method']!='source' and runtime.get('status')=='passed' and runtime.get('webgl')=='passed' and runtime.get('offline_file_open')=='passed' and (mode=='html-only' or (result['card_motion'].get('status')=='passed' and result['image_accounting'].get('ok') is True))),
                   validation_level='independent_visual' if reviewed['method']=='independent' else ('source_review_only' if reviewed['method']=='source' else 'host_self_review'),
-                  next_action='Use portable.py deliver to export only this released HTML and its same-card artifacts. State any unverified browser/WebGL capability accurately.')
+                  next_action='Use portable.py deliver to export only this released HTML and its same-card artifacts. State any unverified browser/WebGL capability accurately. When generated images were unused, explain their recorded disposition rather than inventing a place in the site.')
     state['status']='ready_for_delivery';save(workspace/'portable-state.json',state);save(workspace/'portable-report.json',result)
     return result
 
@@ -205,6 +219,7 @@ def deliver(workspace: Path, out: Path) -> dict:
              'files_sha256':{name:fingerprint(out/name) for name in files},'share_authorized':False,
              **({'card_artifact':'interactive_html','primary_files':['index.html','card-preview.html'],
                  'png_role':'optional_static_snapshot','layer_method':r['layer_method'],
+                 'image_accounting':r['image_accounting'],
                  'card_motion':{k:r['card_motion'].get(k) for k in ('status','backend','interaction_verified','parallax_verified','foil_verified','offline_file_open')}} if r['mode']=='full' else {})}
     save(out/'delivery.json',summary)
     (out/'README.txt').write_text('Twinlight 私人作品\n打开 index.html。主文件不依赖旁边资源。\n'+('本次是完整无卡星系版，没有闪卡，也没有待生成卡位。\n' if r['mode']=='html-only' else '主 HTML 内嵌本次同一张可交互分层闪卡；card-preview.html 是独立交互页面。\n拖转、翻面、自动轻摇、景深与闪光均由 HTML 渲染；PNG 仅为附赠静态截图，不是闪卡成品。\n')+'审查范围和未验证项见 delivery.json；分享前请检查个人内容。\n',encoding='utf-8')

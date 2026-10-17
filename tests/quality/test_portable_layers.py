@@ -151,7 +151,9 @@ class AssistedTests(unittest.TestCase):
         self.assertTrue(portable.review_check(p,'card','x','self',layer_method='assisted_layers')['ok'])
         with self.assertRaises(ValueError):portable.review_check(p,'card','x','self')
     def test_same_assisted_card_embeds_without_second_generation(self):
-        self.prepare();self.generation();src=self.root/'person.json';save(src,person())
+        from image_task_fixtures import start,accepted
+        src=start(self.root,self.root/'person.json');accepted(self.root,source=self.p)
+        self.prepare();self.generation()
         fake={'ok':True,'method':'self','status':'accepted','SYNTHETIC':True}
         with patch.object(portable,'review_check',return_value=fake):r=portable.run(src,self.root,caps(),layers=self.out/'layers.json')
         self.assertTrue(r['complete']);self.assertEqual(r['layer_method'],'assisted_layers');self.assertEqual(r['card_artifact'],'interactive_html')

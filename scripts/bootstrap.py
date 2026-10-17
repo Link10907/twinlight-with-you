@@ -89,6 +89,7 @@ REQUIRED += ('references/interactive-card.md', 'scripts/prepare_assisted_layers.
              'scripts/twinlight_core/portable_motion.py')
 
 REQUIRED += ('references/style-selection.md', 'scripts/twinlight_core/style_selection.py')
+REQUIRED += ('references/portable-image-tasks.md', 'scripts/twinlight_core/portable_images.py')
 
 def fetch(url: str, limit: int) -> bytes:
     request = urllib.request.Request(url, headers={'User-Agent': 'Twinlight-resource-bootstrap',

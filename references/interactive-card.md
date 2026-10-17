@@ -27,7 +27,7 @@
 
 先冻结一张已实际看过且通过的原型，保留文件与 SHA-256。编辑任务只传可见形象、一个画风、当前图层要求和真实参考，不传星系、履历、整份 Skill、审查表。不修改已通过的其他层。
 
-每个真实编辑调用后，用 `portable.py record-image-attempt --workspace WORK --role subject --outcome success|failure|reference_mismatch --reason "实际观察" --prototype WORK/prototype.png [--output WORK/真实返回.png]` 记录；success 必须有实际文件。每角色最多三次；**首次出现换人/换场景就停止此引用链路**，不继续用相同方式反复碰运气。记录不是工具调用本身或供应商认证。
+新工作区按 [逐次图像任务](portable-image-tasks.md)，每次原型/图层调用前 reserve-image，调用后 record-image-result 并记录实际采用、返工或弃用；success 必须有实际文件。旧 record-image-attempt 仅保留旧工作区使用。每角色最多三次，预留即占预算；**首次出现换人/换场景就停止此引用链路**，不继续用相同方式反复碰运气。记录不是工具调用本身或供应商认证。
 
 ## 两条实际可执行的路径
 

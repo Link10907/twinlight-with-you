@@ -1,0 +1,52 @@
+{
+  "version": "portable-1.2.4-maintenance-verification-1",
+  "base_commit": "9cf9c4030a9da84fd2121d19b3b98d58d6e3a980",
+  "skill_revision": "v10-portable-1.2.4",
+  "verified_at": "2026-10-17T14:23:16.916791+00:00",
+  "baseline_source_manifest_git_blob": "03f23a63a32b41fb0aa9f577a552dbb69a718bc0",
+  "command": "python scripts/verify_skill.py --tests --out verification.json",
+  "baseline_tests": {
+    "run": 423,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "candidate_tests": {
+    "run": 482,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "new_image_task_tests": 59,
+  "resource_complete": true,
+  "package_manifest_verified": true,
+  "syntax_errors": [],
+  "broken_entry_links": [],
+  "protected_resources_unchanged": {
+    "assets": true,
+    "scripts/twinlight_core/card_context.py": true,
+    "scripts/twinlight_core/style_selection.py": true,
+    "scripts/twinlight_core/image_dispatch.py": true,
+    "scripts/twinlight_core/site.py": true,
+    "scripts/twinlight_core/embedded_card.py": true,
+    "scripts/twinlight_core/independent_review.py": true,
+    "scripts/prepare_card_layers.py": true
+  },
+  "template_lock_verified": true,
+  "navigation_lock_verified": true,
+  "paths_exercised": [
+    "native_layers task reservation, observed returns, assembly, same-card embedding and delivery",
+    "assisted_layers with registered native prototype and actual mask-processing byte checks",
+    "pending and replay rejection, original freeze, per-role retry limits, reference mismatch stop",
+    "single-layer withdrawal and repair without restarting accepted layers",
+    "unregistered return rejection, discarded extra accounting and private-ledger exclusion",
+    "no-card route and explicitly untracked old-workspace compatibility"
+  ],
+  "full_legacy_suite_executed": false,
+  "whole_repository_ci_success_claimed": false,
+  "real_image_generation_performed": false,
+  "real_independent_reviewer_invoked": false,
+  "new_artwork_approved": false,
+  "scope": "Maintained Skill integrity and synthetic file-based workflow regressions, not live image-provider, visual or GPU acceptance. Local task records do not intercept unregistered host calls.",
+  "candidate_manifest_git_blob": "8799b28ac57091c97d076d24679792bc5781af62"
+}

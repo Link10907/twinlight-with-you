@@ -4,7 +4,7 @@ description: One-instruction native-AI Twinlight workflow. Acquire the complete 
 ---
 # Twinlight · 与你同光
 
-版本：`v10-portable-1.2.3`。先读 [AGENT.md](AGENT.md)。默认交互只有一次请求和一次成品交付，不要求用户选择 A/B、下载 Git 包、运行脚本、配置 API 或手填审查 JSON。
+版本：`v10-portable-1.2.4`。先读 [AGENT.md](AGENT.md)。默认交互只有一次请求和一次成品交付，不要求用户选择 A/B、下载 Git 包、运行脚本、配置 API 或手填审查 JSON。
 
 ## 先判定功能，再组织任务
 
@@ -30,7 +30,7 @@ description: One-instruction native-AI Twinlight workflow. Acquire the complete 
 
 浏览器检查只在相应工件生成后运行；缺浏览器/缺 WebGL记录未验证，不禁止原型生图。真实功能故障或已知美术不合格仍须修复，不以占位产物交付。
 
-默认命令是 `scripts/portable.py`。旧 `task-card` / `task-site` 保留 strict，不要自动调用后再被其独立审查门禁阻断。参见 [审查标准](REVIEWER.md)。
+默认命令是 `scripts/portable.py`。新工作区每次生图先预留当前具体任务，再登记实际结果和用途，续跑只执行下一项；见 [逐次图像任务](references/portable-image-tasks.md)。旧 `task-card` / `task-site` 保留 strict，不要自动调用后再被其独立审查门禁阻断。参见 [审查标准](REVIEWER.md)。
 
 ## 完成边界
 
